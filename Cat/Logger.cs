@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Diagnostics;
 using System.IO;
 using System.Management;
@@ -8,7 +9,9 @@ using System.Security.Principal;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace Cat
 {
@@ -30,13 +33,17 @@ namespace Cat
             return inst;
         }
 
-        internal static void LogError(Exception exc)
+        internal static async void LogError(Exception exc, bool initial = true)
         {
             Log($">>>ERROR START<<<\nMessage:\n   {exc.Message}\nSource:\n   {exc.Source}\nMethod Base:\n   {exc.TargetSite?.Module}.{exc.TargetSite?.DeclaringType}.{exc.TargetSite?.Name} ({exc.TargetSite})\nStackTrace:\n   {exc.StackTrace}\nData:\n   {string.Join("   \n- ", exc.Data.Keys.Cast<object>().Zip(exc.Data.Values.Cast<object>()))}\nHLink:\n   {exc.HelpLink}\nHResult:\n   {exc.HResult}\n>>>END OF ERROR<<<");
             if (exc.InnerException != null)
             {
                 Log("The above was the cause of the following exception: ");
-                LogError(exc.InnerException);
+                LogError(exc.InnerException, false);
+            }
+            if (initial)
+            {
+                await FinalFlush();
             }
         }
 
@@ -492,6 +499,94 @@ namespace Cat
                 case 0x23: return "LPDDR5";
                 // Check the latest SMBIOS specification for new memory types.
                 default: return "Unknown";
+            }
+        }
+    
+    
+        internal class ProgressLogging
+        {
+            private byte progress = 0;
+            private string title;
+            private readonly bool @interface;
+            private event Action<ProgressUpdateEventArgs> OnProgressUpdate;
+            private TextBlock block;
+
+            internal ProgressLogging(string title, bool LogToInterface)
+            {
+                @interface = LogToInterface;
+                if (@interface)
+                {
+                    //Catowo.Interface.progresses.Add(this);
+                    (_, block) = Catowo.Interface.AddTextLogR($"{title} [----------------------------------------------------------------------------------------------------]");
+                }
+
+                OnProgressUpdate += (puea) => 
+                {
+                    progress = puea.NewProgress;
+                    Log(title + "Progress: " + progress + "%");
+                    if (puea.Note != null)
+                        Log("Note: " + puea.Note);
+                    if (@interface)
+                    {
+                        string bar = title + " [" + string.Concat(Enumerable.Repeat("|", progress)) + string.Concat(Enumerable.Repeat("-", 100 - progress)) + "]";
+                        block.Text = bar;
+                        Catowo.Interface.logListBox.Items.Refresh();
+                    }
+                    if (progress == 100)
+                    {
+                        Log(title + "Complete!");
+                        if (@interface)
+                            Catowo.Interface.AddLog(title + " Compelte!");
+                        block = null;
+                    }
+                };
+            }
+
+            internal void InvokeEvent(ProgressUpdateEventArgs e)
+            {
+                Logging.Log("Progress Invokation");
+                OnProgressUpdate?.Invoke(e);
+            }
+
+            internal class ProgressUpdateEventArgs
+            {
+                internal byte NewProgress;
+                internal string? Note = null;
+                
+                internal ProgressUpdateEventArgs(byte np)
+                {
+                    NewProgress = np;
+                }
+            }
+        }
+
+        internal class SpinnyThing
+        {
+            private readonly string[] animation = { "|", "/", "-", "\\" };
+            private TextBlock block;
+            private byte num = 0;
+            private readonly DispatcherTimer timer;
+            internal SpinnyThing()
+            {
+                (_, block) = Catowo.Interface.AddTextLogR(animation[num++]);
+                timer = new DispatcherTimer();
+                timer.Interval = TimeSpan.FromMilliseconds(50); 
+                timer.Tick += Timer_Tick;
+                timer.Start();
+            }
+
+            private void Timer_Tick(object sender, EventArgs e)
+            {
+                block.Text = animation[num++];
+                if (num == animation.Length) num = 0;
+                Catowo.Interface.logListBox.Items.Refresh();
+            }
+
+            internal void Stop()
+            {
+                timer.Stop();
+                timer.Tick -= Timer_Tick;
+                Catowo.Interface.logListBox.Items.Remove(block);
             }
         }
     }

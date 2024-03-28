@@ -20,6 +20,8 @@
   <ItemGroup>
     <PackageReference Include="Accord.Video.FFMPEG" Version="3.8.0" />
     <PackageReference Include="NAudio" Version="2.2.1" />
+    <PackageReference Include="SevenZipExtractor" Version="1.0.17" />
+    <PackageReference Include="SharpCompress" Version="0.36.0" />
     <PackageReference Include="System.Management" Version="8.0.0" />
   </ItemGroup>
 

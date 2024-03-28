@@ -16,6 +16,7 @@ namespace Cat
         internal const string VideoFolder = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\Videos\\";
         internal const string NotesFolder = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\Notes\\";
         internal const string ExternalProcessesFolder = "C:\\ProgramData\\Kitty\\Cat\\Processes\\";
+        internal const string EPTempF = "C:\\ProgramData\\Kitty\\Cat\\Processes\\temp";
 
         internal const string FFMPEGPath = ExternalProcessesFolder + "ffmpeg.exe";
 

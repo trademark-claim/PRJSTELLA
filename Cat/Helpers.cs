@@ -10,6 +10,14 @@ using System.Threading;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Net.Http;
+using System.Text.Json;
+using System.Windows.Media.Imaging;
+using static Cat.Catowo;
+using System.Windows.Threading;
+using SharpCompress;
+using System.Runtime.CompilerServices;
+using SharpCompress.Archives;
 
 namespace Cat
 {
@@ -158,7 +166,7 @@ namespace Cat
         {
             private static bool _isRecording = false;
             private static Thread _recordingThread;
-            private static int _frameRate = 30; 
+            private static int _frameRate = 30;
 
             public static void StartRecording(int screenIndex, string outputPath)
             {
@@ -171,7 +179,7 @@ namespace Cat
             public static void StopRecording()
             {
                 _isRecording = false;
-                _recordingThread?.Join(); 
+                _recordingThread?.Join();
             }
 
             private static void RecordScreen(int screenIndex, string outputPath)
@@ -222,5 +230,233 @@ namespace Cat
             }
         }
 
+        public class CatWindow : Window
+        {
+            private readonly HttpClient _client = new HttpClient();
+            private readonly SWC.Image _imageControl = new SWC.Image();
+            private Logging.ProgressLogging Progress = new("Cat Window Image Download:", true);
+            private Logging.SpinnyThing spinnything;
+            public CatWindow()
+            {
+                Logging.Log("Constructing Cat window");
+                Title = "Random Cat Photo";
+                Content = _imageControl;
+                Logging.Log("Window Loaded");
+                spinnything = new();
+                FetchAndDisplayCatImage();
+                Topmost = true;
+            }
+
+            private async Task FetchAndDisplayCatImage()
+            {
+                Logging.Log("Getting Cat image from https://cataas.com/cat?json=true");
+                try
+                {
+                    string url = "https://cataas.com/cat?json=true";
+                    HttpResponseMessage response = await _client.GetAsync(url);
+                    response.EnsureSuccessStatusCode();
+                    string responseBody = await response.Content.ReadAsStringAsync();
+                    Logging.Log($"Response body: {responseBody}");
+                    using (JsonDocument doc = JsonDocument.Parse(responseBody))
+                    {
+                        string id = doc.RootElement.GetProperty("_id").GetString();
+                        Logging.Log($"ID: {id}");
+                        string imageUrl = $"https://cataas.com/cat/{id}";
+                        Logging.Log("Init'ing Bitmap");
+                        BitmapImage bitmapImage = new BitmapImage();
+                        bitmapImage.BeginInit();
+                        bitmapImage.UriSource = new Uri(imageUrl, UriKind.Absolute);
+                        bitmapImage.EndInit();
+                        Logging.Log("Ending Init of Bitmap, loading...");
+                        bitmapImage.DownloadCompleted += (s, e) =>
+                        {
+                            Dispatcher.Invoke(() =>
+                            {
+                                Logging.Log("Source downloaded for bitmap! Halving size...");
+                                _imageControl.Source = bitmapImage;
+                                _imageControl.Width = bitmapImage.PixelWidth / 2;
+                                _imageControl.Height = bitmapImage.PixelHeight / 2;
+                                Width = _imageControl.Width;
+                                Height = _imageControl.Height;
+                                Logging.Log("Bitmap complete, window should adjust size automatically.");
+                                Interface.AddLog("Here is your kitty!");
+                                spinnything.Stop();
+                                Show();
+                            });
+                        };
+                        bitmapImage.DownloadProgress += (s, e) => Progress.InvokeEvent(new((byte)e.Progress));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logging.LogError(ex);
+                    spinnything.Stop();
+                }
+            }
+        }
+
+        public static class FFMpegManager
+        {
+            private const string DownloadUrl = "https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-2024-03-25-git-ecdc94b97f-essentials_build.7z";
+            private static Logging.ProgressLogging OverallProgress = new Logging.ProgressLogging("Overall FFMPEG Install:", true);
+            private static Logging.ProgressLogging SectionProgress = new Logging.ProgressLogging("Downloading FFMPEG from Gyan.dev:", true);
+
+            public static bool CheckFFMPEGExistence()
+            {
+                Logging.Log("Checking if FFMpeg.exe exists in allocated directory.");
+                bool exists = File.Exists(FFMPEGPath);
+                Logging.Log($"FFMpeg existence check returned {exists}");
+                return exists;
+            }
+
+            public static async Task DownloadFFMPEG()
+            {
+                if (!CheckFFMPEGExistence())
+                {
+                    Logging.Log("Starting FFMPEG download...");
+                    HttpClient client = new HttpClient();
+
+                    try
+                    {
+                        using (var response = await client.GetAsync(DownloadUrl, HttpCompletionOption.ResponseHeadersRead))
+                        {
+                            response.EnsureSuccessStatusCode();
+                            var totalBytes = response.Content.Headers.ContentLength ?? 0;
+                            Logging.Log("Downloading FFMPEG...");
+
+                            using (var streamToReadFrom = await response.Content.ReadAsStreamAsync())
+                            {
+                                string tempPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".7z");
+                                Logging.Log($"Temporary Download path: {tempPath}");
+
+                                using (var streamToWriteTo = File.Open(tempPath, FileMode.Create))
+                                {
+                                    await CopyContentAsync(streamToReadFrom, streamToWriteTo, totalBytes);
+                                }
+
+                                Logging.Log("FFMPEG downloaded, extracting...");
+                                await Extract7zArchiveAsync(tempPath);
+                                File.Delete(tempPath);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Logging.LogError(ex);
+                        Logging.Log("Failed to download or extract FFMPEG.");
+                    }
+                }
+                else
+                {
+                    Logging.Log("FFMpeg.exe already exists, skipping download.");
+                }
+            }
+
+            private static async Task CopyContentAsync(Stream source, Stream destination, long totalBytes)
+            {
+                byte[] buffer = new byte[81920];
+                int bytesRead;
+                long totalRead = 0;
+
+                try
+                {
+                    while ((bytesRead = await source.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                    {
+                        await destination.WriteAsync(buffer, 0, bytesRead);
+                        totalRead += bytesRead;
+                        int percentComplete = (int)((totalRead * 100) / totalBytes);
+                        SectionProgress.InvokeEvent(new((byte)percentComplete));
+                        OverallProgress.InvokeEvent(new((byte)(Math.Round((double)percentComplete / 2))));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logging.LogError(ex);
+                    Logging.Log("Error copying content during FFMPEG download.");
+                }
+            }
+
+            private static async Task Extract7zArchiveAsync(string archivePath)
+            {
+                Logging.Log($"Extracting {archivePath} to {ExternalProcessesFolder}");
+                SectionProgress = new Logging.ProgressLogging("Extracting FFMPEG:", true);
+                var loader = new Logging.SpinnyThing();
+                try
+                {
+                    if (!Directory.Exists(ExternalProcessesFolder))
+                    {
+                        Directory.CreateDirectory(ExternalProcessesFolder);
+                    }
+
+                    using (var archive = SharpCompress.Archives.SevenZip.SevenZipArchive.Open(archivePath))
+                    {
+                        var totalEntries = archive.Entries.Count();
+                        int entriesExtracted = 0;
+
+                        foreach (var entry in archive.Entries.Where(entry => !entry.IsDirectory))
+                        {
+                            await Task.Run(() => entry.WriteToDirectory(ExternalProcessesFolder, new SharpCompress.Common.ExtractionOptions() { ExtractFullPath = true, Overwrite = true }));
+                            entriesExtracted++;
+                            int percentComplete = (int)(((double)entriesExtracted / totalEntries) * 100);
+                            SectionProgress.InvokeEvent(new((byte)percentComplete));
+                            OverallProgress.InvokeEvent(new((byte)(50 + percentComplete / 2)));
+                        }
+                    }
+                    Interface.AddLog("Locating and Moving executable...");
+                    string extractedFolderPath = Path.Combine(ExternalProcessesFolder, "ffmpeg-2024-03-25-git-ecdc94b97f-essentials_build", "bin");
+                    string extractedFFmpegPath = Path.Combine(extractedFolderPath, "ffmpeg.exe");
+                    string finalPath = Path.Combine(ExternalProcessesFolder, "ffmpeg.exe");
+
+                    if (File.Exists(extractedFFmpegPath))
+                    {
+                        File.Move(extractedFFmpegPath, finalPath, true);
+                        Logging.Log($"ffmpeg.exe moved to {finalPath}.");
+                        Interface.AddLog("FFMPeg " + Helpers.Sillythings.Glycemia("Complete"));
+                        Directory.Delete(extractedFolderPath, true);
+                    }
+                    else
+                    {
+                        Logging.Log($"ffmpeg.exe not found in expected path: {extractedFFmpegPath}");
+                    }
+                    loader.Stop();
+                    Logging.Log("Extraction and file movement completed successfully.");
+                }
+                catch (Exception ex)
+                {
+                    Logging.Log($"Error during extraction or file movement: {ex.Message}");
+                    Logging.LogError(ex);
+                }
+
+                SectionProgress.InvokeEvent(new(100));
+                OverallProgress.InvokeEvent(new(100));
+            }
+        }
+
+        public static class Sillythings
+        {
+            internal static string Glycemia(string word)
+            {
+                if (word.Length <= 2) return word;
+                var middle = word[1..^1].ToCharArray();
+                random.Shuffle(middle);
+                return word[0] + new string(middle) + word[^1];
+            }
+        }
+        internal static class ProgressTesting
+        {
+            internal static async void GenerateProgressingTest()
+            {
+                uint rnd = (uint)random.Next(int.MaxValue);
+                Logging.ProgressLogging plog = new($"Progress test {rnd}:", true);
+                var spin = new Logging.SpinnyThing();
+                byte progress = 0;
+                while (progress < 100)
+                {
+                    await Task.Delay(random.Next(1, 100));
+                    plog.InvokeEvent(new(++progress));
+                }
+                spin.Stop();
+            }
+        }
     }
 }

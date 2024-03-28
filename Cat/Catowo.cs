@@ -24,6 +24,7 @@ using SWS = System.Windows.Shapes;
 using Microsoft.VisualBasic.Devices;
 using System.Printing;
 using System.IO;
+using System.Drawing;
 
 namespace Cat
 {
@@ -439,9 +440,9 @@ namespace Cat
         internal class Interface : Canvas
         {
             private readonly SWS.Rectangle Backg;
-            //private readonly SWS.Rectangle Marker = new() { Width = 3, Height = 3, Fill = new SolidColorBrush(Colors.AliceBlue) };
+            //internal static readonly List<Logging.ProgressLogging> progresses = new();
             private SWC.TextBox inputTextBox;
-            private static LogListBox logListBox = new();
+            internal static LogListBox logListBox = new();
             internal static Interface? inst = null;
             internal Canvas parent;
             private static ScrollViewer _scrollViewer;
@@ -531,41 +532,90 @@ namespace Cat
                 Logging.Log("Interface Shown");
             }
 
-            internal void AddLog(string logMessage)
+            internal static int AddLog(string logMessage)
             {
-                Dispatcher.Invoke(() => logListBox.Items.Add(logMessage));
+                Interface? instance = inst;
+                if (instance == null) return -2;
+                int value =instance.Dispatcher.Invoke(() => logListBox.AddItem(logMessage));
                 if (_scrollViewer != null)
                     _scrollViewer.ScrollToEnd();
                 else
                     logListBox.ScrollIntoView(logListBox.Items[logListBox.Items.Count - 1]);
+                return value;
             }
 
-            internal void AddLog(params string[] logs)
+            internal static int AddLog(params string[] logs)
             {
+                Interface? instance = inst;
+                if (instance == null) return -2;
                 foreach (string log in logs)
-                    Dispatcher.Invoke(() => logListBox.Items.Add(log));
+                    instance.Dispatcher.Invoke(() => logListBox.AddItem(log));
+                if (_scrollViewer != null)
+                    _scrollViewer.ScrollToEnd();
+                else
+                    logListBox.ScrollIntoView(logListBox.Items[logListBox.Items.Count - 1]);
+                return logListBox.Items.Count - 1;
+            }
+
+            internal static void EditLog(string message, int id, bool fromEnd)
+            {
+                Interface? instance = inst;
+                if (instance == null) return;
+                int itemnum = fromEnd ? ((logListBox.Items.Count - 1) - (id - 1)) : id;
+                var item = logListBox.Items[itemnum];
+                switch (item)
+                {
+                    case TextBlock tb:
+                        instance.Dispatcher.Invoke(() => (logListBox.Items[itemnum] as TextBlock).Text = message);
+                        break;
+                    default:
+                        instance.Dispatcher.Invoke(() => logListBox.Items[itemnum] = message);
+                        break;
+                }
+                instance.InvalidateVisual();
                 if (_scrollViewer != null)
                     _scrollViewer.ScrollToEnd();
                 else
                     logListBox.ScrollIntoView(logListBox.Items[logListBox.Items.Count - 1]);
             }
 
-            internal void AddTextLog(string logMessage, SWM.Color color)
+            internal static int AddTextLog(string logMessage, SWM.Color color)
             {
-                Dispatcher.Invoke(() => logListBox.Items.Add(new TextBlock { Text = logMessage, Foreground = new SolidColorBrush(color) }));
+                Interface? instance = inst;
+                if (instance == null) return -2;
+                TextBlock block = new TextBlock { Text = logMessage, Foreground = new SolidColorBrush(color) };
+                int value = instance.Dispatcher.Invoke(() => logListBox.AddItem(block));
                 if (_scrollViewer != null)
                     _scrollViewer.ScrollToEnd();
                 else
                     logListBox.ScrollIntoView(logListBox.Items[logListBox.Items.Count - 1]);
+                return value;
             }
 
-            internal void AddTextLog(string logMessage, SolidColorBrush brush)
+            internal static (int, TextBlock) AddTextLogR(string logMessage, SolidColorBrush brush = null)
             {
-                Dispatcher.Invoke(() => logListBox.Items.Add(new TextBlock { Text = logMessage, Foreground = brush }));
+                Interface? instance = inst;
+                if (instance == null) return (-2, null);
+                if (brush == null) brush = new(Colors.White);
+                TextBlock block = new TextBlock { Text = logMessage, Foreground = brush };
+                int value = instance.Dispatcher.Invoke(() => logListBox.AddItem(block));
                 if (_scrollViewer != null)
                     _scrollViewer.ScrollToEnd();
                 else
                     logListBox.ScrollIntoView(logListBox.Items[logListBox.Items.Count - 1]);
+                return (value, block);
+            }
+
+            internal static int AddTextLog(string logMessage, SolidColorBrush brush)
+            {
+                Interface? instance = inst;
+                if (instance == null) return -2;
+                int value = instance.Dispatcher.Invoke(() => logListBox.AddItem(new TextBlock { Text = logMessage, Foreground = brush }));
+                if (_scrollViewer != null)
+                    _scrollViewer.ScrollToEnd();
+                else
+                    logListBox.ScrollIntoView(logListBox.Items[logListBox.Items.Count - 1]);
+                return value;
             }
 
             private static class CommandProcessing
@@ -739,6 +789,10 @@ namespace Cat
                     { "flf", 26 },
                     { "force log flush", 26 },
                     { "force flush logs", 26 },
+
+                    { "download expr", 27 },
+
+                    { "run progress bar test", 28 }
                 };
                 private readonly static Dictionary<int, Dictionary<string, object>> Commands = new()
                 {
@@ -985,12 +1039,30 @@ namespace Cat
                             { "shortcut", "Shifts Q F"}
                         }
                     },
+                    {
+                        27, new Dictionary<string, object>
+                        {
+                            { "desc", "Downloads exprs" },
+                            { "params", "processname{string}" },
+                            { "function", (Action)DEP },
+                            { "shortcut", ""}
+                        }
+                    },
+                    {
+                        28, new Dictionary<string, object>
+                        {
+                            { "desc", "Generates a progress bar test" },
+                            { "params", "" },
+                            { "function", (Action)GPT },
+                            { "shortcut", ""}
+                        }
+                    },
                 };
 
                 private static string cmdtext;
 
                 private static void FYI()
-                    => @interface.AddLog("This feature is coming soon.");
+                    => Interface.AddLog("This feature is coming soon.");
 
                 internal static bool ParseParameters(out object[]? parsedParams)
                 {
@@ -1044,7 +1116,7 @@ namespace Cat
                     {
                         Logging.Log("Invalid amount of inputted parameters.");
                         Logging.Log($"Expected {string.Join(", ", values)} parameters but recieved {parameters.Count}");
-                        @interface.AddTextLog($"[PARSE FAILED] Expected {string.Join(", ", values)} parameters but recieved {parameters.Count}", SWM.Color.FromRgb(220, 30, 30));
+                        Interface.AddTextLog($"[PARSE FAILED] Expected {string.Join(", ", values)} parameters but recieved {parameters.Count}", SWM.Color.FromRgb(220, 30, 30));
                         return false;
                     }
 
@@ -1063,9 +1135,14 @@ namespace Cat
                                 Logging.Log($"Datatype: {datatype}, J: {j}");
                                 if (datatype.Contains('}'))
                                 {
+                                    datatype = datatype.IndexOf('}') != -1 ? datatype.Substring(0, datatype.IndexOf('}')) + '}' : datatype;
                                     if (datatype.Contains('/'))
                                     {
                                         datatype = "string}";
+                                    }
+                                    if (actualcounter > parameters.Count - 1)
+                                    {
+                                        break;
                                     }
                                     switch (datatype)
                                     {
@@ -1125,7 +1202,7 @@ namespace Cat
 
                                         default:
                                             Logging.Log("[PARSING FAILED] Unidentified metadata tag for data type. Please contact my creator to fix this, include the log file!");
-                                            @interface.AddTextLog("[PARSING FAILED] Unidentified metadata tag for data type. Please contact my creator to fix this, include the log file!", SWM.Color.FromRgb(255, 0, 0));
+                                            Interface.AddTextLog("[PARSING FAILED] Unidentified metadata tag for data type. Please contact my creator to fix this, include the log file!", SWM.Color.FromRgb(255, 0, 0));
                                             break;
                                     }
                                     actualcounter++;
@@ -1149,7 +1226,7 @@ namespace Cat
                     if (!fullValid)
                     {
                         Logging.Log("No 1:1 conversion between inputted parameters and metadata found, failing parse.");
-                        @interface.AddTextLog("[PARSE FAILED] No matching link between expected parameters and inputted parameters found.", SWM.Color.FromRgb(230, 20, 20));
+                        Interface.AddTextLog("[PARSE FAILED] No matching link between expected parameters and inputted parameters found.", SWM.Color.FromRgb(230, 20, 20));
                         return false;
                     }
 
@@ -1183,29 +1260,54 @@ namespace Cat
                         else
                         {
                             Logging.Log(">>>ERROR<<< Action nor TFunct not found for the given command ID.");
-                            @interface.AddTextLog($"Action nor TFunct object not found for command {call}, stopping command execution.\nThis... shouldn't happen. hm.", SWM.Color.FromRgb(200, 0, 40));
+                            Interface.AddTextLog($"Action nor TFunct object not found for command {call}, stopping command execution.\nThis... shouldn't happen. hm.", SWM.Color.FromRgb(200, 0, 40));
                         }
                         Logging.Log($"Finished Processing command {call}");
                     }
                     else
                     {
                         Logging.Log("Command Not Found");
-                        @interface.AddLog($"No recognisable command '{call}', please use 'help ;commands' for a list of commands!");
+                        Interface.AddLog($"No recognisable command '{call}', please use 'help ;commands' for a list of commands!");
                     }
                     @interface.inputTextBox.Text = string.Empty;
-                    @interface.AddLog("\n");
+                    Interface.AddLog("\n");
+                }
+
+                private static void GPT()
+                {
+                    Helpers.ProgressTesting.GenerateProgressingTest();
+                }
+
+                private static async void DEP()
+                {
+                    if (ParseParameters(out object[] args))
+                    {
+                        if (args != null && args[0] != null)
+                        {
+                            string entered = args[0].ToString();
+                            if (entered == "ffmpeg")
+                            {
+                                await Helpers.FFMpegManager.DownloadFFMPEG();
+                                Logging.Log("DEP Execution " + Helpers.Sillythings.Glycemia("Complete"));
+                            }
+                            else
+                            {
+                                Interface.AddLog("Unrecognised Process name.");
+                            }
+                        }
+                    }
                 }
 
                 private static async void FML()
                 {
-                    @interface.AddLog("Flushing Log queue...");
+                    Interface.AddLog("Flushing Log queue...");
                     await Logging.FinalFlush();
-                    @interface.AddLog("Logs flushed!");
+                    Interface.AddLog("Logs flushed!");
                 }
 
                 private static void Shutdown()
                 {
-                    @interface.AddTextLog("Shutting down... give me a few moments...", SWM.Color.FromRgb(230, 20, 20));
+                    Interface.AddTextLog("Shutting down... give me a few moments...", SWM.Color.FromRgb(230, 20, 20));
                     Catowo.inst.Hide();
                     App.ShuttingDown();
                 }
@@ -1222,7 +1324,7 @@ namespace Cat
                         else
                         {
                             Logging.Log("Screen index out of bounds of array.");
-                            @interface.AddLog($"Failed to find screen with index: {args[0]}");
+                            Interface.AddLog($"Failed to find screen with index: {args[0]}");
                         }
                     }
                 }
@@ -1243,7 +1345,7 @@ namespace Cat
                             Bitmap bmp = Helpers.Screenshotting.CaptureScreen(arg, out string? error);
                             if (error != "" && error != null)
                             {
-                                @interface.AddTextLog(error, RED);
+                                Interface.AddTextLog(error, RED);
                                 @interface.Show();
                                 return;
                             }
@@ -1251,7 +1353,7 @@ namespace Cat
                             string path = SSFolder + $"Shot{GUIDRegex().Replace(Guid.NewGuid().ToString(), "")}.png";
                             bmp.Save(path, ImageFormat.Png);
                             bmp.Dispose();
-                            @interface.AddLog("Screenshot saved!");
+                            Interface.AddLog("Screenshot saved!");
                             Logging.Log($"Shot saved to {path}");
                         }
                         else if (args[0] is int arg2 && arg2 == -1)
@@ -1265,7 +1367,7 @@ namespace Cat
                                 {
                                     string? error = errors[i];
                                     if (error != null)
-                                        @interface.AddTextLog($"Error when shooting screen {i}" + error, RED);
+                                        Interface.AddTextLog($"Error when shooting screen {i}" + error, RED);
                                     Logging.Log(error == null? "no error" : error);
                                 }
                                 @interface.Show();
@@ -1281,7 +1383,7 @@ namespace Cat
                                 Logging.Log($"Saved shot {i} to {path}");
                                 bmp.Dispose();
                             }
-                            @interface.AddLog("Screenshots saved!");
+                            Interface.AddLog("Screenshots saved!");
                         }
                         else if (args[0] is int arg3 && arg3 == -2)
                         {
@@ -1290,7 +1392,7 @@ namespace Cat
                             if (error != "" && error != null)
                             {
                                 Logging.Log(error);
-                                @interface.AddTextLog(error, RED);
+                                Interface.AddTextLog(error, RED);
                                 @interface.Show();
                                 return;
                             }
@@ -1298,13 +1400,13 @@ namespace Cat
                             string path = SSFolder + $"SShot{GUIDRegex().Replace(Guid.NewGuid().ToString(), "")}.png";
                             bmp.Save(path, ImageFormat.Png);
                             bmp.Dispose();
-                            @interface.AddLog("Screenshot saved!");
+                            Interface.AddLog("Screenshot saved!");
                             Logging.Log($"Shot saved to {path}");
                         }
                         else
                         {
                             string str = $"Expected arg1 value within -2 to {System.Windows.Forms.Screen.AllScreens.Length}";
-                            @interface.AddTextLog(str, LIGHTRED);
+                            Interface.AddTextLog(str, LIGHTRED);
                             Logging.Log(str);
                             @interface.Show();
                             return;
@@ -1315,14 +1417,14 @@ namespace Cat
 
                 internal static void PrintElementDetails()
                 {
-                    @interface.AddLog("Background Rectangle: ", inst.Backg.Width.ToString(), inst.Backg.Height.ToString());
-                    @interface.AddLog("Display box: ", logListBox.Width.ToString(), logListBox.Height.ToString(), GetLeft(logListBox).ToString());
-                    @interface.AddLog("Input box: ", @interface.inputTextBox.Width.ToString(), @interface.inputTextBox.Height.ToString(), GetLeft(@interface.inputTextBox).ToString(), GetTop(@interface.inputTextBox).ToString());
+                    Interface.AddLog("Background Rectangle: ", inst.Backg.Width.ToString(), inst.Backg.Height.ToString());
+                    Interface.AddLog("Display box: ", logListBox.Width.ToString(), logListBox.Height.ToString(), GetLeft(logListBox).ToString());
+                    Interface.AddLog("Input box: ", @interface.inputTextBox.Width.ToString(), @interface.inputTextBox.Height.ToString(), GetLeft(@interface.inputTextBox).ToString(), GetTop(@interface.inputTextBox).ToString());
                 }
 
                 private static void StartRecording()
                 {
-                    @interface.AddLog("Starting screen recording session");
+                    Interface.AddLog("Starting screen recording session");
                     Helpers.ScreenRecording.StartRecording(_screen_, VideoFolder + "V" + GUIDRegex().Replace(Guid.NewGuid().ToString(), "") + ".mp4");
                 }
 
@@ -1334,9 +1436,9 @@ namespace Cat
                 private static void StopRecording() 
                 {
                     FML();
-                    @interface.AddLog("Ending screen recording session");
+                    Interface.AddLog("Ending screen recording session");
                     Helpers.ScreenRecording.StopRecording();
-                    @interface.AddLog("Screen recording session ended.");
+                    Interface.AddLog("Screen recording session ended.");
                 }
 
                 private static void StopAudioRecording()
@@ -1351,22 +1453,31 @@ namespace Cat
                         if (args == null || args[0] == null)
                         {
                             Logging.Log("Args was null, expected Filepath object.");
-                            @interface.AddTextLog("Args was null, expected Filepath object.", RED);
+                            Interface.AddTextLog("Args was null, expected Filepath object.", RED);
                         }
 
                         try
                         {
-                            string filePath = args[0] as string;
-                            if (filePath == null || !ValidateFile(filePath))
+                            if (args.Length == 0 || args[0] == null)
                             {
-                                @interface.AddTextLog($"Filepath {filePath} resulted in a file that was either null, corrupt, unreadable, or protected.", RED);
+                                Logging.Log("Args was null or empty, expected Filepath object.");
+                                Interface.AddTextLog("Args was null or empty, expected Filepath object.", RED);
+                                return;
+                            }
+
+                            string filePath = args[0] as string;
+                            if (string.IsNullOrWhiteSpace(filePath) || !ValidateFile(filePath))
+                            {
+                                Logging.Log($"Invalid or inaccessible file path: {filePath}");
+                                Interface.AddTextLog($"Invalid or inaccessible file path: {filePath}", RED);
+                                return;
                             }
                             Logging.Log($"Attempting to play audio file: {filePath}");
 
                             if (WavePlayer != null)
                             {
                                 Logging.Log("An audio file is already playing. Stopping current audio.");
-                                @interface.AddLog("An audio file is already playing. Stopping current audio...");
+                                Interface.AddLog("An audio file is already playing. Stopping current audio...");
                                 StopAudio();
                             }
                             Logging.Log("Creating Waveout and Audio file reader objects...");
@@ -1392,7 +1503,7 @@ namespace Cat
                             WavePlayer.Play();
 
                             Logging.Log("Audio playback started successfully.");
-                            @interface.AddLog($"Playing {filePath}");
+                            Interface.AddLog($"Playing {filePath}");
                         }
                         catch (Exception ex)
                         {
@@ -1418,13 +1529,13 @@ namespace Cat
 
                             Logging.Log("Audio playback stopped.");
                             if (!SilentAudioCleanup)
-                                @interface.AddLog("Audio playback stopped.");
+                                Interface.AddLog("Audio playback stopped.");
                         }
                         else
                         {
                             Logging.Log("No audio is currently playing.");
                             if (!SilentAudioCleanup)
-                                @interface.AddLog("Yes, I too enjoy perfect silence... but you can't tell me to stop playing nothing -- existence isn't an audio file, yk?");
+                                Interface.AddLog("Yes, I too enjoy perfect silence... but you can't tell me to stop playing nothing -- existence isn't an audio file, yk?");
                         }
                     }
                     catch (Exception ex)
@@ -1487,7 +1598,8 @@ namespace Cat
 
                 private static void RandomCatPicture()
                 {
-                    FYI();
+                    AddLog("Generating kitty...");
+                    var r = new Helpers.CatWindow();
                 }
 
                 private static void Help()
@@ -1498,10 +1610,10 @@ namespace Cat
                     {
                         if (args == null)
                         {
-                            @interface.AddLog("Welcome to the help page!\nThis is the interface for the Kitty program, and is where you can run all the commands");
-                            @interface.AddTextLog("Run 'help ;commands' to see a list of commands\nRun 'help ;(cmdname)\n    E.g: 'help ;screenshot'\n  to see extended help for that command.", SWM.Color.FromRgb(0xC0, 0xC0, 0xC0));
-                            @interface.AddLog("This is a program created to help automate, manage, and improve overall effectiveness of your computer, currently only for Windows machines.");
-                            @interface.AddLog("Uhhh... don't really know what else to put here apart from some general notes:\n   For the PARAMS field when viewing command specific help, the symbols are defined as such:\n      | means OR, so you can input the stuff on the left OR the stuff on the right of the bar\n      [] means OPTIONAL PARAMETER, in other words you don't need to input it.\n      {} denotes a datatype, the expected type you input. bool is true/false, int is any whole number.");
+                            Interface.AddLog("Welcome to the help page!\nThis is the interface for the Kitty program, and is where you can run all the commands");
+                            Interface.AddTextLog("Run 'help ;commands' to see a list of commands\nRun 'help ;(cmdname)\n    E.g: 'help ;screenshot'\n  to see extended help for that command.", SWM.Color.FromRgb(0xC0, 0xC0, 0xC0));
+                            Interface.AddLog("This is a program created to help automate, manage, and improve overall effectiveness of your computer, currently only for Windows machines.");
+                            Interface.AddLog("Uhhh... don't really know what else to put here apart from some general notes:\n   For the PARAMS field when viewing command specific help, the symbols are defined as such:\n      | means OR, so you can input the stuff on the left OR the stuff on the right of the bar\n      [] means OPTIONAL PARAMETER, in other words you don't need to input it.\n      {} denotes a datatype, the expected type you input. bool is true/false, int is any whole number.");
                         }
                         else if (args.Length > 0)
                         {
@@ -1509,32 +1621,32 @@ namespace Cat
                             if (str == null) 
                             {
                                 Logging.Log("Something went wronng when getting the string command input... uh oh......REEEEEEEEEEEEEEEEEEEE");
-                                @interface.AddTextLog("[(Potentially?) CRITICAL ERROR] Failed to get string value from inputted parameters, even though ParseCommands() returned true. Send bug report with log, thanks! (or just try again)", SWM.Color.FromRgb(0xff, 0xc0, 0xcb));
+                                Interface.AddTextLog("[(Potentially?) CRITICAL ERROR] Failed to get string value from inputted parameters, even though ParseCommands() returned true. Send bug report with log, thanks! (or just try again)", SWM.Color.FromRgb(0xff, 0xc0, 0xcb));
                                 return;
                             }
                             if (str == "commands")
                             {
-                                @interface.AddLog("Heres a list of every command:");
+                                Interface.AddLog("Heres a list of every command:");
                                 foreach (int key in Commands.Keys)
                                 {
                                     var firstKey = cmdmap.FirstOrDefault(x => x.Value == key).Key;
-                                    @interface.AddLog($"- {firstKey}");
+                                    Interface.AddLog($"- {firstKey}");
                                 }
                             }
                             else if (cmdmap.TryGetValue(str, out int result))
                             {
                                     var Keys = cmdmap.Where(x => x.Value == result).Select(x => x.Key).ToArray();
                                     var metadata = Commands[result];
-                                    @interface.AddLog($"Command: {Keys[0]}");
-                                    @interface.AddLog($"Description: {metadata["desc"]}");
-                                    @interface.AddLog($"Parameter Format: {metadata["params"]}");
-                                    @interface.AddLog($"Shortcut: {metadata["shortcut"]}");
-                                    @interface.AddLog($"Aliases: {string.Join(", ", Keys)}");
+                                    Interface.AddLog($"Command: {Keys[0]}");
+                                    Interface.AddLog($"Description: {metadata["desc"]}");
+                                    Interface.AddLog($"Parameter Format: {metadata["params"]}");
+                                    Interface.AddLog($"Shortcut: {metadata["shortcut"]}");
+                                    Interface.AddLog($"Aliases: {string.Join(", ", Keys)}");
                             }
                             else
                             {
                                 Logging.Log($"Failed to find command for help command {str}");
-                                @interface.AddLog($"Failed to find command '{str}'.");
+                                Interface.AddLog($"Failed to find command '{str}'.");
                             }
                         }
                     }
@@ -1551,20 +1663,20 @@ namespace Cat
                             {
                                 Screen screen = System.Windows.Forms.Screen.AllScreens[i];
                                 if (screen != null)
-                                    @interface.AddLog($"Screen {i + 1}", $"   Device Name: {screen.DeviceName}", $"   Bounds: {screen.Bounds.Width}px Width, {screen.Bounds.Height}px Height, {screen.Bounds.X}x, {screen.Bounds.Y}y, {screen.Bounds.Top}px Top, {screen.Bounds.Left}px left.", $"   Is Primary: {screen.Primary}", $"   BPP: {screen.BitsPerPixel}");
+                                    Interface.AddLog($"Screen {i + 1}", $"   Device Name: {screen.DeviceName}", $"   Bounds: {screen.Bounds.Width}px Width, {screen.Bounds.Height}px Height, {screen.Bounds.X}x, {screen.Bounds.Y}y, {screen.Bounds.Top}px Top, {screen.Bounds.Left}px left.", $"   Is Primary: {screen.Primary}", $"   BPP: {screen.BitsPerPixel}");
                                 else
-                                    @interface.AddTextLog($"Failed to get Screen #{i}'s information.", RED);
+                                    Interface.AddTextLog($"Failed to get Screen #{i}'s information.", RED);
                             }
                         }
                         else if (args[0] is int arg && arg >= 0 && arg < System.Windows.Forms.Screen.AllScreens.Length)
                         {
                             Screen screen = System.Windows.Forms.Screen.AllScreens[(int)args[0]];
-                            @interface.AddLog($"Screen {arg + 1}", $"   Device Name: {screen.DeviceName}", $"   Bounds: {screen.Bounds.Width}px Width, {screen.Bounds.Height}px Height, {screen.Bounds.X}x, {screen.Bounds.Y}y, {screen.Bounds.Top}px Top, {screen.Bounds.Left}px left.", $"   Is Primary: {screen.Primary}", $"   BPP: {screen.BitsPerPixel}");
+                            Interface.AddLog($"Screen {arg + 1}", $"   Device Name: {screen.DeviceName}", $"   Bounds: {screen.Bounds.Width}px Width, {screen.Bounds.Height}px Height, {screen.Bounds.X}x, {screen.Bounds.Y}y, {screen.Bounds.Top}px Top, {screen.Bounds.Left}px left.", $"   Is Primary: {screen.Primary}", $"   BPP: {screen.BitsPerPixel}");
                         }
                         else
                         {
                             Logging.Log("Specified index was outside the bounds of the screen array");
-                            @interface.AddTextLog("Please select a valid screen index.", LIGHTRED);
+                            Interface.AddTextLog("Please select a valid screen index.", LIGHTRED);
                         }
                     }
                 }
@@ -1574,10 +1686,10 @@ namespace Cat
                     if (Logger == null)
                     {
                         Logger = Logging.ShowLogger();
-                        @interface.AddLog("Live Logging window opened!");
+                        Interface.AddLog("Live Logging window opened!");
                     }
                     else
-                        @interface.AddTextLog("Live logger already open...", HOTPINK);
+                        Interface.AddTextLog("Live logger already open...", HOTPINK);
                 }
 
                 private static void CloseLogger()
@@ -1586,14 +1698,14 @@ namespace Cat
                     {
                         Logger = null;
                         Logging.HideLogger();
-                        @interface.AddLog("Live Logging window closed!");
+                        Interface.AddLog("Live Logging window closed!");
                     }
                     else
-                        @interface.AddTextLog("This would be great to run... if there was a log window to run it on.", HOTPINK);
+                        Interface.AddTextLog("This would be great to run... if there was a log window to run it on.", HOTPINK);
                 }
             }
 
-            private class LogListBox : SWC.ListBox
+            internal class LogListBox : SWC.ListBox
             {
                 public LogListBox()
                 {
@@ -1613,6 +1725,11 @@ namespace Cat
                     };
 
                     _scrollViewer = GetScrollViewer(this);
+                }
+
+                internal int AddItem<T>(T Item)
+                {
+                    return Items.Add(Item);
                 }
             }
         }

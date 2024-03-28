@@ -59,8 +59,8 @@ namespace Cat
                 if (!File.Exists(source))
                 {
                     Logging.Log("FATAL ERROR: Cannot find FFMpeg binaries in source! Please verify files or reinstall Kitty!");
-                    System.Windows.MessageBox.Show("Cannot find FFMpeg binaries in source! Please verify files or reinstall Kitty!", "Fatal Error -- Missing Binaries!", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-                    App.ShuttingDown();
+                    //System.Windows.MessageBox.Show("Cannot find FFMpeg binaries in source! Please verify files or run 'load expr ;ffmpeg'", "Fatal Error -- Missing Binaries!", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                    //App.ShuttingDown();
                     return;
                 }
                 Logging.Log("Source FFMpeg found! Copying...");
@@ -72,18 +72,13 @@ namespace Cat
                 {
                     Logging.LogError(e);
                     Logging.Log($"Failed to copy source ffmpeg.exe to destination {FFMPEGPath}, Please verify files, reinstall Kitty, or download 'ffmpeg-2024-03-20-git-e04c638f5f-full_build' and move 'bin/ffmpng.exe' to {ExternalProcessesFolder}.");
-                    System.Windows.MessageBox.Show($"Failed to move source FFMpeg binaries to destination! View logs for more details.", "Fatal Error -- Copying Error!", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
-                    App.ShuttingDown();
-                    return;
+                    //System.Windows.MessageBox.Show($"Failed to move source FFMpeg binaries to destination! View logs for more details.", "Fatal Error -- Copying Error!", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);                    return;
                 }
                 finally
                 {
                     Logging.Log($"Successfully copied {source} to {FFMPEGPath}");
-
                 }
             }
-
-
             return;
         }
     }
