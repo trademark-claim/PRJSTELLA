@@ -25,6 +25,7 @@ using Microsoft.VisualBasic.Devices;
 using System.Printing;
 using System.IO;
 using System.Drawing;
+using System.Collections.Immutable;
 
 namespace Cat
 {
@@ -1288,7 +1289,7 @@ namespace Cat
                             if (entered == "ffmpeg")
                             {
                                 await Helpers.FFMpegManager.DownloadFFMPEG();
-                                Logging.Log("DEP Execution " + Helpers.Sillythings.Glycemia("Complete"));
+                                Logging.Log("DEP Execution " + Helpers.BackendHelping.Glycemia("Complete"));
                             }
                             else
                             {
@@ -1702,6 +1703,175 @@ namespace Cat
                     }
                     else
                         Interface.AddTextLog("This would be great to run... if there was a log window to run it on.", HOTPINK);
+                }
+
+                private static class ParameterParsing
+                {
+                    internal readonly struct Command
+                    {
+                        internal readonly string call;
+                        internal readonly string raw;
+                        internal readonly object[][] parameters;
+
+                        internal Command(string call, string raw, object[][] parameters)
+                        {
+                            this.call = call;
+                            this.raw = raw;
+                            this.parameters = parameters;
+                        }
+
+                        internal Command(string call, string raw)
+                        {
+                            this.call = call;
+                            this.raw = raw;
+                            parameters = null;
+                        }
+                    }
+
+                    internal static bool ParseCommand(in string raw, in int num, out Command? command, out string? error_message)
+                    {
+                        //!! I'm going to leave comments here because this will probably be rather complex :p
+                        // First, get the different sequences of expected parameters
+                        command = null;
+                        error_message = "";
+                        string metadata = CommandProcessing.Commands[num]["params"] as string;
+                        string call = raw.Split(";")[0].Trim();
+                        // If metadata is null then something's gone wrong with extracting it from the
+                        // Commands dictionary... which is really bad.
+                        if (metadata == null)
+                        {
+                            Logging.Log("[CRITICAL ERROR] Metadata was unresolved, command cannot be processed. You'll have to make a bug report (attach this log) so this can be fixed in the code behind, apologies for the inconvenience.");
+                            error_message = "Metadata resolve error, please see logs for details.";
+                            return false;
+                        }
+                        metadata = metadata.Replace(", ", "").Trim();
+                        // The command doesn't accept parameters, so skip parsing them and execute.
+                        if (metadata == string.Empty || metadata == "")
+                        {
+                            Logging.Log("Command accepts no parameters, skipping parse.");
+                            command = new(call, raw);
+                            return true;
+                        }
+
+                        var linputs = raw.Split(";").ToList();
+                        linputs.RemoveAt(0);
+                        string[] inputs = linputs.ToArray();
+                        // Split the metadata into every expected sequence
+                        string[] optionals = metadata.Contains('|') ? metadata.Split('|') : [metadata,];
+                        Logging.Log("Optionals", optionals);
+                        List<string> couldbes = new(optionals.Length);
+                        foreach (string sequence in optionals)
+                        {
+                            bool? status = ParseSequence(inputs, sequence, out error_message, out object[][]? parsedparams);
+                            if (status == false && (error_message != null && error_message != ""))
+                                return false;
+                            if (status == null)
+                                return true;
+                            if (status == true)
+                            {
+                                command = new(call, raw, parsedparams);
+                                return true;
+                            }
+                        }
+                        Logging.Log("[PARSE FAILED] No matching sequence to input found. Please use 'help ;{call}` to see expected command parameters.");
+                        error_message = "Unrecognised arguments." + (error_message != "" && error_message != null ? "Additional Error(s): " + error_message : "");
+                        return false;
+                    }
+
+                    private static bool? ParseSequence(string[] inputs, string sequence, out string? error_message, out object[][]? parsedparams)
+                    {
+                        error_message = null;
+                        parsedparams = null;
+                        int all = sequence.Count(c => c == '{');
+                        int flex = sequence.Count(c => c == '[');
+                        int fix = all - flex;
+                        Logging.Log($"All: {all}", $"Flex: {flex}", $"Fixed: {fix}");
+                        if (fix == 0 && inputs.Length == 0)
+                        {
+                            Logging.Log("Sequence only accepts optionals and there were no given inputs. End of Parse");
+                            return null;
+                        }
+                        
+                        if (fix > inputs.Length)
+                        {
+                            string mes = "[PARSE ERROR] Inputs were less than sequence expected";
+                            Logging.Log(mes);
+                            return false;
+                        }
+                        if (inputs.Length > all)
+                        {
+                            Logging.Log("More inputs than expected, exiting sequence");
+                            return false;
+                        }
+                        string[]? results;
+                        if (Helpers.BackendHelping.ExtractStringGroups(sequence, "{", "}", out results))
+                        {
+                            if (results == null)
+                            {
+                                Logging.Log("[CRITICAL ERROR] Metadata grouping resulted null, command cannot be processed. You'll have to make a bug report (attach this log) so this can be fixed in the code behind, apologies for the inconvenience.");
+                                error_message = "Metadata resolve error, please see logs for details.";
+                                return false;
+                            }
+                            List<object> flexparams = new(flex), fixparams = new(fix);
+                            for (int i = 0; i < results.Length; i++)
+                            {
+                                string[] types = results[i].Split('/');
+                                Logging.Log("Types: ", types);
+                                bool isValid = false;
+                                foreach (string type in types)
+                                {
+                                    switch (type)
+                                    {
+                                        case "int":
+                                            if (int.TryParse(inputs[i], out int result))
+                                            {
+                                                Logging.Log($"Successfully cast input #{i}, {inputs[i]} to int.");
+                                                isValid = true;
+                                                if (all - i + 1 < flex)
+                                                    flexparams.Add(result);
+                                                else
+                                                    fixparams.Add(result);
+                                            }
+                                            else Logging.Log($"Failed to cast input #{i}, {inputs[i]} to int.");
+                                            break;
+                                        case "bool":
+                                            if (bool.TryParse(inputs[i], out bool bresult))
+                                            {
+                                                Logging.Log($"Successfully cast input #{i}, {inputs[i]} to bool.");
+                                                isValid = true;
+                                                if (all - i + 1 < flex)
+                                                    flexparams.Add(bresult);
+                                                else
+                                                    fixparams.Add(bresult);
+                                            }
+                                            else Logging.Log($"Failed to cast input #{i}, {inputs[i]} to bool.");
+                                            break;
+                                        case "string":
+                                            isValid = true;
+                                            if (all - i + 1 < flex)
+                                                flexparams.Add(inputs[i]);
+                                            else
+                                                fixparams.Add(inputs[i]);
+                                            break;
+                                    }
+                                    if (isValid) break;
+                                }
+                                if (!isValid)
+                                {
+                                    Logging.Log($"Expected {results[i]}, not whatever was inputted.");
+                                    return false;
+                                }
+                            }
+                            parsedparams = [fixparams.ToArray(), flexparams.ToArray()];
+                            Logging.Log("Parsed Params object:", parsedparams);
+                            return true;
+                        }
+                        else
+                        {
+                            Logging.Log("[PARSE ERROR] Failed to extract string groupings! This shouldn't happen... please send a bug report and attach this log, thanks!");
+                            return false;
+                        }
+                    }
                 }
             }
 

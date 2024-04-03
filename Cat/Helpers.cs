@@ -18,6 +18,7 @@ using System.Windows.Threading;
 using SharpCompress;
 using System.Runtime.CompilerServices;
 using SharpCompress.Archives;
+using System.Text.RegularExpressions;
 
 namespace Cat
 {
@@ -411,7 +412,7 @@ namespace Cat
                     {
                         File.Move(extractedFFmpegPath, finalPath, true);
                         Logging.Log($"ffmpeg.exe moved to {finalPath}.");
-                        Interface.AddLog("FFMPeg " + Helpers.Sillythings.Glycemia("Complete"));
+                        Interface.AddLog("FFMPeg " + Helpers.BackendHelping.Glycemia("Complete"));
                         Directory.Delete(extractedFolderPath, true);
                     }
                     else
@@ -432,7 +433,7 @@ namespace Cat
             }
         }
 
-        public static class Sillythings
+        public static class BackendHelping
         {
             internal static string Glycemia(string word)
             {
@@ -440,6 +441,34 @@ namespace Cat
                 var middle = word[1..^1].ToCharArray();
                 random.Shuffle(middle);
                 return word[0] + new string(middle) + word[^1];
+            }
+
+            internal static bool ExtractStringGroups(string word, string sequencestarter, string sequenceender, out string[]? results)
+            {
+                results = null;
+                List<string> matches = new();
+                if (string.IsNullOrEmpty(word) || word.Length <= 2 || !word.Contains(sequencestarter) || !word.Contains(sequenceender)) 
+                {
+                    Logging.Log("Invalid input for ExtractStringGroups()");
+                    return false;
+                }
+                try
+                {
+                    string escapedStart = Regex.Escape(sequencestarter);
+                    string escapedEnd = Regex.Escape(sequenceender);
+                    string pattern = $"{escapedStart}(.*?){escapedEnd}";
+                    matches.AddRange(from Match match in Regex.Matches(word, pattern, RegexOptions.Compiled)
+                                     where match.Success
+                                     select match.Groups[1].Value);
+                }
+                catch (Exception e)
+                {
+                    Logging.LogError(e);
+                    Logging.Log("Exiting helper method ExtractStringGroups() due to error");
+                    return false;
+                }
+                results = matches.ToArray();
+                return true;
             }
         }
         internal static class ProgressTesting
