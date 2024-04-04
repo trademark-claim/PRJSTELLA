@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Windows;
 using System.Windows.Controls;
-using System.Windows;
 
 namespace Cat
 {
@@ -14,8 +9,8 @@ namespace Cat
         {
             private static ShutDownScreen inst;
 
-
-            internal static ShutDownScreen ToggleScreen(Canvas canv) { if (inst != null) { canv.Children.Remove(inst); inst = null; return inst; } else { inst = new ShutDownScreen(); canv.Children.Add(inst); return inst; } }
+            internal static ShutDownScreen ToggleScreen(Canvas canv)
+            { if (inst != null) { canv.Children.Remove(inst); inst = null; return inst; } else { inst = new ShutDownScreen(); canv.Children.Add(inst); return inst; } }
 
             private ShutDownScreen()
             {

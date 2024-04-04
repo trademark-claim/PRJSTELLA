@@ -1,24 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
-using System.Windows;
+﻿using IniParser;
+using IniParser.Model;
+using SharpCompress.Archives;
 using System.Diagnostics;
-using System.Threading;
 using System.Drawing.Imaging;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Net.Http;
+using System.Reflection;
 using System.Text.Json;
-using System.Windows.Media.Imaging;
-using static Cat.Catowo;
-using System.Windows.Threading;
-using SharpCompress;
-using System.Runtime.CompilerServices;
-using SharpCompress.Archives;
 using System.Text.RegularExpressions;
+using System.Windows;
+using System.Windows.Media.Imaging;
+using System.Windows.Threading;
+using static Cat.Catowo;
 
 namespace Cat
 {
@@ -26,9 +19,11 @@ namespace Cat
     {
         internal static class Screenshotting
         {
+            [LoggingAspects.Logging]
+            [LoggingAspects.InterfaceNotice]
+            [LoggingAspects.ConsumeException]
             internal static Bitmap CaptureScreen(int screenIndex, out string? error_message)
             {
-                Logging.Log($"Entering Helper method: Screenshotting.CaptureScreen() with params {screenIndex}");
                 error_message = "";
                 if (screenIndex < 0 || screenIndex >= System.Windows.Forms.Screen.AllScreens.Length)
                 {
@@ -53,6 +48,7 @@ namespace Cat
                 return bmp;
             }
 
+            [LoggingAspects.Logging]
             internal static List<Bitmap> AllIndivCapture(out List<string?> errorMessages)
             {
                 Logging.Log("Entering helper method Screenshotting.AllIndivCapture().");
@@ -80,7 +76,9 @@ namespace Cat
                 return bitmaps;
             }
 
-
+            [LoggingAspects.Logging]
+            [LoggingAspects.ConsumeException]
+            [LoggingAspects.InterfaceNotice]
             internal static Bitmap StitchCapture(out string? error_message)
             {
                 Logging.Log("Entering helper Screenshotting.StitchCapture()");
@@ -135,11 +133,11 @@ namespace Cat
                 Logging.Log("Exiting helpermethod Screenshotting.StitchCapture()");
                 return stitchedBitmap;
             }
-
         }
 
         internal static class ScreenSizing
         {
+            [LoggingAspects.Logging]
             internal static (double Width, double Height, double WorkingAreaHeight) GetAdjustedScreenSize(Screen screen)
             {
                 var dpiX = GetSystemDpi("DpiX");
@@ -151,6 +149,7 @@ namespace Cat
                 return (screenWidth, screenHeight, workAreaHeight);
             }
 
+            [LoggingAspects.Logging]
             private static double GetSystemDpi(string dpiPropertyName)
             {
                 var dpiProperty = typeof(SystemParameters).GetProperty(dpiPropertyName, BindingFlags.NonPublic | BindingFlags.Static);
@@ -169,6 +168,7 @@ namespace Cat
             private static Thread _recordingThread;
             private static int _frameRate = 30;
 
+            [LoggingAspects.Logging]
             public static void StartRecording(int screenIndex, string outputPath)
             {
                 if (_isRecording) return;
@@ -177,12 +177,17 @@ namespace Cat
                 _recordingThread = new Thread(() => RecordScreen(screenIndex, outputPath));
                 _recordingThread.Start();
             }
+
+            [LoggingAspects.Logging]
             public static void StopRecording()
             {
                 _isRecording = false;
                 _recordingThread?.Join();
             }
 
+            [LoggingAspects.Logging]
+            [LoggingAspects.ConsumeException]
+            [LoggingAspects.InterfaceNotice]
             private static void RecordScreen(int screenIndex, string outputPath)
             {
                 ProcessStartInfo psi = new ProcessStartInfo
@@ -221,6 +226,7 @@ namespace Cat
                 Logging.Log("Recording stopped.");
             }
 
+            [LoggingAspects.Logging]
             private static byte[]? BitmapToBytes(Bitmap image)
             {
                 using (MemoryStream stream = new MemoryStream())
@@ -237,6 +243,7 @@ namespace Cat
             private readonly SWC.Image _imageControl = new SWC.Image();
             private Logging.ProgressLogging Progress = new("Cat Window Image Download:", true);
             private Logging.SpinnyThing spinnything;
+
             public CatWindow()
             {
                 Logging.Log("Constructing Cat window");
@@ -447,7 +454,7 @@ namespace Cat
             {
                 results = null;
                 List<string> matches = new();
-                if (string.IsNullOrEmpty(word) || word.Length <= 2 || !word.Contains(sequencestarter) || !word.Contains(sequenceender)) 
+                if (string.IsNullOrEmpty(word) || word.Length <= 2 || !word.Contains(sequencestarter) || !word.Contains(sequenceender))
                 {
                     Logging.Log("Invalid input for ExtractStringGroups()");
                     return false;
@@ -471,6 +478,7 @@ namespace Cat
                 return true;
             }
         }
+
         internal static class ProgressTesting
         {
             internal static async void GenerateProgressingTest()
@@ -485,6 +493,67 @@ namespace Cat
                     plog.InvokeEvent(new(++progress));
                 }
                 spin.Stop();
+            }
+        }
+
+        internal static class IniParsing
+        {
+            public static string GetValue(string filePath, string section, string key)
+            {
+                var parser = new FileIniDataParser();
+                IniData data = parser.ReadFile(filePath);
+
+                if (data[section] != null && data[section].ContainsKey(key))
+                {
+                    return data[section][key];
+                }
+
+                return null;
+            }
+
+            public static Dictionary<string, Dictionary<string, string>> GetStructure(string filePath)
+            {
+                var parser = new FileIniDataParser();
+                IniData data = parser.ReadFile(filePath);
+
+                var result = new Dictionary<string, Dictionary<string, string>>();
+                foreach (var section in data.Sections)
+                {
+                    var sectionDict = new Dictionary<string, string>();
+                    foreach (var key in section.Keys)
+                    {
+                        sectionDict.Add(key.KeyName, key.Value);
+                    }
+                    result.Add(section.SectionName, sectionDict);
+                }
+
+                return result;
+            }
+
+            public static void UpAddValue(string filePath, string section, string key, string value)
+            {
+                var parser = new FileIniDataParser();
+                IniData data = parser.ReadFile(filePath);
+
+                if (data[section] == null)
+                {
+                    data.Sections.AddSection(section);
+                }
+
+                data[section][key] = value;
+                parser.WriteFile(filePath, data);
+            }
+
+            public static void RemoveEntry(string filePath, string section, string key)
+            {
+                var parser = new FileIniDataParser();
+                IniData data = parser.ReadFile(filePath);
+
+                if (data[section] != null && data[section].ContainsKey(key))
+                {
+                    data[section].RemoveKey(key);
+                    parser.WriteFile(filePath, data);
+                }
             }
         }
     }

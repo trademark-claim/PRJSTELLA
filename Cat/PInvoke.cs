@@ -50,13 +50,13 @@ namespace Cat
 
         [DllImport("user32.dll", SetLastError = true)]
         private static extern IntPtr GetDesktopWindow();
-        
+
         [DllImport("user32.dll", SetLastError = true)]
         private static extern IntPtr GetWindowDC(IntPtr hWnd);
-        
+
         [DllImport("gdi32.dll", SetLastError = true)]
         private static extern uint BitBlt(IntPtr hDestDC, int xDest, int yDest, int wDest, int hDest, IntPtr hSrcDC, int xSrc, int ySrc, CopyPixelOperation rop);
-        
+
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool ReleaseDC(IntPtr hWnd, IntPtr hDC);
 
@@ -76,7 +76,6 @@ namespace Cat
         [DllImport("gdi32.dll", SetLastError = true)]
         private static extern bool DeleteDC(IntPtr hDC);
 
-
         #endregion P/Invoke Declarations
 
         #region Internal Methods Wrapping P/Invoke
@@ -86,6 +85,7 @@ namespace Cat
             Logging.Log(">PINVOKE< Getting Desktop Window...");
             IntPtr hWnd = GetDesktopWindow();
             Logging.Log($">PINVOKE< GetDesktopWindow returned hWnd: {hWnd}");
+            LogMarshalError();
             return hWnd;
         }
 
@@ -94,8 +94,7 @@ namespace Cat
             Logging.Log(">PINVOKE< Getting Window DC...");
             IntPtr hDC = GetWindowDC(hWnd);
             Logging.Log($">PINVOKE< GetWindowDC for hWnd: {hWnd} returned hDC: {hDC}");
-            if (hDC == IntPtr.Zero)
-                LogMarshalError();
+            LogMarshalError();
             return hDC;
         }
 
@@ -104,8 +103,7 @@ namespace Cat
             Logging.Log(">PINVOKE< Releasing DC...");
             bool result = ReleaseDC(hWnd, hDC);
             Logging.Log($">PINVOKE< ReleaseDC for hWnd: {hWnd} and hDC: {hDC} returned {result}");
-            if (!result)
-                LogMarshalError();
+            LogMarshalError();
             return result;
         }
 
@@ -114,8 +112,7 @@ namespace Cat
             Logging.Log(">PINVOKE< Deleting DC...");
             bool result = DeleteDC(hDC);
             Logging.Log($">PINVOKE< DeleteDC for hDC: {hDC} returned {result}");
-            if (!result)
-                LogMarshalError();
+            LogMarshalError();
             return result;
         }
 
@@ -124,8 +121,7 @@ namespace Cat
             Logging.Log(">PINVOKE< Creating Compatible DC...");
             IntPtr compatibleDC = CreateCompatibleDC(hDC);
             Logging.Log($">PINVOKE< CreateCompatibleDC for hDC: {hDC} returned compatibleDC: {compatibleDC}");
-            if (compatibleDC == IntPtr.Zero)
-                LogMarshalError();
+            LogMarshalError();
             return compatibleDC;
         }
 
@@ -143,8 +139,7 @@ namespace Cat
             Logging.Log(">PINVOKE< Deleting GDI Object...");
             bool result = DeleteObject(hObject);
             Logging.Log($">PINVOKE< DeleteObject operation returned {result} for object handle: {hObject}");
-            if (!result)
-                LogMarshalError();
+            LogMarshalError();
             return result;
         }
 
@@ -153,8 +148,7 @@ namespace Cat
             Logging.Log(">PINVOKE< Creating Compatible Bitmap...");
             IntPtr bitmap = CreateCompatibleBitmap(hdc, nWidth, nHeight);
             Logging.Log($">PINVOKE< CreateCompatibleBitmap returned bitmap handle: {bitmap}");
-            if (bitmap == IntPtr.Zero)
-                LogMarshalError();
+            LogMarshalError();
             return bitmap;
         }
 
@@ -163,8 +157,7 @@ namespace Cat
             Logging.Log(">PINVOKE< Selecting GDI Object...");
             IntPtr prevObject = SelectObject(hdc, hgdiobj);
             Logging.Log($">PINVOKE< SelectObject operation returned previous object handle: {prevObject}");
-            if (prevObject == IntPtr.Zero || prevObject == new IntPtr(-1))
-                LogMarshalError();
+            LogMarshalError();
             return prevObject;
         }
 
@@ -173,8 +166,7 @@ namespace Cat
             Logging.Log(">PINVOKE< Getting Cursor Position...");
             bool b = GetCursorPos(out lpPoint);
             Logging.Log($">PINVOKE< GetCursorPos returned {b} with position {lpPoint.X}, {lpPoint.Y}");
-            if (!b)
-                LogMarshalError();
+            LogMarshalError();
             return b;
         }
 
@@ -183,8 +175,7 @@ namespace Cat
             Logging.Log($">PINVOKE< Setting Cursor Position to X: {X}, Y: {Y}...");
             bool result = SetCursorPos(X, Y);
             Logging.Log($">PINVOKE< SetCursorPos returned {result}");
-            if (!result)
-                LogMarshalError();
+            LogMarshalError();
             return result;
         }
 
@@ -193,6 +184,7 @@ namespace Cat
             Logging.Log($">PINVOKE< Sending {nInputs} Inputs...");
             uint result = SendInput(nInputs, pInputs, INPUT.Size);
             Logging.Log($">PINVOKE< SendInput processed {result} inputs");
+            LogMarshalError();
             return result;
         }
 
@@ -201,6 +193,7 @@ namespace Cat
             Logging.Log($">PINVOKE< Getting Window Long, hWnd: {hWnd}, nIndex: {nIndex}...");
             int result = GetWindowLong(hWnd, nIndex);
             Logging.Log($">PINVOKE< GetWindowLong returned {result}");
+            LogMarshalError();
             return result;
         }
 
@@ -209,6 +202,7 @@ namespace Cat
             Logging.Log($">PINVOKE< Setting Window Long, hWnd: {hWnd}, nIndex: {nIndex}, NewLong: {dwNewLong}...");
             int result = SetWindowLong(hWnd, nIndex, dwNewLong);
             Logging.Log($">PINVOKE< SetWindowLong returned {result}");
+            LogMarshalError();
             return result;
         }
 
@@ -217,6 +211,7 @@ namespace Cat
             Logging.Log($">PINVOKE< Setting Windows Hook, idHook: {idHook}, Thread ID: {dwThreadId}...");
             IntPtr result = SetWindowsHookEx(idHook, lpfn, hMod, dwThreadId);
             Logging.Log($">PINVOKE< SetWindowsHookEx returned {result}");
+            LogMarshalError();
             return result;
         }
 
@@ -225,14 +220,14 @@ namespace Cat
             Logging.Log($">PINVOKE< Unhooking Windows Hook, hhk: {hhk}...");
             bool result = UnhookWindowsHookEx(hhk);
             Logging.Log($">PINVOKE< UnhookWindowsHookEx returned {result}");
-            if (!result)
-                LogMarshalError();
+            LogMarshalError();
             return result;
         }
 
         internal static IntPtr CallNextHookExWrapper(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam)
         {
             IntPtr result = CallNextHookEx(hhk, nCode, wParam, lParam);
+            LogMarshalError();
             return result;
         }
 
@@ -241,12 +236,14 @@ namespace Cat
             Logging.Log($">PINVOKE< Getting Module Handle, Module Name: {lpModuleName}...");
             IntPtr result = GetModuleHandle(lpModuleName);
             Logging.Log($">PINVOKE< GetModuleHandle returned {result}");
+            LogMarshalError();
             return result;
         }
 
         internal static short GetAsyncKeyStateWrapper(int vKey)
         {
             short result = GetAsyncKeyState(vKey);
+            LogMarshalError();
             return result;
         }
 
@@ -255,6 +252,7 @@ namespace Cat
             Logging.Log($">PINVOKE< {(bShow ? "Showing" : "Hiding")} cursor...");
             int result = ShowCursor(bShow);
             Logging.Log($">PINVOKE< ShowCursor action resulted in cursor count {result}");
+            LogMarshalError();
             return result;
         }
 
@@ -263,6 +261,7 @@ namespace Cat
             Logging.Log($">PINVOKE< Loading Cursor from file, Path: {path}...");
             IntPtr result = LoadCursorFromFile(path);
             Logging.Log($">PINVOKE< LoadCursorFromFile returned {result}");
+            LogMarshalError();
             return result;
         }
 
@@ -271,8 +270,7 @@ namespace Cat
             Logging.Log($">PINVOKE< Setting System Cursor, Cursor Handle: {hcur}, ID: {id}...");
             bool result = SetSystemCursor(hcur, id);
             Logging.Log($">PINVOKE< SetSystemCursor returned {result}");
-            if (!result)
-                LogMarshalError();
+            LogMarshalError();
             return result;
         }
 
@@ -281,8 +279,7 @@ namespace Cat
             Logging.Log($">PINVOKE< Setting System Cursor, uiAction: {uiAction}, uiParam: {uiParam}, pvParam: {pvParam}, fWinIni: {fWinIni}");
             bool b = SystemParametersInfo(uiAction, uiParam, pvParam, fWinIni);
             Logging.Log($">PINVOKE< SystemParametersInfo returned {b}");
-            if (!b)
-                LogMarshalError();
+            LogMarshalError();
             return b;
         }
 
@@ -291,7 +288,9 @@ namespace Cat
         private static void LogMarshalError()
         {
             int errorCode = Marshal.GetLastWin32Error();
-            Logging.Log($">PINVOKE< Error: {errorCode} - {new System.ComponentModel.Win32Exception(errorCode).Message}");
+            if (errorCode != 0)
+                Logging.Log($">PINVOKE< Error: {errorCode} - {new System.ComponentModel.Win32Exception(errorCode).Message}");
+            else Logging.Log("Marshal operation successful");
         }
 
         [Flags]
@@ -326,6 +325,5 @@ namespace Cat
             Whiteness = 0x00FF0062,
             CaptureBlt = 0x40000000
         }
-
     }
 }

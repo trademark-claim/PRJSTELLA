@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Diagnostics;
 using System.IO;
 using System.Management;
@@ -9,7 +8,6 @@ using System.Security.Principal;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Threading;
 
@@ -125,7 +123,7 @@ namespace Cat
                 System.Windows.Application.Current.Dispatcher.Invoke(() => inst?.AddTextLog(mess.ToString(), color));
         }
 
-        private static string ProcessMessage(object message, int indentLevel)
+        internal static string ProcessMessage(object message, int indentLevel)
         {
             if (message == null)
                 return string.Empty;
@@ -501,14 +499,15 @@ namespace Cat
                 default: return "Unknown";
             }
         }
-    
-    
+
         internal class ProgressLogging
         {
             private byte progress = 0;
             private string title;
             private readonly bool @interface;
+
             private event Action<ProgressUpdateEventArgs> OnProgressUpdate;
+
             private TextBlock block;
 
             internal ProgressLogging(string title, bool LogToInterface)
@@ -520,7 +519,7 @@ namespace Cat
                     (_, block) = Catowo.Interface.AddTextLogR($"{title} [----------------------------------------------------------------------------------------------------]");
                 }
 
-                OnProgressUpdate += (puea) => 
+                OnProgressUpdate += (puea) =>
                 {
                     progress = puea.NewProgress;
                     Log(title + "Progress: " + progress + "%");
@@ -552,7 +551,7 @@ namespace Cat
             {
                 internal byte NewProgress;
                 internal string? Note = null;
-                
+
                 internal ProgressUpdateEventArgs(byte np)
                 {
                     NewProgress = np;
@@ -566,11 +565,12 @@ namespace Cat
             private TextBlock block;
             private byte num = 0;
             private readonly DispatcherTimer timer;
+
             internal SpinnyThing()
             {
                 (_, block) = Catowo.Interface.AddTextLogR(animation[num++]);
                 timer = new DispatcherTimer();
-                timer.Interval = TimeSpan.FromMilliseconds(50); 
+                timer.Interval = TimeSpan.FromMilliseconds(50);
                 timer.Tick += Timer_Tick;
                 timer.Start();
             }

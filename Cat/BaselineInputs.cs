@@ -1,11 +1,12 @@
 ﻿using NAudio.CoreAudioApi;
 using System.IO;
-using System.Windows;
 
 namespace Cat
 {
     internal static class BaselineInputs
     {
+        [LoggingAspects.Logging]
+        [LoggingAspects.ConsumeException]
         internal static bool IsMute()
         {
             Logging.Log("Checking Mute status of device...");
@@ -21,14 +22,16 @@ namespace Cat
         {
             internal static CursorType CurrentCursor { get; private set; }
 
-            private static void ChangeCursor(string filename)
+            [LoggingAspects.ConsumeException]
+            [LoggingAspects.Logging]
+            private static bool ChangeCursor(string filename)
             {
                 Logging.Log("Changing cursor to: " + filename);
                 bool isValid = ValidateFile(filename);
                 if (!isValid)
                 {
                     Logging.Log($"{filename} invalid, returning.");
-                    return;
+                    return false;
                 }
                 Logging.Log("Loading cursor handling...");
                 IntPtr cursorHandle = LoadCursorFromFileWrapper(filename);
@@ -36,6 +39,7 @@ namespace Cat
                 if (cursorHandle != IntPtr.Zero)
                 {
                     SetSystemCursorWrapper(cursorHandle, OCR_NORMAL);
+                    return true;
                 }
                 else
                 {
@@ -43,6 +47,8 @@ namespace Cat
                 }
             }
 
+            [LoggingAspects.ConsumeException]
+            [LoggingAspects.Logging]
             internal static void BlackPoint()
             {
                 string path = Path.Combine(RunningPath, BCURPATH);
@@ -51,6 +57,8 @@ namespace Cat
                 ChangeCursor(path);
             }
 
+            [LoggingAspects.ConsumeException]
+            [LoggingAspects.Logging]
             internal static void Reset()
             {
                 Logging.Log("Resetting system cursors...");
@@ -69,6 +77,7 @@ namespace Cat
             }
         }
 
+
         internal static void SendKeyboardInput(ushort virtualKeyCode)
         {
             Logging.Log($"Sending KEYUP KEYDOWN for VK {virtualKeyCode}");
@@ -85,6 +94,7 @@ namespace Cat
             SendInputWrapper((uint)inputs.Length, inputs);
         }
 
+        [LoggingAspects.Logging]
         internal static void ToggleMuteSound()
         {
             Logging.Log($"Toggling mute...");
@@ -92,6 +102,7 @@ namespace Cat
             Logging.Log($"Mute toggle operation complete.");
         }
 
+        [LoggingAspects.Logging]
         internal static void ToggleMuteSound(bool on)
         {
             bool muted = IsMute();
@@ -105,18 +116,28 @@ namespace Cat
             }
         }
 
-        internal static void HideCursor()
+        [LoggingAspects.Logging]
+        internal static int HideCursor()
         {
             Logging.Log("Attempting to hide cursor. (WARNING: This operation may fail without error)");
-            while (PInvoke.ShowCursorWrapper(false) >= 0) ;
+            int curs = PInvoke.ShowCursorWrapper(false);
+            while (curs >= 0)
+                curs = PInvoke.ShowCursorWrapper(false);
+            return curs;
         }
 
-        internal static void ShowCursor()
+        [LoggingAspects.Logging]
+        internal static int ShowCursor()
         {
-            Logging.Log($"Attempting to show cursor (WARNING: This operation may fail without error.)");
-            while (PInvoke.ShowCursorWrapper(true) < 0) ;
+            Logging.Log("Attempting to show cursor. (WARNING: This operation may fail without error)");
+            int curs = PInvoke.ShowCursorWrapper(true);
+            while (curs < 0)
+                curs = PInvoke.ShowCursorWrapper(true);
+            return curs;
         }
 
+        [LoggingAspects.Logging]
+        [LoggingAspects.ConsumeException]
         internal static void SendHello()
         {
             Logging.Log($"Sending fake hello VIn");
@@ -154,6 +175,8 @@ namespace Cat
             SendInputWrapper((uint)inputs.Count, inputs.ToArray());
         }
 
+        [LoggingAspects.Logging]
+        [LoggingAspects.AsyncExceptionSwallower]
         internal static async void CauseMouseToHaveSpasticAttack(bool smooth = false)
         {
             Logging.Log($"Causing mouse to have a spastic attack, smoothing: {smooth}");
@@ -176,6 +199,8 @@ namespace Cat
             Logging.Log($"Spastic Attack complete.");
         }
 
+        [LoggingAspects.Logging]
+        [LoggingAspects.AsyncExceptionSwallower]
         internal static async Task MoveMouseSmoothly(int startX, int startY, int endX, int endY, int duration)
         {
             Logging.Log($"Moving mouse smoothly from {startX}:{startY} to {endX}:{endY} over {duration} milliseconds. (100 steps)");

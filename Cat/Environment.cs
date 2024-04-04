@@ -17,9 +17,8 @@ namespace Cat
         internal const string NotesFolder = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\Notes\\";
         internal const string ExternalProcessesFolder = "C:\\ProgramData\\Kitty\\Cat\\Processes\\";
         internal const string EPTempF = "C:\\ProgramData\\Kitty\\Cat\\Processes\\temp";
-
+        internal const string UserDataFile = UserFolder + "hello_mr_edit_my_raw_data.txt";
         internal const string FFMPEGPath = ExternalProcessesFolder + "ffmpeg.exe";
-
 
         internal static bool AssemblyInformation = false;
         internal static bool EnvironmentVariables = false;
@@ -169,5 +168,10 @@ namespace Cat
         internal static partial Regex GUIDRegex();
 
         #endregion Delegates
+
+        internal static class UserData
+        {
+            internal static bool AspectLogging = true;
+        }
     }
 }

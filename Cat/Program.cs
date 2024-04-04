@@ -1,5 +1,4 @@
 ﻿using System.IO;
-using System.Runtime.CompilerServices;
 
 namespace Cat
 {
@@ -14,7 +13,7 @@ namespace Cat
 
         private static async Task CheckInternalData()
         {
-            Logging.Log("Checking if Logs exist...");
+            Logging.Log("Checking if directories exist...");
             string[] dirs = [
                 "C:\\ProgramData\\Kitty",
                 "C:\\ProgramData\\Kitty\\Cat",
@@ -38,13 +37,8 @@ namespace Cat
                 }
             }
 
-            using (StreamWriter sw = new StreamWriter(File.Create(Environment.LogPath)))
-            {
-                sw.WriteLine("[BEGIN LOG]");
-            }
-            Logging.Log("Created " + Environment.LogPath + " log file.");
-
             await LoadExternalBinaries();
+            LoadInitialFiles();
             return;
         }
 
@@ -80,6 +74,18 @@ namespace Cat
                 }
             }
             return;
+        }
+
+        private static void LoadInitialFiles()
+        {
+            Logging.Log("Loading Initial Files...");
+            using (StreamWriter sw = new StreamWriter(File.Create(Environment.LogPath)))
+            {
+                sw.WriteLine("[BEGIN LOG]");
+            }
+            Logging.Log("Created " + Environment.LogPath + " log file.");
+
+            //if (!File.Exists)
         }
     }
 }

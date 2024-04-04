@@ -7,31 +7,23 @@ global using static Cat.PInvoke;
 global using static Cat.Statics;
 global using static Cat.Structs;
 global using SWC = System.Windows.Controls;
+using NAudio.Wave;
 using System.Diagnostics;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Forms;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 using SWM = System.Windows.Media;
-using NAudio.Wave;
 using SWS = System.Windows.Shapes;
-using Microsoft.VisualBasic.Devices;
-using System.Printing;
-using System.IO;
-using System.Drawing;
-using System.Collections.Immutable;
 
 namespace Cat
 {
     internal class Catowo : Window
     {
-        
         internal static Catowo inst;
         internal static bool ShuttingDown = false;
         internal static IntPtr keyhook = IntPtr.Zero;
@@ -104,7 +96,7 @@ namespace Cat
 
         internal int Screen
         {
-            get => _screen_; 
+            get => _screen_;
             set
             {
                 if (value != _screen_)
@@ -128,6 +120,7 @@ namespace Cat
 
         #region Low Levels
 
+        [LoggingAspects.Logging]
         private void InitKeyHook()
         {
             Logging.Log("Setting key hook protocal...");
@@ -138,6 +131,7 @@ namespace Cat
             keyhook = _keyboardHookID;
         }
 
+        [LoggingAspects.Logging]
         internal static void DestroyKeyHook()
         {
             Logging.Log("Unhooking key hook...");
@@ -152,6 +146,7 @@ namespace Cat
                 keyhook = IntPtr.Zero;
         }
 
+        [LoggingAspects.Logging]
         private static IntPtr SetKeyboardHook(LowLevelKeyboardProc proc)
         {
             Logging.Log("Initing Keyboard hook...");
@@ -163,6 +158,7 @@ namespace Cat
             }
         }
 
+        [LoggingAspects.Logging]
         private IntPtr KeyboardProc(int nCode, IntPtr wParam, IntPtr lParam)
         {
             int vkCode = Marshal.ReadInt32(lParam);
@@ -343,6 +339,7 @@ namespace Cat
             Logging.Log("Catowo Destroyed.");
         }
 
+        [LoggingAspects.Logging]
         internal static Screen GetScreen()
         {
             try
@@ -354,6 +351,7 @@ namespace Cat
                 return System.Windows.Forms.Screen.PrimaryScreen;
             }
         }
+
 
         private void InitializeWindow()
         {
@@ -412,7 +410,10 @@ namespace Cat
 
         #region Interface
 
-        private void ToggleInterface()
+        [LoggingAspects.Logging]
+        [LoggingAspects.ConsumeException]
+        [LoggingAspects.UpsetStomach]
+        private bool ToggleInterface()
         {
             if (Interface.inst != null)
             {
@@ -425,6 +426,7 @@ namespace Cat
                 int es = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
                 Logging.Log($"Set WinStyle of HWND {hwnd} from {os:X} ({os:B}) [{os}] to {es:X} ({es:B}) [{es}]");
                 InitKeyHook();
+                return false;
             }
             else
             {
@@ -435,14 +437,17 @@ namespace Cat
                 Logging.Log($"Set WinStyle of HWND {hwnd} from {os:X} ({os:B}) [{os}] to {es:X} ({es:B}) [{es}]");
                 canvas.Children.Add(new Interface(canvas));
                 DestroyKeyHook();
+                return true;
             }
         }
 
         internal class Interface : Canvas
         {
             private readonly SWS.Rectangle Backg;
+
             //internal static readonly List<Logging.ProgressLogging> progresses = new();
             private SWC.TextBox inputTextBox;
+
             internal static LogListBox logListBox = new();
             internal static Interface? inst = null;
             internal Canvas parent;
@@ -472,6 +477,9 @@ namespace Cat
                 return rect;
             }
 
+            [LoggingAspects.Logging]
+            [LoggingAspects.ConsumeException]
+            [LoggingAspects.UpsetStomach]
             private void InitializeComponents()
             {
                 Screen screen = GetScreen();
@@ -504,7 +512,6 @@ namespace Cat
                 logListBox.Width = screenWidth - (padding * 2);
                 logListBox.Height = screenHeight - taskbarHeight - inputTextBoxHeight - (padding * 3);
 
-
                 SetLeft(logListBox, padding);
                 SetTop(logListBox, padding);
                 Children.Add(inputTextBox);
@@ -525,7 +532,7 @@ namespace Cat
                 await Task.Delay(500);
                 Logging.Log("Interface hidden");
             }
-            
+
             internal void Show()
             {
                 Logging.Log("Showing interface...");
@@ -533,11 +540,12 @@ namespace Cat
                 Logging.Log("Interface Shown");
             }
 
+            [LoggingAspects.ConsumeException]
             internal static int AddLog(string logMessage)
             {
                 Interface? instance = inst;
                 if (instance == null) return -2;
-                int value =instance.Dispatcher.Invoke(() => logListBox.AddItem(logMessage));
+                int value = instance.Dispatcher.Invoke(() => logListBox.AddItem(logMessage));
                 if (_scrollViewer != null)
                     _scrollViewer.ScrollToEnd();
                 else
@@ -545,6 +553,7 @@ namespace Cat
                 return value;
             }
 
+            [LoggingAspects.ConsumeException]
             internal static int AddLog(params string[] logs)
             {
                 Interface? instance = inst;
@@ -558,6 +567,7 @@ namespace Cat
                 return logListBox.Items.Count - 1;
             }
 
+            [LoggingAspects.ConsumeException]
             internal static void EditLog(string message, int id, bool fromEnd)
             {
                 Interface? instance = inst;
@@ -569,6 +579,7 @@ namespace Cat
                     case TextBlock tb:
                         instance.Dispatcher.Invoke(() => (logListBox.Items[itemnum] as TextBlock).Text = message);
                         break;
+
                     default:
                         instance.Dispatcher.Invoke(() => logListBox.Items[itemnum] = message);
                         break;
@@ -580,6 +591,7 @@ namespace Cat
                     logListBox.ScrollIntoView(logListBox.Items[logListBox.Items.Count - 1]);
             }
 
+            [LoggingAspects.ConsumeException]
             internal static int AddTextLog(string logMessage, SWM.Color color)
             {
                 Interface? instance = inst;
@@ -593,6 +605,7 @@ namespace Cat
                 return value;
             }
 
+            [LoggingAspects.ConsumeException]
             internal static (int, TextBlock) AddTextLogR(string logMessage, SolidColorBrush brush = null)
             {
                 Interface? instance = inst;
@@ -607,6 +620,7 @@ namespace Cat
                 return (value, block);
             }
 
+            [LoggingAspects.ConsumeException]
             internal static int AddTextLog(string logMessage, SolidColorBrush brush)
             {
                 Interface? instance = inst;
@@ -627,12 +641,13 @@ namespace Cat
                 private static ParameterParsing.Command? commandstruct;
                 private static bool SilentAudioCleanup = false;
                 private static Window? Logger = null;
+
                 private static readonly Dictionary<string, int> cmdmap = new()
                 {
                     { "shutdown", 0 },
                     { "exit", 0 },
                     { "std", 0 },
-                    
+
                     { "close", 1 },
                     { "hide", 1 },
                     { "cls", 1 },
@@ -640,12 +655,12 @@ namespace Cat
                     { "move", 2 },
                     { "change screen", 2 },
                     { "relocate", 2 },
-                    
+
                     { "screenshot", 3 },
                     { "ss", 3 },
                     { "take screenshot", 3 },
                     { "screen capture", 3 },
-                    
+
                     { "capture video", 4 },
                     { "cv", 4 },
                     { "begin video capture", 4 },
@@ -659,7 +674,7 @@ namespace Cat
                     { "start audio capture", 5 },
                     { "record audio", 5 },
                     { "start recording audio", 5 },
-                    
+
                     { "stop video", 6 },
                     { "sv", 6 },
                     { "stop video recording", 6 },
@@ -687,7 +702,7 @@ namespace Cat
 
                     { "take process snapshot", 10 },
                     { "tps", 10 },
-                    
+
                     { "start process measuring", 11 },
                     { "start measuring process", 11 },
                     { "begin process measuring", 11 },
@@ -719,11 +734,11 @@ namespace Cat
                     { "view log", 14 },
                     { "open log", 14 },
                     { "vl", 14 },
-                    
+
                     { "change cursor", 15 },
                     { "cc", 15 },
                     { "change mouse", 15 },
-                    
+
                     { "reset cursor", 16 },
                     { "rc", 16 },
                     { "reset mouse", 16 },
@@ -733,13 +748,13 @@ namespace Cat
                     { "plot graph", 17 },
                     { "create graph", 17 },
                     { "pd", 17 },
-                    
+
                     { "save plot", 18 },
                     { "sp", 18 },
                     { "save plotted data", 18 },
                     { "save plot data", 18 },
                     { "save graph", 18 },
-                    
+
                     { "cat", 19 },
                     { "random cat picture", 19 },
                     { "rcp", 19 },
@@ -796,14 +811,15 @@ namespace Cat
 
                     { "run progress bar test", 28 }
                 };
-                private readonly static Dictionary<int, Dictionary<string, object>> Commands = new()
+
+                private static readonly Dictionary<int, Dictionary<string, object>> Commands = new()
                 {
                     {
                         0, new Dictionary<string, object>
                         {
                             { "desc", "Shuts down the entire program" },
                             { "params", "" },
-                            { "function", (Action)Shutdown },
+                            { "function", (Func<bool>)Shutdown },
                             { "shortcut", "Shift Q E"}
                         }
                     },
@@ -812,7 +828,7 @@ namespace Cat
                         {
                             { "desc", "Closes the interface, the shortcut will open it." },
                             { "params", "" },
-                            { "function", (Action)Catowo.inst.ToggleInterface},
+                            { "function", (Func<bool>)Catowo.inst.ToggleInterface},
                             { "shortcut", "Shift Q I"}
                         }
                     },
@@ -821,7 +837,7 @@ namespace Cat
                         {
                             { "desc", "Shifts the interface screen to another monitor, takes in a number corresponding to the monitor you want it to shift to (1 being primary)" },
                             { "params", "screennum{int}" },
-                            { "function", (Action)ChangeScreen },
+                            { "function", (Func<bool>)ChangeScreen },
                             { "shortcut", "Shifts Q (number)"}
                         }
                     },
@@ -830,7 +846,7 @@ namespace Cat
                         {
                             { "desc", "Takes a screenshot of the screen, without the interface. -2 for a stiched image of all screens, -1 for individual screen pics, (number) for an individual screen, leave empty for the current screen Kitty is running on.\nE.g: screenshot ;-2" },
                             { "params", "[mode{int}]" },
-                            { "function", (Action)Screenshot },
+                            { "function", (Func<Task<bool>>)Screenshot },
                             { "shortcut", "Shifts Q S"}
                         }
                     },
@@ -839,7 +855,7 @@ namespace Cat
                          {
                             { "desc", "Begins capturing screen as a video, mutlimonitor support coming soon. Closes the interface when ran." },
                             { "params", "" },
-                            { "function", (Action)StartRecording },
+                            { "function", (Func<bool>)StartRecording },
                             { "shortcut", "Shifts Q R"}
                          }
                     },
@@ -848,7 +864,7 @@ namespace Cat
                         {
                             { "desc", "Starts capturing system audio, with optional audio input (0/exclusive, 1/inclusive).\n- Exclusive means only audio input, inclusive means audio input and system audio\nE.g: capture audio ;exclusive\nE.g: capture audio ;1" },
                             { "params", "[mode{int/string}]" },
-                            { "function", (Action)StartAudioRecording },
+                            { "function", (Func<bool>)StartAudioRecording },
                             { "shortcut", ""}
                         }
                     },
@@ -857,7 +873,7 @@ namespace Cat
                         {
                             { "desc", "Stops a currently running recording session, with an optional opening of the recording location after saving (true)\nE.g: stop recording ;true" },
                             { "params", "" },
-                            { "function", (Action)StopRecording },
+                            { "function", (Func<bool>)StopRecording },
                             { "shortcut", "Shifts Q D"}
                         }
                     },
@@ -866,7 +882,7 @@ namespace Cat
                         {
                             { "desc", "Stops a currently running audio session, with optional opening of the file location after saving.\nE.g: stop audio ;true" },
                             { "params", "" },
-                            { "function", (Action)StopAudioRecording },
+                            { "function", (Func<bool>)StopAudioRecording },
                             { "shortcut", ""}
                         }
                     },
@@ -875,7 +891,7 @@ namespace Cat
                         {
                             { "desc", "Plays an audio file, present the filepath as an argument with optional looping.\nE.g: play audio ;C:/Downloads/Sussyaudio.mp4 ;true" },
                             { "params", "filepath{str}, [looping{bool}]" },
-                            { "function", (Action)PlayAudio },
+                            { "function", (Func<bool>)PlayAudio },
                             { "shortcut", ""}
                         }
                     },
@@ -884,7 +900,7 @@ namespace Cat
                         {
                             { "desc", "Changes a control setting, you must specify the \nE.g: change setting ;LogAssemblies ;true\nE.g: change setting ;background ;green" },
                             { "params", "variablename{string}, value{string}" },
-                            { "function", (Action)ChangeSettings },
+                            { "function", (Func<bool>)ChangeSettings },
                             { "shortcut", ""}
                         }
                     },
@@ -893,7 +909,7 @@ namespace Cat
                         {
                             { "desc", "Takes a 'snapshot' of a specified process and shows information like it's memory usage, cpu usage, etc.\nE.g: take process snapshot ;devenv\nE.g: take process snapshot ;9926381232" },
                             { "params", "process{string/int}" },
-                            { "function", (Action)TakeProcessSnapshot },
+                            { "function", (Func<bool>)TakeProcessSnapshot },
                             { "shortcut", "Shifts Q T"}
                         }
                     },
@@ -902,7 +918,7 @@ namespace Cat
                         {
                             { "desc", "Starts measuring a processes's information until stopped.\nE.g: start measuring process ;devenv" },
                             { "params", "process{string/int}" },
-                            { "function", (Action)StartProcessMeasuring },
+                            { "function", (Func<bool>)StartProcessMeasuring },
                             { "shortcut", "Shifts Q X"}
                         }
                     },
@@ -911,7 +927,7 @@ namespace Cat
                         {
                             { "desc", "Stops a currently running process measuring session, with an optional saving of the data.\nE.g: stop measuring process ;false" },
                             { "params", "[savedata{bool}]" },
-                            { "function", (Action)StopProcessMeasuring },
+                            { "function", (Func<bool>)StopProcessMeasuring },
                             { "shortcut", "Shifts Q C"}
                         }
                     },
@@ -920,7 +936,7 @@ namespace Cat
                         {
                             { "desc", "Opens the logs folder.\nE.g: open logs" },
                             { "params", "" },
-                            { "function", (Action)OpenLogs },
+                            { "function", (Func<bool>)OpenLogs },
                             { "shortcut", ""}
                         }
                     },
@@ -929,7 +945,7 @@ namespace Cat
                         {
                             { "desc", "Opens a specified log file for viewing, specifying index or name.\nE.g: view log ;1\nE.g: view log ;Lcc0648800552499facf099d368686f0c" },
                             { "params", "filename{string/int}" },
-                            { "function", (Action)ViewLog },
+                            { "function", (Func<bool>)ViewLog },
                             { "shortcut", ""}
                         }
                     },
@@ -938,7 +954,7 @@ namespace Cat
                         {
                             { "desc", "(Attempts to) Changes the cursor to the specified cursor file, specifying file path.\nE.g: change cursor ;the/path/to/your/.cur/file" },
                             { "params", "" },
-                            { "function", (Action)ChangeCursor },
+                            { "function", (Func<bool>)ChangeCursor },
                             { "shortcut", ""}
                         }
                     },
@@ -947,7 +963,7 @@ namespace Cat
                         {
                             { "desc", "Resets all system cursors" },
                             { "params", "" },
-                            { "function", (Action)ResetCursor },
+                            { "function", (Func<bool>)ResetCursor },
                             { "shortcut", ""}
                         }
                     },
@@ -956,7 +972,7 @@ namespace Cat
                         {
                             { "desc", "Plots a set of data, specifying file path(s) or data in the format: ;int, int, int, ... int ;int, int, int, ... int (two sets of data).\nE.g: plot ;path/to/a/csv/with/two/lines/of/data\nE.g: plot ;path/to/csv/with/x_axis/data ;path/to/2nd/csv/with/y_axis/data\nE.g: plot ;1, 2, 3, 4, 5, 6 ;66, 33, 231, 53242, 564345" },
                             { "params", "filepath{string} | filepath1{string} filepath2{string} | data1{int[]} data2{int[]}" },
-                            { "function", (Action)Plot },
+                            { "function", (Func<bool>)Plot },
                             { "shortcut", ""}
                         }
                     },
@@ -965,7 +981,7 @@ namespace Cat
                         {
                             { "desc", "Saves a currently open plot (Plot must be open) to a file.\nE.g: save plot" },
                             { "params", "" },
-                            { "function", (Action)SavePlot },
+                            { "function", (Func<bool>)SavePlot },
                             { "shortcut", ""}
                         }
                     },
@@ -974,7 +990,7 @@ namespace Cat
                         {
                             { "desc", "Shows a random kitty :3" },
                             { "params", "" },
-                            { "function", (Action)RandomCatPicture },
+                            { "function", (Func<bool>)RandomCatPicture },
                             { "shortcut", "Shifts Q K"}
                         }
                     },
@@ -983,7 +999,7 @@ namespace Cat
                         {
                             { "desc", "Shows a list of commands, specific command info or general info.\nE.g: help\nE.g: help ;commands\nE.g:help ;plot" },
                             { "params", "[cmdname{string}]" },
-                            { "function", (Action)Help },
+                            { "function", (Func<bool>)Help },
                             { "shortcut", ""}
                         }
                     },
@@ -992,7 +1008,7 @@ namespace Cat
                         {
                             { "desc", "Displays either all screen information, or just a specified one.\ndsi ;1" },
                             { "params", "[screennumber{int}]" },
-                            { "function", (Action)DisplayScreenInformation },
+                            { "function", (Func<bool>)DisplayScreenInformation },
                             { "shortcut", ""}
                         }
                     },
@@ -1001,7 +1017,7 @@ namespace Cat
                         {
                             { "desc", "Opens the live logger. \nE.g:sll" },
                             { "params", "" },
-                            { "function", (Action)OpenLogger},
+                            { "function", (Func<bool>)OpenLogger},
                             { "shortcut", "Shifts Q ,"}
                         }
                     },
@@ -1010,7 +1026,7 @@ namespace Cat
                         {
                             { "desc", "Closes an open live logger\nE.g: cll" },
                             { "params", "" },
-                            { "function", (Action)CloseLogger },
+                            { "function", (Func<bool>)CloseLogger },
                             { "shortcut", "Shifts Q ."}
                         }
                     },
@@ -1019,7 +1035,7 @@ namespace Cat
                         {
                             { "desc", "Aborts a currently playing audio file." },
                             { "params", "" },
-                            { "function", (Action)StopAudio },
+                            { "function", (Func<bool>)StopAudio },
                             { "shortcut", "Shifts Q V"}
                         }
                     },
@@ -1028,7 +1044,7 @@ namespace Cat
                         {
                             { "desc", "Prints the interface element details" },
                             { "params", "" },
-                            { "function", (Action)PrintElementDetails },
+                            { "function", (Func<bool>)PrintElementDetails },
                             { "shortcut", ""}
                         }
                     },
@@ -1037,7 +1053,7 @@ namespace Cat
                         {
                             { "desc", "Forces a logging flush" },
                             { "params", "" },
-                            { "function", (Action)FML },
+                            { "function", (Func<Task<bool>>)FML },
                             { "shortcut", "Shifts Q F"}
                         }
                     },
@@ -1046,7 +1062,7 @@ namespace Cat
                         {
                             { "desc", "Downloads exprs" },
                             { "params", "processname{string}" },
-                            { "function", (Action)DEP },
+                            { "function", (Func<Task<bool>>)DEP },
                             { "shortcut", ""}
                         }
                     },
@@ -1055,7 +1071,7 @@ namespace Cat
                         {
                             { "desc", "Generates a progress bar test" },
                             { "params", "" },
-                            { "function", (Action)GPT },
+                            { "function", (Func<bool>)GPT },
                             { "shortcut", ""}
                         }
                     },
@@ -1064,7 +1080,9 @@ namespace Cat
                 private static string cmdtext;
 
                 private static void FYI()
-                    => Interface.AddLog("This feature is coming soon.");
+                    => AddLog("This feature is coming soon.");
+
+                [LoggingAspects.Logging]
                 internal static async void ProcessCommand()
                 {
                     cmdtext = @interface.inputTextBox.Text.Trim().ToLower();
@@ -1094,9 +1112,9 @@ namespace Cat
                         if (!string.IsNullOrEmpty(error_message))
                             AddTextLog(error_message, RED);
 
-                        if (metadata.TryGetValue("function", out var actionObj) && actionObj is Action action)
-                            action();
-                        else if (metadata.TryGetValue("function", out var funcObj) && actionObj is Func<Task> tfunc)
+                        if (metadata.TryGetValue("function", out var actionObj) && actionObj is Func<bool> func)
+                            func();
+                        else if (metadata.TryGetValue("function", out var funcObj) && actionObj is Func<Task<bool>> tfunc)
                             await tfunc();
                         else
                         {
@@ -1114,19 +1132,22 @@ namespace Cat
                     Interface.AddLog("\n");
                 }
 
-                private static void GPT()
+                [LoggingAspects.ConsumeException]
+                private static bool GPT()
                 {
                     Helpers.ProgressTesting.GenerateProgressingTest();
+                    return true;
                 }
 
-                private static async void DEP()
+                [LoggingAspects.AsyncExceptionSwallower]
+                private static async Task<bool> DEP()
                 {
-                    string entry = commandstruct?.parameters[0][0] as string;
+                    string entry = commandstruct?.Parameters[0][0] as string;
                     if (entry == null)
                     {
                         Logging.Log("Expected string but parsing failed and returned either a null command struct or a null entry, please submit a bug report.");
                         AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
-                        return;
+                        return false;
                     }
                     if (entry == "ffmpeg")
                     {
@@ -1136,53 +1157,64 @@ namespace Cat
                     else
                     {
                         Interface.AddLog("Unrecognised Process name.");
+                        return false;
                     }
+                    return true;
                 }
 
-                private static async void FML()
+                [LoggingAspects.AsyncExceptionSwallower]
+                private static async Task<bool> FML()
                 {
                     Interface.AddLog("Flushing Log queue...");
                     await Logging.FinalFlush();
                     Interface.AddLog("Logs flushed!");
+                    return true;
                 }
 
-                private static void Shutdown()
+                [LoggingAspects.ConsumeException]
+                private static bool Shutdown()
                 {
                     Interface.AddTextLog("Shutting down... give me a few moments...", SWM.Color.FromRgb(230, 20, 20));
                     Catowo.inst.Hide();
                     App.ShuttingDown();
+                    return true;
                 }
 
-                private static void ChangeScreen()
+                [LoggingAspects.ConsumeException]
+                private static bool ChangeScreen()
                 {
-                    int? entry = (int?)(commandstruct?.parameters[0][0]);
+                    int? entry = (int?)(commandstruct?.Parameters[0][0]);
                     if (entry == null)
                     {
                         Logging.Log("Expected string but parsing failed and returned either a null command struct or a null entry, please submit a bug report.");
                         AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
-                        return;
+                        return false;
                     }
                     if (entry >= 0 && entry < System.Windows.Forms.Screen.AllScreens.Length)
                     {
                         Logging.Log($"Changing screen to Screen #{entry}");
                         Catowo.inst.Screen = entry.Value;
+                        return true;
                     }
                     else
                     {
                         Logging.Log("Screen index out of bounds of array.");
                         Interface.AddLog($"Failed to find screen with index: {entry}");
+                        return false;
                     }
                 }
 
-                private static async void Screenshot()
+                [LoggingAspects.AsyncExceptionSwallower]
+                [LoggingAspects.Logging]
+                private static async Task<bool> Screenshot()
                 {
                     await @interface.Hide();
-                    int? entryN = (int?)(commandstruct?.parameters[0][0]);
+                    int? entryN = (int?)(commandstruct?.Parameters[0][0]);
                     if (entryN == null)
                     {
                         Logging.Log("Expected int but parsing failed and returned either a null command struct or a null entry, please submit a bug report.");
                         AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
-                        return;
+                        return false;
                     }
                     int entry = entryN.Value;
                     Logging.Log("Taking screenshots...");
@@ -1196,7 +1228,7 @@ namespace Cat
                                 {
                                     AddTextLog(error, RED);
                                     @interface.Show();
-                                    return;
+                                    return false;
                                 }
                                 Logging.Log("Captured!");
                                 string path = SSFolder + $"Shot{GUIDRegex().Replace(Guid.NewGuid().ToString(), "")}.png";
@@ -1223,7 +1255,7 @@ namespace Cat
                                     }
                                     @interface.Show();
                                     Logging.Log("Exiting Screenshotting due to errors.");
-                                    return;
+                                    return false;
                                 }
                                 Logging.Log($"{bmps.Count} shots taken!");
                                 for (int i = 0; i < bmps.Count; i++)
@@ -1247,7 +1279,7 @@ namespace Cat
                                     Logging.Log(error);
                                     AddTextLog(error, RED);
                                     @interface.Show();
-                                    return;
+                                    return false;
                                 }
                                 Logging.Log("Captured!");
                                 string path = SSFolder + $"SShot{GUIDRegex().Replace(Guid.NewGuid().ToString(), "")}.png";
@@ -1264,51 +1296,65 @@ namespace Cat
                                 AddTextLog(str, LIGHTRED);
                                 Logging.Log(str);
                                 @interface.Show();
-                                return;
+                                return false;
                             }
                     }
                     @interface.Show();
+                    return true;
                 }
 
-                internal static void PrintElementDetails()
+                [LoggingAspects.ConsumeException]
+                internal static bool PrintElementDetails()
                 {
                     Interface.AddLog("Background Rectangle: ", inst.Backg.Width.ToString(), inst.Backg.Height.ToString());
                     Interface.AddLog("Display box: ", logListBox.Width.ToString(), logListBox.Height.ToString(), GetLeft(logListBox).ToString());
                     Interface.AddLog("Input box: ", @interface.inputTextBox.Width.ToString(), @interface.inputTextBox.Height.ToString(), GetLeft(@interface.inputTextBox).ToString(), GetTop(@interface.inputTextBox).ToString());
+                    return true;
                 }
 
-                private static void StartRecording()
+                [LoggingAspects.ConsumeException]
+                [LoggingAspects.Logging]
+                private static bool StartRecording()
                 {
                     Interface.AddLog("Starting screen recording session");
                     Helpers.ScreenRecording.StartRecording(_screen_, VideoFolder + "V" + GUIDRegex().Replace(Guid.NewGuid().ToString(), "") + ".mp4");
+                    return true;
                 }
 
-                private static void StartAudioRecording()
+                [LoggingAspects.ConsumeException]
+                [LoggingAspects.Logging]
+                private static bool StartAudioRecording()
                 {
                     FYI();
+                    return true;
                 }
 
-                private static void StopRecording() 
+                [LoggingAspects.ConsumeException]
+                private static bool StopRecording()
                 {
                     FML();
                     Interface.AddLog("Ending screen recording session");
                     Helpers.ScreenRecording.StopRecording();
                     Interface.AddLog("Screen recording session ended.");
+                    return true;
                 }
 
-                private static void StopAudioRecording()
+                [LoggingAspects.ConsumeException]
+                private static bool StopAudioRecording()
                 {
                     FYI();
+                    return true;
                 }
 
-                private static void PlayAudio()
+                [LoggingAspects.ConsumeException]
+                private static bool PlayAudio()
                 {
-                    string entry = commandstruct?.parameters[0][0] as string;
+                    string entry = commandstruct?.Parameters[0][0] as string;
                     if (entry == null)
                     {
                         Logging.Log("Expected string but parsing failed and returned either a null command struct or a null entry, please submit a bug report.");
                         AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
-                        return;
+                        return false;
                     }
                     try
                     {
@@ -1316,7 +1362,7 @@ namespace Cat
                         {
                             Logging.Log($"Invalid or inaccessible file path: {entry}");
                             Interface.AddTextLog($"Invalid or inaccessible file path: {entry}", RED);
-                            return;
+                            return false;
                         }
                         Logging.Log($"Attempting to play audio file: {entry}");
 
@@ -1355,10 +1401,13 @@ namespace Cat
                     {
                         Logging.Log($"Error while attempting to play audio:");
                         Logging.LogError(ex);
+                        return false;
                     }
+                    return true;
                 }
 
-                private static void StopAudio()
+                [LoggingAspects.ConsumeException]
+                private static bool StopAudio()
                 {
                     Logging.Log("Stopping Audio playback...");
                     try
@@ -1387,84 +1436,112 @@ namespace Cat
                     {
                         Logging.Log($"Error stopping audio playback.");
                         Logging.LogError(ex);
+                        return false;
                     }
                     SilentAudioCleanup = false;
+                    return true;
                 }
 
-                private static void ChangeSettings()
+                [LoggingAspects.ConsumeException]
+                private static bool ChangeSettings()
                 {
                     FYI();
+                    return true;
                 }
 
-                private static void TakeProcessSnapshot()
+                [LoggingAspects.ConsumeException]
+                private static bool TakeProcessSnapshot()
                 {
                     FYI();
+                    return true;
                 }
 
-                private static void StartProcessMeasuring()
+                [LoggingAspects.ConsumeException]
+                private static bool StartProcessMeasuring()
                 {
                     FYI();
+                    return true;
                 }
 
-                private static void StopProcessMeasuring()
+                [LoggingAspects.ConsumeException]
+                private static bool StopProcessMeasuring()
                 {
                     FYI();
+                    return true;
                 }
 
-                private static void OpenLogs()
+                [LoggingAspects.ConsumeException]
+                private static bool OpenLogs()
                 {
                     FYI();
+                    return true;
                 }
 
-                private static void ViewLog()
+                [LoggingAspects.ConsumeException]
+                private static bool ViewLog()
                 {
                     FYI();
+                    return true;
                 }
 
-                private static void ChangeCursor()
+                [LoggingAspects.ConsumeException]
+                private static bool ChangeCursor()
                 {
                     FYI();
+                    return true;
                 }
 
-                private static void ResetCursor()
+                [LoggingAspects.ConsumeException]
+                private static bool ResetCursor()
                 {
                     FYI();
+                    return true;
                 }
 
-                private static void Plot()
+                [LoggingAspects.ConsumeException]
+                [LoggingAspects.Logging]
+                private static bool Plot()
                 {
                     FYI();
+                    return true;
                 }
 
-                private static void SavePlot()
+                [LoggingAspects.ConsumeException]
+                private static bool SavePlot()
                 {
                     FYI();
+                    return true;
                 }
 
-                private static void RandomCatPicture()
+                [LoggingAspects.ConsumeException]
+                [LoggingAspects.Logging]
+                private static bool RandomCatPicture()
                 {
                     AddLog("Generating kitty...");
                     var r = new Helpers.CatWindow();
                     r.Show();
+                    return true;
                 }
 
-                private static void Help()
+                [LoggingAspects.ConsumeException]
+                private static bool Help()
                 {
-                    if (commandstruct == null || commandstruct.Value.parameters[1].Length < 1)
+                    if (commandstruct == null || commandstruct.Value.Parameters[1].Length < 1)
                     {
                         Interface.AddLog("Welcome to the help page!\nThis is the interface for the Kitty program, and is where you can run all the commands");
                         Interface.AddTextLog("Run 'help ;commands' to see a list of commands\nRun 'help ;(cmdname)\n    E.g: 'help ;screenshot'\n  to see extended help for that command.", SWM.Color.FromRgb(0xC0, 0xC0, 0xC0));
                         Interface.AddLog("This is a program created to help automate, manage, and improve overall effectiveness of your computer, currently only for Windows machines.");
                         Interface.AddLog("Uhhh... don't really know what else to put here apart from some general notes:\n   For the PARAMS field when viewing command specific help, the symbols are defined as such:\n      | means OR, so you can input the stuff on the left OR the stuff on the right of the bar\n      [] means OPTIONAL PARAMETER, in other words you don't need to input it.\n      {} denotes a datatype, the expected type you input. bool is true/false, int is any whole number.");
+                        return false;
                     }
                     else
                     {
-                        string str = commandstruct?.parameters[1][0] as string;
-                        if (str == null) 
+                        string str = commandstruct?.Parameters[1][0] as string;
+                        if (str == null)
                         {
                             Logging.Log("Something went wronng when getting the string command input... uh oh......REEEEEEEEEEEEEEEEEEEE");
                             Interface.AddTextLog("[(Potentially?) CRITICAL ERROR] Failed to get string value from inputted parameters, even though ParseCommands() returned true. Send bug report with log, thanks! (or just try again)", SWM.Color.FromRgb(0xff, 0xc0, 0xcb));
-                            return;
+                            return false;
                         }
                         if (str == "commands")
                         {
@@ -1477,25 +1554,28 @@ namespace Cat
                         }
                         else if (cmdmap.TryGetValue(str, out int result))
                         {
-                                var Keys = cmdmap.Where(x => x.Value == result).Select(x => x.Key).ToArray();
-                                var metadata = Commands[result];
-                                Interface.AddLog($"Command: {Keys[0]}");
-                                Interface.AddLog($"Description: {metadata["desc"]}");
-                                Interface.AddLog($"Parameter Format: {metadata["params"]}");
-                                Interface.AddLog($"Shortcut: {metadata["shortcut"]}");
-                                Interface.AddLog($"Aliases: {string.Join(", ", Keys)}");
+                            var Keys = cmdmap.Where(x => x.Value == result).Select(x => x.Key).ToArray();
+                            var metadata = Commands[result];
+                            Interface.AddLog($"Command: {Keys[0]}");
+                            Interface.AddLog($"Description: {metadata["desc"]}");
+                            Interface.AddLog($"Parameter Format: {metadata["params"]}");
+                            Interface.AddLog($"Shortcut: {metadata["shortcut"]}");
+                            Interface.AddLog($"Aliases: {string.Join(", ", Keys)}");
                         }
                         else
                         {
                             Logging.Log($"Failed to find command for help command {str}");
                             Interface.AddLog($"Failed to find command '{str}'.");
+                            return false;
                         }
+                        return true;
                     }
                 }
 
-                internal static void DisplayScreenInformation()
+                [LoggingAspects.ConsumeException]
+                internal static bool DisplayScreenInformation()
                 {
-                    if (commandstruct == null || commandstruct?.parameters[1].Length < 1)
+                    if (commandstruct == null || commandstruct?.Parameters[1].Length < 1)
                     {
                         Logging.Log("Displaying all connected screens' information...");
                         for (int i = 0; i < System.Windows.Forms.Screen.AllScreens.Length; i++)
@@ -1506,15 +1586,16 @@ namespace Cat
                             else
                                 Interface.AddTextLog($"Failed to get Screen #{i}'s information.", RED);
                         }
+                        return true;
                     }
                     else
                     {
-                        int? entryN = (int?)(commandstruct?.parameters[1][0]);
+                        int? entryN = (int?)(commandstruct?.Parameters[1][0]);
                         if (entryN == null)
                         {
                             Logging.Log("Expected int but parsing failed and returned either a null command struct or a null entry, please submit a bug report.");
                             AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
-                            return;
+                            return false;
                         }
                         int entry = entryN.Value;
                         if (entry >= 0 && entry < System.Windows.Forms.Screen.AllScreens.Length)
@@ -1526,11 +1607,14 @@ namespace Cat
                         {
                             Logging.Log("Specified index was outside the bounds of the screen array");
                             Interface.AddTextLog("Please select a valid screen index.", LIGHTRED);
+                            return false;
                         }
+                        return true;
                     }
                 }
 
-                private static void OpenLogger()
+                [LoggingAspects.ConsumeException]
+                private static bool OpenLogger()
                 {
                     if (Logger == null)
                     {
@@ -1539,9 +1623,11 @@ namespace Cat
                     }
                     else
                         Interface.AddTextLog("Live logger already open...", HOTPINK);
+                    return true;
                 }
 
-                private static void CloseLogger()
+                [LoggingAspects.ConsumeException]
+                private static bool CloseLogger()
                 {
                     if (Logger != null)
                     {
@@ -1551,31 +1637,15 @@ namespace Cat
                     }
                     else
                         Interface.AddTextLog("This would be great to run... if there was a log window to run it on.", HOTPINK);
+                    return true;
                 }
 
                 private static class ParameterParsing
                 {
-                    internal readonly struct Command
-                    {
-                        internal readonly string call;
-                        internal readonly string raw;
-                        internal readonly object[][] parameters;
+                    internal readonly record struct Command(string Call, string Raw, object[][]? Parameters = null);
 
-                        internal Command(string call, string raw, object[][] parameters)
-                        {
-                            this.call = call;
-                            this.raw = raw;
-                            this.parameters = parameters;
-                        }
-
-                        internal Command(string call, string raw)
-                        {
-                            this.call = call;
-                            this.raw = raw;
-                            parameters = null;
-                        }
-                    }
-
+                    [LoggingAspects.ConsumeException]
+                    [LoggingAspects.Logging]
                     internal static bool ParseCommand(in string raw, in int num, out Command? command, out string? error_message)
                     {
                         //!! I'm going to leave comments here because this will probably be rather complex :p
@@ -1626,6 +1696,8 @@ namespace Cat
                         return false;
                     }
 
+                    [LoggingAspects.ConsumeException]
+                    [LoggingAspects.Logging]
                     private static bool? ParseSequence(string[] inputs, string sequence, out string? error_message, out object[][]? parsedparams)
                     {
                         error_message = null;
@@ -1639,7 +1711,7 @@ namespace Cat
                             Logging.Log("Sequence only accepts optionals and there were no given inputs. End of Parse");
                             return null;
                         }
-                        
+
                         if (fix > inputs.Length)
                         {
                             string mes = "[PARSE ERROR] Inputs were less than sequence expected";
@@ -1683,6 +1755,7 @@ namespace Cat
                                             }
                                             else Logging.Log($"Failed to cast input #{i}, {inputs[i]} to int.");
                                             break;
+
                                         case "bool":
                                             if (bool.TryParse(inputs[i], out bool bresult))
                                             {
@@ -1695,6 +1768,7 @@ namespace Cat
                                             }
                                             else Logging.Log($"Failed to cast input #{i}, {inputs[i]} to bool.");
                                             break;
+
                                         case "string":
                                             isValid = true;
                                             if (all - (i + 1) < flex)
@@ -1753,6 +1827,6 @@ namespace Cat
             }
         }
 
-#endregion Interface
+        #endregion Interface
     }
 }
