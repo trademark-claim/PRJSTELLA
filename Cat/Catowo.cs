@@ -624,6 +624,7 @@ namespace Cat
                 internal static Interface @interface;
                 private static IWavePlayer WavePlayer;
                 private static AudioFileReader AFR;
+                private static ParameterParsing.Command? commandstruct;
                 private static bool SilentAudioCleanup = false;
                 private static Window? Logger = null;
                 private static readonly Dictionary<string, int> cmdmap = new()
@@ -1064,177 +1065,6 @@ namespace Cat
 
                 private static void FYI()
                     => Interface.AddLog("This feature is coming soon.");
-
-                internal static bool ParseParameters(out object[]? parsedParams)
-                {
-                    parsedParams = null;
-                    Logging.Log("Parsing Parameters...");
-                    bool parameterless = false;
-                    if (cmdtext.Split(';').Length == 1)
-                    {
-                        Logging.Log("No parameters inputted.");
-                        parameterless = true;
-                    }
-                    List<string> parameters = [cmdtext,];
-                    if (!parameterless) 
-                        parameters = cmdtext.Split(';').Select(p => p.Trim()).ToList();
-                    string metadata = Commands[cmdmap[parameters[0]]]["params"] as string;
-                    if (!parameterless)
-                        parameters.RemoveAt(0);
-                    else
-                        parameters = [];
-                    Logging.LogP($"Command metadata ", metadata);
-                    Logging.LogP(parameters);
-                    if (metadata == "" || metadata == null)
-                    {
-                        Logging.Log("Empty Metadata, proceeding.");
-                        return true;
-                    }
-
-                    if (parameterless && (metadata == null || metadata == "" || metadata.Split('[').Length == metadata.Split('{').Length))
-                    {
-                        Logging.Log("No parameters inputted and function is parameterless or has all optional parameters");
-                        return true;
-                    }
-                    var options = metadata.Split("|");
-                    Logging.Log($"Metadata Options: -- {string.Join(", ", options)} -- ({options.Length})");
-                    bool isValid = false;
-                    (int, int)[] values = new (int, int)[options.Length];
-                    for (int i = 0; i < options.Length; i++)
-                    {
-                        int optionals = Math.Abs(options[i].Split('[').Length - 1);
-                        int mincount = Math.Abs(options[i].Split('{').Length - 1) - optionals;
-                        int maxcount = mincount + optionals;
-                        values[i] = (mincount, maxcount);
-                        Logging.Log($"Metacount: {mincount}, parameters: {parameters.Count}");
-                        if (parameters.Count >= mincount && parameters.Count <= maxcount)
-                        {
-                            isValid = true;
-                            break;
-                        }
-                    }
-                    if (!isValid)
-                    {
-                        Logging.Log("Invalid amount of inputted parameters.");
-                        Logging.Log($"Expected {string.Join(", ", values)} parameters but recieved {parameters.Count}");
-                        Interface.AddTextLog($"[PARSE FAILED] Expected {string.Join(", ", values)} parameters but recieved {parameters.Count}", SWM.Color.FromRgb(220, 30, 30));
-                        return false;
-                    }
-
-                    bool fullValid = false;
-                    object[] temp = new object[options.Length];
-                    int actualcounter = 0;
-                    for (int i = 0; i < options.Length; i++)
-                    {
-                        Logging.LogP("Parameters: ", parameters);
-                        if (parameters.Count >= values[i].Item1 && parameters.Count <= values[i].Item2)
-                        {
-                            var optionsy = options[i].Split('{');
-                            for (int j = 0; j < optionsy.Length; j++)
-                            {
-                                string datatype = optionsy[j].Trim().Replace("[", "").Replace("]", "");
-                                Logging.Log($"Datatype: {datatype}, J: {j}");
-                                if (datatype.Contains('}'))
-                                {
-                                    datatype = datatype.IndexOf('}') != -1 ? datatype.Substring(0, datatype.IndexOf('}')) + '}' : datatype;
-                                    if (datatype.Contains('/'))
-                                    {
-                                        datatype = "string}";
-                                    }
-                                    if (actualcounter > parameters.Count - 1)
-                                    {
-                                        break;
-                                    }
-                                    switch (datatype)
-                                    {
-                                        case "string}":
-                                            Logging.Log($"Adding type string {parameters[actualcounter]} as parameter {actualcounter}");
-                                            temp[i] = (parameters[actualcounter]);
-                                            break;
-                                        case "int}":
-                                            Logging.Log($"Parsing {parameters[actualcounter]} as int...");
-                                            if (int.TryParse(parameters[actualcounter], out int iresult))
-                                            {
-                                                Logging.Log($"Successfully cast to int");
-                                                Logging.Log($"Adding type int {parameters[actualcounter]} as parameter {actualcounter}");
-                                                temp[i] = (iresult);
-                                            }
-                                            else
-                                            {
-                                                Logging.Log("Unsuccessful int casting, trying next set of options (if any)");
-                                                isValid = false;
-                                            }
-                                            break;
-                                        case "bool}":
-                                            Logging.Log($"Parsing {parameters[actualcounter]} as bool...");
-                                            if (bool.TryParse(parameters[actualcounter], out bool bresult))
-                                            {
-                                                Logging.Log($"Successfully cast to bool");
-                                                Logging.Log($"Adding type bool {parameters[actualcounter]} as parameter {actualcounter}");
-                                                temp[i] = (bresult);
-                                            }
-                                            else
-                                            {
-                                                Logging.Log("Unsuccessful bool casting, trying next set of options (if any)");
-                                                isValid = false;
-                                            }
-                                            break;
-                                        case "int[]}":
-                                            Logging.Log($"Parsing {parameters[actualcounter]} as int[]...");
-                                            List<int> tempints = new();
-                                            string[] tempparam = parameters[actualcounter].Replace(" ", "").Split(',');
-                                            for (int ilk = 0; ilk < tempparam.Length; ilk++)
-                                            {
-                                                Logging.Log($"Attempting to parse item {tempparam[ilk]} (#{ilk}) as int...");
-                                                if (int.TryParse(tempparam[ilk], out int aresult))
-                                                {
-                                                    Logging.Log("Successfully parsed item as int");
-                                                    tempints.Add(aresult);
-                                                }
-                                                else
-                                                {
-                                                    Logging.Log("Parsing failed");
-                                                    isValid = false;
-                                                    break;
-                                                }
-                                            }
-                                            temp[i] = tempints.ToArray();
-                                            break;
-
-                                        default:
-                                            Logging.Log("[PARSING FAILED] Unidentified metadata tag for data type. Please contact my creator to fix this, include the log file!");
-                                            Interface.AddTextLog("[PARSING FAILED] Unidentified metadata tag for data type. Please contact my creator to fix this, include the log file!", SWM.Color.FromRgb(255, 0, 0));
-                                            break;
-                                    }
-                                    actualcounter++;
-                                }
-                                if (!isValid)
-                                    break;
-                            }
-                        }
-
-
-                        if (isValid)
-                        {
-                            fullValid = true;
-                        }
-                        else
-                        {
-                            isValid = true;
-                        }
-                    }
-                
-                    if (!fullValid)
-                    {
-                        Logging.Log("No 1:1 conversion between inputted parameters and metadata found, failing parse.");
-                        Interface.AddTextLog("[PARSE FAILED] No matching link between expected parameters and inputted parameters found.", SWM.Color.FromRgb(230, 20, 20));
-                        return false;
-                    }
-
-                    parsedParams = temp;
-                    return true;
-                }
-
                 internal static async void ProcessCommand()
                 {
                     cmdtext = @interface.inputTextBox.Text.Trim().ToLower();
@@ -1248,12 +1078,22 @@ namespace Cat
                         if (parts.Length > 1)
                         {
                             var parametersToLog = string.Join(";", parts.Skip(1));
-                            Logging.Log($"Executing command {call}, index {index} with parameters {parametersToLog}");
+                            Logging.Log($"Executing command {call}, index {index} with entered parameters {parametersToLog}");
                         }
                         else
                         {
-                            Logging.Log($"Executing command {call}, index {index} with no parameters");
+                            Logging.Log($"Executing command {call}, index {index} with no entered parameters");
                         }
+                        bool parsestate = ParameterParsing.ParseCommand(cmdtext, value, out commandstruct, out string? error_message);
+                        if (!parsestate)
+                        {
+                            Logging.Log("Failed to parse command.");
+                            Interface.AddTextLog("Execution terminated.", RED);
+                            return;
+                        }
+                        if (!string.IsNullOrEmpty(error_message))
+                            AddTextLog(error_message, RED);
+
                         if (metadata.TryGetValue("function", out var actionObj) && actionObj is Action action)
                             action();
                         else if (metadata.TryGetValue("function", out var funcObj) && actionObj is Func<Task> tfunc)
@@ -1281,21 +1121,21 @@ namespace Cat
 
                 private static async void DEP()
                 {
-                    if (ParseParameters(out object[] args))
+                    string entry = commandstruct?.parameters[0][0] as string;
+                    if (entry == null)
                     {
-                        if (args != null && args[0] != null)
-                        {
-                            string entered = args[0].ToString();
-                            if (entered == "ffmpeg")
-                            {
-                                await Helpers.FFMpegManager.DownloadFFMPEG();
-                                Logging.Log("DEP Execution " + Helpers.BackendHelping.Glycemia("Complete"));
-                            }
-                            else
-                            {
-                                Interface.AddLog("Unrecognised Process name.");
-                            }
-                        }
+                        Logging.Log("Expected string but parsing failed and returned either a null command struct or a null entry, please submit a bug report.");
+                        AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
+                        return;
+                    }
+                    if (entry == "ffmpeg")
+                    {
+                        await Helpers.FFMpegManager.DownloadFFMPEG();
+                        Logging.Log("DEP Execution " + Helpers.BackendHelping.Glycemia("Complete"));
+                    }
+                    else
+                    {
+                        Interface.AddLog("Unrecognised Process name.");
                     }
                 }
 
@@ -1314,104 +1154,118 @@ namespace Cat
                 }
 
                 private static void ChangeScreen()
-                { 
-                    if (ParseParameters(out object[] args) && args != null)
+                {
+                    int? entry = (int?)(commandstruct?.parameters[0][0]);
+                    if (entry == null)
                     {
-                        if (args[0] is int arg && arg >= 0 && arg < System.Windows.Forms.Screen.AllScreens.Length)
-                        {
-                            Logging.Log($"Changing screen to Screen #{arg}");
-                            Catowo.inst.Screen = arg;
-                        }
-                        else
-                        {
-                            Logging.Log("Screen index out of bounds of array.");
-                            Interface.AddLog($"Failed to find screen with index: {args[0]}");
-                        }
+                        Logging.Log("Expected string but parsing failed and returned either a null command struct or a null entry, please submit a bug report.");
+                        AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
+                        return;
+                    }
+                    if (entry >= 0 && entry < System.Windows.Forms.Screen.AllScreens.Length)
+                    {
+                        Logging.Log($"Changing screen to Screen #{entry}");
+                        Catowo.inst.Screen = entry.Value;
+                    }
+                    else
+                    {
+                        Logging.Log("Screen index out of bounds of array.");
+                        Interface.AddLog($"Failed to find screen with index: {entry}");
                     }
                 }
 
                 private static async void Screenshot()
                 {
                     await @interface.Hide();
-                    if (ParseParameters(out object[] args))
+                    int? entryN = (int?)(commandstruct?.parameters[0][0]);
+                    if (entryN == null)
                     {
-                        Logging.Log("Taking screenshots...");
-                        if (args is null)
-                            args = new object[1];
-                        if (args[0] is null)
-                            args[0] = Array.IndexOf(System.Windows.Forms.Screen.AllScreens, System.Windows.Forms.Screen.PrimaryScreen);
-                        if (args[0] is int arg && arg >= 0 && arg < System.Windows.Forms.Screen.AllScreens.Length)
-                        {
-                            Logging.Log($"Capturing screen {arg}");
-                            Bitmap bmp = Helpers.Screenshotting.CaptureScreen(arg, out string? error);
-                            if (error != "" && error != null)
+                        Logging.Log("Expected int but parsing failed and returned either a null command struct or a null entry, please submit a bug report.");
+                        AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
+                        return;
+                    }
+                    int entry = entryN.Value;
+                    Logging.Log("Taking screenshots...");
+                    switch (entry)
+                    {
+                        case >= 0 when entry < System.Windows.Forms.Screen.AllScreens.Length:
                             {
-                                Interface.AddTextLog(error, RED);
-                                @interface.Show();
-                                return;
-                            }
-                            Logging.Log("Captured!");
-                            string path = SSFolder + $"Shot{GUIDRegex().Replace(Guid.NewGuid().ToString(), "")}.png";
-                            bmp.Save(path, ImageFormat.Png);
-                            bmp.Dispose();
-                            Interface.AddLog("Screenshot saved!");
-                            Logging.Log($"Shot saved to {path}");
-                        }
-                        else if (args[0] is int arg2 && arg2 == -1)
-                        {
-                            Logging.Log("Capturing all screens, individual mode");
-                            List<Bitmap> bmps = Helpers.Screenshotting.AllIndivCapture(out var errors);
-                            errors?.RemoveAll(x => x == null);
-                            if (errors != null && errors?.Count > 0)
-                            {
-                                for (int i = 0; i < errors.Count; i++)
+                                Logging.Log($"Capturing screen {entry}");
+                                Bitmap bmp = Helpers.Screenshotting.CaptureScreen(entry, out string? error);
+                                if (error != "" && error != null)
                                 {
-                                    string? error = errors[i];
-                                    if (error != null)
-                                        Interface.AddTextLog($"Error when shooting screen {i}" + error, RED);
-                                    Logging.Log(error == null? "no error" : error);
+                                    AddTextLog(error, RED);
+                                    @interface.Show();
+                                    return;
                                 }
-                                @interface.Show();
-                                Logging.Log("Exiting Screenshotting due to errors.");
-                                return;
-                            }
-                            Logging.Log($"{bmps.Count} shots taken!");
-                            for (int i = 0; i < bmps.Count; i++)
-                            {
-                                Bitmap bmp = bmps[i];
-                                string path = SSFolder + $"IShot{i}{GUIDRegex().Replace(Guid.NewGuid().ToString(), "")}.png";
+                                Logging.Log("Captured!");
+                                string path = SSFolder + $"Shot{GUIDRegex().Replace(Guid.NewGuid().ToString(), "")}.png";
                                 bmp.Save(path, ImageFormat.Png);
-                                Logging.Log($"Saved shot {i} to {path}");
                                 bmp.Dispose();
+                                AddLog("Screenshot saved!");
+                                Logging.Log($"Shot saved to {path}");
+                                break;
                             }
-                            Interface.AddLog("Screenshots saved!");
-                        }
-                        else if (args[0] is int arg3 && arg3 == -2)
-                        {
-                            Logging.Log("Capturing all screens, stitch mode");
-                            Bitmap bmp = Helpers.Screenshotting.StitchCapture(out var error);
-                            if (error != "" && error != null)
+
+                        case -1:
                             {
-                                Logging.Log(error);
-                                Interface.AddTextLog(error, RED);
+                                Logging.Log("Capturing all screens, individual mode");
+                                List<Bitmap> bmps = Helpers.Screenshotting.AllIndivCapture(out var errors);
+                                errors?.RemoveAll(x => x == null);
+                                if (errors != null && errors?.Count > 0)
+                                {
+                                    for (int i = 0; i < errors.Count; i++)
+                                    {
+                                        string? error = errors[i];
+                                        if (error != null)
+                                            AddTextLog($"Error when shooting screen {i}" + error, RED);
+                                        Logging.Log(error == null ? "no error" : error);
+                                    }
+                                    @interface.Show();
+                                    Logging.Log("Exiting Screenshotting due to errors.");
+                                    return;
+                                }
+                                Logging.Log($"{bmps.Count} shots taken!");
+                                for (int i = 0; i < bmps.Count; i++)
+                                {
+                                    Bitmap bmp = bmps[i];
+                                    string path = SSFolder + $"IShot{i}{GUIDRegex().Replace(Guid.NewGuid().ToString(), "")}.png";
+                                    bmp.Save(path, ImageFormat.Png);
+                                    Logging.Log($"Saved shot {i} to {path}");
+                                    bmp.Dispose();
+                                }
+                                AddLog("Screenshots saved!");
+                                break;
+                            }
+
+                        case -2:
+                            {
+                                Logging.Log("Capturing all screens, stitch mode");
+                                Bitmap bmp = Helpers.Screenshotting.StitchCapture(out var error);
+                                if (error != "" && error != null)
+                                {
+                                    Logging.Log(error);
+                                    AddTextLog(error, RED);
+                                    @interface.Show();
+                                    return;
+                                }
+                                Logging.Log("Captured!");
+                                string path = SSFolder + $"SShot{GUIDRegex().Replace(Guid.NewGuid().ToString(), "")}.png";
+                                bmp.Save(path, ImageFormat.Png);
+                                bmp.Dispose();
+                                AddLog("Screenshot saved!");
+                                Logging.Log($"Shot saved to {path}");
+                                break;
+                            }
+
+                        default:
+                            {
+                                string str = $"Expected arg1 value within -2 to {System.Windows.Forms.Screen.AllScreens.Length}";
+                                AddTextLog(str, LIGHTRED);
+                                Logging.Log(str);
                                 @interface.Show();
                                 return;
                             }
-                            Logging.Log("Captured!");
-                            string path = SSFolder + $"SShot{GUIDRegex().Replace(Guid.NewGuid().ToString(), "")}.png";
-                            bmp.Save(path, ImageFormat.Png);
-                            bmp.Dispose();
-                            Interface.AddLog("Screenshot saved!");
-                            Logging.Log($"Shot saved to {path}");
-                        }
-                        else
-                        {
-                            string str = $"Expected arg1 value within -2 to {System.Windows.Forms.Screen.AllScreens.Length}";
-                            Interface.AddTextLog(str, LIGHTRED);
-                            Logging.Log(str);
-                            @interface.Show();
-                            return;
-                        }
                     }
                     @interface.Show();
                 }
@@ -1449,68 +1303,58 @@ namespace Cat
 
                 private static void PlayAudio()
                 {
-                    if (ParseParameters(out object[] args))
+                    string entry = commandstruct?.parameters[0][0] as string;
+                    if (entry == null)
                     {
-                        if (args == null || args[0] == null)
+                        Logging.Log("Expected string but parsing failed and returned either a null command struct or a null entry, please submit a bug report.");
+                        AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
+                        return;
+                    }
+                    try
+                    {
+                        if (string.IsNullOrWhiteSpace(entry) || !ValidateFile(entry))
                         {
-                            Logging.Log("Args was null, expected Filepath object.");
-                            Interface.AddTextLog("Args was null, expected Filepath object.", RED);
+                            Logging.Log($"Invalid or inaccessible file path: {entry}");
+                            Interface.AddTextLog($"Invalid or inaccessible file path: {entry}", RED);
+                            return;
                         }
+                        Logging.Log($"Attempting to play audio file: {entry}");
 
-                        try
+                        if (WavePlayer != null)
                         {
-                            if (args.Length == 0 || args[0] == null)
-                            {
-                                Logging.Log("Args was null or empty, expected Filepath object.");
-                                Interface.AddTextLog("Args was null or empty, expected Filepath object.", RED);
-                                return;
-                            }
-
-                            string filePath = args[0] as string;
-                            if (string.IsNullOrWhiteSpace(filePath) || !ValidateFile(filePath))
-                            {
-                                Logging.Log($"Invalid or inaccessible file path: {filePath}");
-                                Interface.AddTextLog($"Invalid or inaccessible file path: {filePath}", RED);
-                                return;
-                            }
-                            Logging.Log($"Attempting to play audio file: {filePath}");
-
-                            if (WavePlayer != null)
-                            {
-                                Logging.Log("An audio file is already playing. Stopping current audio.");
-                                Interface.AddLog("An audio file is already playing. Stopping current audio...");
-                                StopAudio();
-                            }
-                            Logging.Log("Creating Waveout and Audio file reader objects...");
-                            WavePlayer = new WaveOut();
-                            AFR = new AudioFileReader(filePath);
-                            WavePlayer.Init(AFR);
-
-                            WavePlayer.PlaybackStopped += (s, e) =>
-                            {
-                                if (e.Exception != null)
-                                {
-                                    Logging.Log($"Playback stopped due to an exception.");
-                                    Logging.LogError(e.Exception);
-                                }
-                                else
-                                {
-                                    Logging.Log("Playback stopped without any exception.");
-                                }
-                                StopAudio();
-                            };
-                            Logging.Log("Objects created successfully.");
-
-                            WavePlayer.Play();
-
-                            Logging.Log("Audio playback started successfully.");
-                            Interface.AddLog($"Playing {filePath}");
+                            Logging.Log("An audio file is already playing. Stopping current audio.");
+                            Interface.AddLog("An audio file is already playing. Stopping current audio...");
+                            StopAudio();
                         }
-                        catch (Exception ex)
+                        Logging.Log("Creating Waveout and Audio file reader objects...");
+                        WavePlayer = new WaveOut();
+                        AFR = new AudioFileReader(entry);
+                        WavePlayer.Init(AFR);
+
+                        WavePlayer.PlaybackStopped += (s, e) =>
                         {
-                            Logging.Log($"Error while attempting to play audio:");
-                            Logging.LogError(ex);
-                        }
+                            if (e.Exception != null)
+                            {
+                                Logging.Log($"Playback stopped due to an exception.");
+                                Logging.LogError(e.Exception);
+                            }
+                            else
+                            {
+                                Logging.Log("Playback stopped without any exception.");
+                            }
+                            StopAudio();
+                        };
+                        Logging.Log("Objects created successfully.");
+
+                        WavePlayer.Play();
+
+                        Logging.Log("Audio playback started successfully.");
+                        Interface.AddLog($"Playing {entry}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Logging.Log($"Error while attempting to play audio:");
+                        Logging.LogError(ex);
                     }
                 }
 
@@ -1601,78 +1445,82 @@ namespace Cat
                 {
                     AddLog("Generating kitty...");
                     var r = new Helpers.CatWindow();
+                    r.Show();
                 }
 
                 private static void Help()
                 {
-                    bool success = ParseParameters(out object[]? args);
-                    Logging.LogP($"Executing help command with args: ", args);
-                    if (success)
+                    if (commandstruct == null || commandstruct.Value.parameters[1].Length < 1)
                     {
-                        if (args == null)
+                        Interface.AddLog("Welcome to the help page!\nThis is the interface for the Kitty program, and is where you can run all the commands");
+                        Interface.AddTextLog("Run 'help ;commands' to see a list of commands\nRun 'help ;(cmdname)\n    E.g: 'help ;screenshot'\n  to see extended help for that command.", SWM.Color.FromRgb(0xC0, 0xC0, 0xC0));
+                        Interface.AddLog("This is a program created to help automate, manage, and improve overall effectiveness of your computer, currently only for Windows machines.");
+                        Interface.AddLog("Uhhh... don't really know what else to put here apart from some general notes:\n   For the PARAMS field when viewing command specific help, the symbols are defined as such:\n      | means OR, so you can input the stuff on the left OR the stuff on the right of the bar\n      [] means OPTIONAL PARAMETER, in other words you don't need to input it.\n      {} denotes a datatype, the expected type you input. bool is true/false, int is any whole number.");
+                    }
+                    else
+                    {
+                        string str = commandstruct?.parameters[1][0] as string;
+                        if (str == null) 
                         {
-                            Interface.AddLog("Welcome to the help page!\nThis is the interface for the Kitty program, and is where you can run all the commands");
-                            Interface.AddTextLog("Run 'help ;commands' to see a list of commands\nRun 'help ;(cmdname)\n    E.g: 'help ;screenshot'\n  to see extended help for that command.", SWM.Color.FromRgb(0xC0, 0xC0, 0xC0));
-                            Interface.AddLog("This is a program created to help automate, manage, and improve overall effectiveness of your computer, currently only for Windows machines.");
-                            Interface.AddLog("Uhhh... don't really know what else to put here apart from some general notes:\n   For the PARAMS field when viewing command specific help, the symbols are defined as such:\n      | means OR, so you can input the stuff on the left OR the stuff on the right of the bar\n      [] means OPTIONAL PARAMETER, in other words you don't need to input it.\n      {} denotes a datatype, the expected type you input. bool is true/false, int is any whole number.");
+                            Logging.Log("Something went wronng when getting the string command input... uh oh......REEEEEEEEEEEEEEEEEEEE");
+                            Interface.AddTextLog("[(Potentially?) CRITICAL ERROR] Failed to get string value from inputted parameters, even though ParseCommands() returned true. Send bug report with log, thanks! (or just try again)", SWM.Color.FromRgb(0xff, 0xc0, 0xcb));
+                            return;
                         }
-                        else if (args.Length > 0)
+                        if (str == "commands")
                         {
-                            string str = args[0] != null ? args[0].ToString() : "";
-                            if (str == null) 
+                            Interface.AddLog("Heres a list of every command:");
+                            foreach (int key in Commands.Keys)
                             {
-                                Logging.Log("Something went wronng when getting the string command input... uh oh......REEEEEEEEEEEEEEEEEEEE");
-                                Interface.AddTextLog("[(Potentially?) CRITICAL ERROR] Failed to get string value from inputted parameters, even though ParseCommands() returned true. Send bug report with log, thanks! (or just try again)", SWM.Color.FromRgb(0xff, 0xc0, 0xcb));
-                                return;
+                                var firstKey = cmdmap.FirstOrDefault(x => x.Value == key).Key;
+                                Interface.AddLog($"- {firstKey}");
                             }
-                            if (str == "commands")
-                            {
-                                Interface.AddLog("Heres a list of every command:");
-                                foreach (int key in Commands.Keys)
-                                {
-                                    var firstKey = cmdmap.FirstOrDefault(x => x.Value == key).Key;
-                                    Interface.AddLog($"- {firstKey}");
-                                }
-                            }
-                            else if (cmdmap.TryGetValue(str, out int result))
-                            {
-                                    var Keys = cmdmap.Where(x => x.Value == result).Select(x => x.Key).ToArray();
-                                    var metadata = Commands[result];
-                                    Interface.AddLog($"Command: {Keys[0]}");
-                                    Interface.AddLog($"Description: {metadata["desc"]}");
-                                    Interface.AddLog($"Parameter Format: {metadata["params"]}");
-                                    Interface.AddLog($"Shortcut: {metadata["shortcut"]}");
-                                    Interface.AddLog($"Aliases: {string.Join(", ", Keys)}");
-                            }
-                            else
-                            {
-                                Logging.Log($"Failed to find command for help command {str}");
-                                Interface.AddLog($"Failed to find command '{str}'.");
-                            }
+                        }
+                        else if (cmdmap.TryGetValue(str, out int result))
+                        {
+                                var Keys = cmdmap.Where(x => x.Value == result).Select(x => x.Key).ToArray();
+                                var metadata = Commands[result];
+                                Interface.AddLog($"Command: {Keys[0]}");
+                                Interface.AddLog($"Description: {metadata["desc"]}");
+                                Interface.AddLog($"Parameter Format: {metadata["params"]}");
+                                Interface.AddLog($"Shortcut: {metadata["shortcut"]}");
+                                Interface.AddLog($"Aliases: {string.Join(", ", Keys)}");
+                        }
+                        else
+                        {
+                            Logging.Log($"Failed to find command for help command {str}");
+                            Interface.AddLog($"Failed to find command '{str}'.");
                         }
                     }
                 }
 
                 internal static void DisplayScreenInformation()
                 {
-                    if (ParseParameters(out object[] args))
+                    if (commandstruct == null || commandstruct?.parameters[1].Length < 1)
                     {
-                        if (args == null)
+                        Logging.Log("Displaying all connected screens' information...");
+                        for (int i = 0; i < System.Windows.Forms.Screen.AllScreens.Length; i++)
                         {
-                            Logging.Log("Displaying all connected screens' information...");
-                            for (int i = 0; i < System.Windows.Forms.Screen.AllScreens.Length; i++)
-                            {
-                                Screen screen = System.Windows.Forms.Screen.AllScreens[i];
-                                if (screen != null)
-                                    Interface.AddLog($"Screen {i + 1}", $"   Device Name: {screen.DeviceName}", $"   Bounds: {screen.Bounds.Width}px Width, {screen.Bounds.Height}px Height, {screen.Bounds.X}x, {screen.Bounds.Y}y, {screen.Bounds.Top}px Top, {screen.Bounds.Left}px left.", $"   Is Primary: {screen.Primary}", $"   BPP: {screen.BitsPerPixel}");
-                                else
-                                    Interface.AddTextLog($"Failed to get Screen #{i}'s information.", RED);
-                            }
+                            Screen screen = System.Windows.Forms.Screen.AllScreens[i];
+                            if (screen != null)
+                                Interface.AddLog($"Screen {i + 1}", $"   Device Name: {screen.DeviceName}", $"   Bounds: {screen.Bounds.Width}px Width, {screen.Bounds.Height}px Height, {screen.Bounds.X}x, {screen.Bounds.Y}y, {screen.Bounds.Top}px Top, {screen.Bounds.Left}px left.", $"   Is Primary: {screen.Primary}", $"   BPP: {screen.BitsPerPixel}");
+                            else
+                                Interface.AddTextLog($"Failed to get Screen #{i}'s information.", RED);
                         }
-                        else if (args[0] is int arg && arg >= 0 && arg < System.Windows.Forms.Screen.AllScreens.Length)
+                    }
+                    else
+                    {
+                        int? entryN = (int?)(commandstruct?.parameters[1][0]);
+                        if (entryN == null)
                         {
-                            Screen screen = System.Windows.Forms.Screen.AllScreens[(int)args[0]];
-                            Interface.AddLog($"Screen {arg + 1}", $"   Device Name: {screen.DeviceName}", $"   Bounds: {screen.Bounds.Width}px Width, {screen.Bounds.Height}px Height, {screen.Bounds.X}x, {screen.Bounds.Y}y, {screen.Bounds.Top}px Top, {screen.Bounds.Left}px left.", $"   Is Primary: {screen.Primary}", $"   BPP: {screen.BitsPerPixel}");
+                            Logging.Log("Expected int but parsing failed and returned either a null command struct or a null entry, please submit a bug report.");
+                            AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
+                            return;
+                        }
+                        int entry = entryN.Value;
+                        if (entry >= 0 && entry < System.Windows.Forms.Screen.AllScreens.Length)
+                        {
+                            Screen screen = System.Windows.Forms.Screen.AllScreens[entry];
+                            Interface.AddLog($"Screen {entry + 1}", $"   Device Name: {screen.DeviceName}", $"   Bounds: {screen.Bounds.Width}px Width, {screen.Bounds.Height}px Height, {screen.Bounds.X}x, {screen.Bounds.Y}y, {screen.Bounds.Top}px Top, {screen.Bounds.Left}px left.", $"   Is Primary: {screen.Primary}", $"   BPP: {screen.BitsPerPixel}");
                         }
                         else
                         {
@@ -1758,7 +1606,7 @@ namespace Cat
                         string[] inputs = linputs.ToArray();
                         // Split the metadata into every expected sequence
                         string[] optionals = metadata.Contains('|') ? metadata.Split('|') : [metadata,];
-                        Logging.Log("Optionals", optionals);
+                        Logging.LogP("Optionals", optionals);
                         List<string> couldbes = new(optionals.Length);
                         foreach (string sequence in optionals)
                         {
@@ -1773,7 +1621,7 @@ namespace Cat
                                 return true;
                             }
                         }
-                        Logging.Log("[PARSE FAILED] No matching sequence to input found. Please use 'help ;{call}` to see expected command parameters.");
+                        Logging.Log($"[PARSE FAILED] No matching sequence to input found. Please use 'help ;{call}` to see expected command parameters.");
                         error_message = "Unrecognised arguments." + (error_message != "" && error_message != null ? "Additional Error(s): " + error_message : "");
                         return false;
                     }
@@ -1815,8 +1663,9 @@ namespace Cat
                             List<object> flexparams = new(flex), fixparams = new(fix);
                             for (int i = 0; i < results.Length; i++)
                             {
+                                //Logging.Log(i, all - i, flex, fix, "");
                                 string[] types = results[i].Split('/');
-                                Logging.Log("Types: ", types);
+                                Logging.LogP("Types: ", types);
                                 bool isValid = false;
                                 foreach (string type in types)
                                 {
@@ -1839,7 +1688,7 @@ namespace Cat
                                             {
                                                 Logging.Log($"Successfully cast input #{i}, {inputs[i]} to bool.");
                                                 isValid = true;
-                                                if (all - i + 1 < flex)
+                                                if (all - (i + 1) < flex)
                                                     flexparams.Add(bresult);
                                                 else
                                                     fixparams.Add(bresult);
@@ -1848,7 +1697,7 @@ namespace Cat
                                             break;
                                         case "string":
                                             isValid = true;
-                                            if (all - i + 1 < flex)
+                                            if (all - (i + 1) < flex)
                                                 flexparams.Add(inputs[i]);
                                             else
                                                 fixparams.Add(inputs[i]);
@@ -1863,7 +1712,7 @@ namespace Cat
                                 }
                             }
                             parsedparams = [fixparams.ToArray(), flexparams.ToArray()];
-                            Logging.Log("Parsed Params object:", parsedparams);
+                            Logging.LogP("Parsed Params object:", parsedparams);
                             return true;
                         }
                         else

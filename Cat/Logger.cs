@@ -132,7 +132,7 @@ namespace Cat
 
             if (message is IEnumerable enumerable && !(message is string))
             {
-                var sb = new StringBuilder();
+                var sb = new StringBuilder("Enum:");
                 sb.AppendLine();
                 foreach (var item in enumerable)
                     sb.AppendLine(new string(' ', indentLevel * 2) + "- " + ProcessMessage(item, indentLevel + 1));
