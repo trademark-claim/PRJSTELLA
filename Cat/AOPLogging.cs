@@ -3,13 +3,14 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 
 namespace Cat
 {
     internal static class LoggingAspects
     {
         [Aspect(Scope.Global)]
-        [AttributeUsage(AttributeTargets.Method, AllowMultiple=false)]
+        [AttributeUsage(AttributeTargets.Method | AttributeTargets.Constructor, AllowMultiple=false)]
         [Injection(typeof(Logging))]
         public class Logging : Attribute
         {
@@ -60,7 +61,7 @@ namespace Cat
         }
 
         [Aspect(Scope.Global)]
-        [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
+        [AttributeUsage(AttributeTargets.Method | AttributeTargets.Constructor, AllowMultiple = false)]
         [Injection(typeof(ConsumeException))]
         public class ConsumeException : Attribute
         {
@@ -100,7 +101,7 @@ namespace Cat
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
         public class RecordTime : Attribute;
 
-        [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
+        [AttributeUsage(AttributeTargets.Method | AttributeTargets.Constructor, AllowMultiple = false)]
         public class InterfaceNotice : Attribute;
 
         [Aspect(Scope.Global)]
@@ -115,7 +116,25 @@ namespace Cat
             {
                 if (typeof(Task).IsAssignableFrom(returnType))
                 {
-                    return HandleAsync(method, args, target, returnType).ConfigureAwait(false);
+                    try
+                    {
+                        // Execute the target method and handle the result for Task or Task<T>.
+                        var result = target(args);
+                        if (returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(Task<>))
+                        {
+                            var taskType = returnType.GetGenericArguments()[0];
+                            return ProcessTaskWithResult(result, taskType, method);
+                        }
+                        else
+                        {
+                            // For Task (non-generic), directly return the task.
+                            return result;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        return HandleException(ex, method, returnType);
+                    }
                 }
                 else
                 {
@@ -125,58 +144,75 @@ namespace Cat
                 }
             }
 
-            private async Task<object> HandleAsync(MethodBase method, object[] args, Func<object[], object> target, Type returnType)
+            private static object ProcessTaskWithResult(object task, Type resultType, MethodBase method)
             {
-                try
-                {
-                    var task = (Task)target(args);
-                    await task.ConfigureAwait(false);
-                    var resultProperty = returnType.GetProperty("Result");
-                    return returnType.IsGenericType ? resultProperty.GetValue(task) : null;
-                }
-                catch (Exception ex)
-                {
-                    Cat.Logging.LogError(ex);
-                    if (method.IsDefined(typeof(InterfaceNotice), false))
-                        Catowo.Interface.AddTextLogR($"Error caught while executing {target.Method.DeclaringType}.{target.Method.Name}", RED);
-                    if (method.IsDefined(typeof(UpsetStomach), false))
-                    {
-                        Task.Run(async () => await Cat.Logging.FinalFlush()).GetAwaiter().GetResult();
-                        throw;
-                    }
+                // Process Task<T> to handle its result or exception.
+                var taskCompletionSource = (TaskCompletionSource<object>)Activator.CreateInstance(typeof(TaskCompletionSource<>).MakeGenericType(resultType));
 
-                    if (returnType == typeof(Task)) return Task.CompletedTask;
-                    else if (returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(Task<bool>))
+                ((Task)task).ContinueWith(t =>
+                {
+                    if (t.IsFaulted && t.Exception != null)
                     {
-                        var taskType = returnType.GetGenericArguments()[0];
-                        var defaultValue = taskType.IsValueType ? Activator.CreateInstance(taskType) : null;
-                        return CreateCompletedTask(taskType, false);
+                        HandleException(t.Exception, method, typeof(Task<>).MakeGenericType(resultType));
+                        taskCompletionSource.TrySetException(t.Exception.InnerExceptions);
                     }
-                    else if (returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(Task<int>))
+                    else if (t.IsCanceled)
                     {
-                        var taskType = returnType.GetGenericArguments()[0];
-                        return CreateCompletedTask(taskType, -7911);
-                    }
-                    else if (returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(Task<>))
-                    {
-                        var taskType = returnType.GetGenericArguments()[0];
-                        var defaultValue = taskType.IsValueType ? Activator.CreateInstance(taskType) : null;
-                        return CreateCompletedTask(taskType, defaultValue);
+                        taskCompletionSource.TrySetCanceled();
                     }
                     else
                     {
-                        Cat.Logging.Log("[CRITICALLY FATAL ERROR] Asynchronous Exception Swallower tried to consume unexpected return type... this should never happen... please make a bug report and submit this log.");
-                        Task.Run(async () => await Cat.Logging.FinalFlush()).GetAwaiter().GetResult();
-                        throw new InvalidOperationException("Unexpected return type for async method.");
+                        var resultProp = t.GetType().GetProperty("Result");
+                        var result = resultProp.GetValue(t);
+                        taskCompletionSource.TrySetResult(result);
                     }
+                }, TaskScheduler.Current);
+
+                return taskCompletionSource.Task;
+            }
+
+            private static object HandleException(Exception ex, MethodBase method, Type returnType)
+            {
+                var capturedException = ExceptionDispatchInfo.Capture(ex);
+                Cat.Logging.LogError(ex);
+                if (method.IsDefined(typeof(InterfaceNotice), false))
+                {
+                    Catowo.Interface.AddTextLogR($"Error caught while executing {method.DeclaringType}.{method.Name}", RED);
+                }
+
+                // Check if UpsetStomach attribute is present.
+                if (method.IsDefined(typeof(UpsetStomach), false))
+                {
+                    Task.Run(async () => await Cat.Logging.FinalFlush()).GetAwaiter().GetResult();
+                    capturedException.Throw();
+                }
+
+                // Return a faulted task based on the returnType.
+                if (returnType == typeof(Task))
+                {
+                    return Task.FromException(ex);
+                }
+                else if (returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(Task<>))
+                {
+                    return CreateFaultedTask(returnType.GetGenericArguments()[0], ex);
+                }
+                else
+                {
+                    Cat.Logging.Log("[CRITICALLY FATAL ERROR] Asynchronous Exception Swallower tried to consume unexpected return type... this should never happen... please make a bug report and submit this log.");
+                    Task.Run(async () => await Cat.Logging.FinalFlush()).GetAwaiter().GetResult();
+                    throw new InvalidOperationException("Unexpected return type for async method.");
                 }
             }
 
-            private static object CreateCompletedTask(Type resultType, object result)
+            private static object CreateFaultedTask(Type resultType, Exception exception)
             {
-                var method = typeof(Task).GetMethod(nameof(Task.FromResult))
-                                         .MakeGenericMethod(resultType);
-                return method.Invoke(null, new[] { result });
+                var method = typeof(TaskCompletionSource<>)
+                    .MakeGenericType(resultType)
+                    .GetMethod("TrySetException", new Type[] { typeof(Exception) });
+
+                var taskCompletionSource = Activator.CreateInstance(typeof(TaskCompletionSource<>).MakeGenericType(resultType));
+                method.Invoke(taskCompletionSource, new object[] { exception });
+                return taskCompletionSource.GetType().GetProperty("Task").GetValue(taskCompletionSource);
             }
         }
     }

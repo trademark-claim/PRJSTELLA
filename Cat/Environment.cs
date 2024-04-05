@@ -7,7 +7,7 @@ namespace Cat
         internal static readonly string RunningPath = AppDomain.CurrentDomain.BaseDirectory;
         internal const string BCURPATH = "black1.cur";
         internal static readonly Random random = new();
-        internal static readonly string LogPath = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\Logs\\L" + GUIDRegex().Replace(Guid.NewGuid().ToString(), "") + ".txt";
+        internal static readonly string LogPath = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\Logs\\L" + GUIDRegex().Replace(Guid.NewGuid().ToString(), "") + ".LOG";
 
         internal const string LogFolder = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\Logs\\";
         internal const string AudioFolder = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\Audio\\";
@@ -17,7 +17,7 @@ namespace Cat
         internal const string NotesFolder = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\Notes\\";
         internal const string ExternalProcessesFolder = "C:\\ProgramData\\Kitty\\Cat\\Processes\\";
         internal const string EPTempF = "C:\\ProgramData\\Kitty\\Cat\\Processes\\temp";
-        internal const string UserDataFile = UserFolder + "hello_mr_edit_my_raw_data.txt";
+        internal const string UserDataFile = UserFolder + "hello_mr_edit_my_raw_data.ini";
         internal const string FFMPEGPath = ExternalProcessesFolder + "ffmpeg.exe";
 
         internal static bool AssemblyInformation = false;

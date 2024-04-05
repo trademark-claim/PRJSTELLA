@@ -8,6 +8,7 @@ global using static Cat.Statics;
 global using static Cat.Structs;
 global using SWC = System.Windows.Controls;
 using NAudio.Wave;
+using System.CodeDom;
 using System.Diagnostics;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
@@ -809,7 +810,13 @@ namespace Cat
 
                     { "download expr", 27 },
 
-                    { "run progress bar test", 28 }
+                    { "run progress bar test", 28 },
+
+                    { "view settings", 29 },
+                    { "see settings", 29 },
+                    { "print settings", 29 },
+                    { "vs", 29 },
+
                 };
 
                 private static readonly Dictionary<int, Dictionary<string, object>> Commands = new()
@@ -1075,6 +1082,15 @@ namespace Cat
                             { "shortcut", ""}
                         }
                     },
+                    {
+                        29, new Dictionary<string, object>
+                        {
+                            { "desc", "Prints all user settings in the format:\n[Section]\n  [Key]: [Value]" },
+                            { "params", "" },
+                            { "function", (Func<bool>)ShowSettings },
+                            { "shortcut", ""}
+                        }
+                    },
                 };
 
                 private static string cmdtext;
@@ -1130,6 +1146,23 @@ namespace Cat
                     }
                     @interface.inputTextBox.Text = string.Empty;
                     Interface.AddLog("\n");
+                }
+
+                [LoggingAspects.Logging]
+                [LoggingAspects.ConsumeException]
+                [LoggingAspects.InterfaceNotice]
+                internal static bool ShowSettings()
+                {
+                    var data = Helpers.IniParsing.GetStructure(UserDataFile);
+                    foreach (string key in data.Keys) 
+                    {
+                        Interface.AddLog(key);
+                        foreach (KeyValuePair<string, string> kvp in data[key])
+                        {
+                            Interface.AddLog($"   {kvp.Key}: {kvp.Value}");
+                        }
+                    }
+                    return true;
                 }
 
                 [LoggingAspects.ConsumeException]
@@ -1445,8 +1478,57 @@ namespace Cat
                 [LoggingAspects.ConsumeException]
                 private static bool ChangeSettings()
                 {
-                    FYI();
-                    return true;
+                    (string? entryN, string? entryM) = ((string?)(commandstruct?.Parameters[0][0]), (string?)(commandstruct?.Parameters[0][1]));
+                    if (entryN == null)
+                    {
+                        Logging.Log("Expected string but parsing failed and returned either a null command struct or a null entry, please submit a bug report. (Key Argument)");
+                        AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
+                        return false;
+                    }
+                    if (entryM == null)
+                    {
+                        Logging.Log("Expected string but parsing failed and returned either a null command struct or a null entry, please submit a bug report. (Value argument)");
+                        AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
+                        return false;
+                    }
+                    var data = Helpers.IniParsing.GetStructure(UserDataFile);
+                    foreach (var section in data.Keys)
+                        foreach (KeyValuePair<string, string> kvp in data[section])
+                            if (kvp.Key.ToLower() == entryN.ToLower())
+                            {
+                                Type type = Helpers.IniParsing.validation[kvp.Key].Item1 as Type;
+                                if (type == typeof(float))
+                                {
+                                    if (float.TryParse(entryM, out float result))
+                                    {
+                                        if (result >= (Helpers.IniParsing.validation[kvp.Key].Item2 as Tuple<float, float>).Item1 && result <= (Helpers.IniParsing.validation[kvp.Key].Item2 as Tuple<float, float>).Item2)
+                                        {
+                                            Helpers.IniParsing.UpAddValue(UserDataFile, section, kvp.Key, result.ToString());
+                                            Interface.AddLog("Updated!");
+                                            return true;
+                                        }
+                                    }
+                                }
+                                else if (type == typeof(bool))
+                                {
+                                    if (bool.TryParse(entryM, out bool result))
+                                    {
+                                        Helpers.IniParsing.UpAddValue(UserDataFile, section, kvp.Key, result.ToString());
+                                        Interface.AddLog("Updated!");
+                                        return true;
+                                    }
+                                }
+                                else
+                                {
+                                    Helpers.IniParsing.UpAddValue(UserDataFile, section, kvp.Key, entryM);
+                                    Interface.AddLog("Updated!");
+                                    return true;
+                                }
+                                Interface.AddLog($"Invalid datatype! Expected {type}.");
+                                return false;
+                            }
+                    Interface.AddLog("Key not found.");
+                    return false;
                 }
 
                 [LoggingAspects.ConsumeException]

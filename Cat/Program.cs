@@ -11,6 +11,8 @@ namespace Cat
             new Catowo().Show();
         }
 
+        [LoggingAspects.Logging]
+        [LoggingAspects.AsyncExceptionSwallower]
         private static async Task CheckInternalData()
         {
             Logging.Log("Checking if directories exist...");
@@ -42,6 +44,8 @@ namespace Cat
             return;
         }
 
+        [LoggingAspects.Logging]
+        [LoggingAspects.AsyncExceptionSwallower]
         private static async Task LoadExternalBinaries()
         {
             Logging.Log("Loading External Binaries...");
@@ -76,6 +80,8 @@ namespace Cat
             return;
         }
 
+        [LoggingAspects.Logging]
+        [LoggingAspects.ConsumeException]
         private static void LoadInitialFiles()
         {
             Logging.Log("Loading Initial Files...");
@@ -85,7 +91,13 @@ namespace Cat
             }
             Logging.Log("Created " + Environment.LogPath + " log file.");
 
-            //if (!File.Exists)
+            if (!File.Exists(UserDataFile))
+            {
+                Logging.Log("Creating user data file");
+                File.Create(UserDataFile).Dispose();
+                Helpers.IniParsing.GenerateUserData();
+                Logging.Log("Created user data file");
+            }
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using IniParser;
 using IniParser.Model;
 using SharpCompress.Archives;
+using SharpCompress.Common;
 using System.Diagnostics;
 using System.Drawing.Imaging;
 using System.IO;
@@ -255,6 +256,9 @@ namespace Cat
                 Topmost = true;
             }
 
+            [LoggingAspects.Logging]
+            [LoggingAspects.AsyncExceptionSwallower]
+            [LoggingAspects.InterfaceNotice]
             private async Task FetchAndDisplayCatImage()
             {
                 Logging.Log("Getting Cat image from https://cataas.com/cat?json=true");
@@ -309,6 +313,7 @@ namespace Cat
             private static Logging.ProgressLogging OverallProgress = new Logging.ProgressLogging("Overall FFMPEG Install:", true);
             private static Logging.ProgressLogging SectionProgress = new Logging.ProgressLogging("Downloading FFMPEG from Gyan.dev:", true);
 
+            [LoggingAspects.Logging]
             public static bool CheckFFMPEGExistence()
             {
                 Logging.Log("Checking if FFMpeg.exe exists in allocated directory.");
@@ -317,6 +322,9 @@ namespace Cat
                 return exists;
             }
 
+            [LoggingAspects.Logging]
+            [LoggingAspects.AsyncExceptionSwallower]
+            [LoggingAspects.InterfaceNotice]
             public static async Task DownloadFFMPEG()
             {
                 if (!CheckFFMPEGExistence())
@@ -360,6 +368,9 @@ namespace Cat
                 }
             }
 
+            [LoggingAspects.Logging]
+            [LoggingAspects.AsyncExceptionSwallower]
+            [LoggingAspects.InterfaceNotice]
             private static async Task CopyContentAsync(Stream source, Stream destination, long totalBytes)
             {
                 byte[] buffer = new byte[81920];
@@ -384,6 +395,9 @@ namespace Cat
                 }
             }
 
+            [LoggingAspects.Logging]
+            [LoggingAspects.AsyncExceptionSwallower]
+            [LoggingAspects.InterfaceNotice]
             private static async Task Extract7zArchiveAsync(string archivePath)
             {
                 Logging.Log($"Extracting {archivePath} to {ExternalProcessesFolder}");
@@ -450,6 +464,8 @@ namespace Cat
                 return word[0] + new string(middle) + word[^1];
             }
 
+            [LoggingAspects.Logging]
+            [LoggingAspects.ConsumeException]
             internal static bool ExtractStringGroups(string word, string sequencestarter, string sequenceender, out string[]? results)
             {
                 results = null;
@@ -481,6 +497,8 @@ namespace Cat
 
         internal static class ProgressTesting
         {
+            [LoggingAspects.Logging]
+            [LoggingAspects.AsyncExceptionSwallower]
             internal static async void GenerateProgressingTest()
             {
                 uint rnd = (uint)random.Next(int.MaxValue);
@@ -498,6 +516,51 @@ namespace Cat
 
         internal static class IniParsing
         {
+            internal static readonly Dictionary<string, (object, object)> validation = new Dictionary<string, (object, object)>()
+            {
+                { "Brightness", (typeof(float), (0.0f, 1.0f)) },
+                { "Opacity", (typeof(float), (0.0f, 1.0f)) },
+                { "Startup", (typeof(bool), false) },
+            };
+             
+            internal static readonly Dictionary<string, List<(string, object)>> initalsettings = new()
+            {
+                { 
+                    "Display", new() {
+                        ("Brightness", 0.5f),
+                        ("Opacity", 0.7f)
+                    }
+                },
+                {
+                    "Misc", new() {
+                        ("Startup", true)
+                    }
+                }
+            };
+
+            [LoggingAspects.Logging]
+            [LoggingAspects.ConsumeException]
+            [LoggingAspects.UpsetStomach]
+            internal static void GenerateUserData()
+            {
+                IniData data= new();
+                foreach (string key in initalsettings.Keys)
+                {
+                    if (data[key] == null)
+                        data.Sections.AddSection(key);
+                    foreach((string innerkey, object value) in initalsettings[key])
+                    {
+                        data[key][innerkey] = value.ToString();
+                    }
+                }
+                FileIniDataParser parser = new();
+                parser.WriteFile(UserDataFile, data);
+            }
+
+
+            [LoggingAspects.Logging]
+            [LoggingAspects.ConsumeException]
+            [LoggingAspects.InterfaceNotice]
             public static string GetValue(string filePath, string section, string key)
             {
                 var parser = new FileIniDataParser();
@@ -511,6 +574,9 @@ namespace Cat
                 return null;
             }
 
+            [LoggingAspects.Logging]
+            [LoggingAspects.ConsumeException]
+            [LoggingAspects.InterfaceNotice]
             public static Dictionary<string, Dictionary<string, string>> GetStructure(string filePath)
             {
                 var parser = new FileIniDataParser();
@@ -530,6 +596,9 @@ namespace Cat
                 return result;
             }
 
+            [LoggingAspects.Logging]
+            [LoggingAspects.ConsumeException]
+            [LoggingAspects.InterfaceNotice]
             public static void UpAddValue(string filePath, string section, string key, string value)
             {
                 var parser = new FileIniDataParser();
@@ -544,6 +613,9 @@ namespace Cat
                 parser.WriteFile(filePath, data);
             }
 
+            [LoggingAspects.Logging]
+            [LoggingAspects.ConsumeException]
+            [LoggingAspects.InterfaceNotice]
             public static void RemoveEntry(string filePath, string section, string key)
             {
                 var parser = new FileIniDataParser();

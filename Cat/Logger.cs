@@ -510,6 +510,9 @@ namespace Cat
 
             private TextBlock block;
 
+            [LoggingAspects.Logging]
+            [LoggingAspects.ConsumeException]
+            [LoggingAspects.InterfaceNotice]
             internal ProgressLogging(string title, bool LogToInterface)
             {
                 @interface = LogToInterface;
@@ -528,7 +531,8 @@ namespace Cat
                     if (@interface)
                     {
                         string bar = title + " [" + string.Concat(Enumerable.Repeat("|", progress)) + string.Concat(Enumerable.Repeat("-", 100 - progress)) + "]";
-                        block.Text = bar;
+                        if (block != null)
+                            block.Text = bar;
                         Catowo.Interface.logListBox.Items.Refresh();
                     }
                     if (progress == 100)

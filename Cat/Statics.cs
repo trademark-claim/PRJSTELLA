@@ -18,6 +18,7 @@ namespace Cat
         internal static SolidColorBrush DEEPPINK { get; } = new(Colors.DeepPink);
         internal static SolidColorBrush HOTPINK { get; } = new(Colors.HotPink);
 
+
         internal static T SetLeft<T>(UIElement obj, T where)
         {
             Logging.Log($"Setting {obj.GetType().FullName}'s left position to {where}");
@@ -57,6 +58,7 @@ namespace Cat
             Logging.Log($"Visibility changed.");
         }
 
+
         internal static bool ValidateFile(string path)
         {
             Logging.Log("Validating " + path);
@@ -74,6 +76,8 @@ namespace Cat
             return true;
         }
 
+        [LoggingAspects.Logging]
+        [LoggingAspects.ConsumeException]
         internal static ScrollViewer GetScrollViewer(DependencyObject depObj)
         {
             Logging.Log("Getting Scroll viewer dependacny object from object: " + depObj.GetType().FullName);
