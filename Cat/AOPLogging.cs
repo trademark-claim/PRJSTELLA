@@ -22,15 +22,17 @@ namespace Cat
                 [Argument(Source.Instance)] object instance,
                 [Argument(Source.Arguments)] object[] arguments)
             {
-
-                if (method.IsDefined(typeof(RecordTime), false))
+                if (UserData.AspectLogging)
                 {
-                    var key = GetUniqueKey(method, instance);
-                    var stopwatch = Stopwatch.StartNew();
-                    Timers[key] = stopwatch;
+                    if (method.IsDefined(typeof(RecordTime), false) || UserData.TimeAll)
+                    {
+                        var key = GetUniqueKey(method, instance);
+                        var stopwatch = Stopwatch.StartNew();
+                        Timers[key] = stopwatch;
+                    }
+                    Cat.Logging.Log($"Entering {(instance == null ? "static" : "instance")} method {method.DeclaringType?.FullName?.Replace('+', '.')}.{method.Name}");
+                    Cat.Logging.LogP($"Arguments:", arguments);
                 }
-                Cat.Logging.Log($"Entering {(instance == null ? "static" : "instance")} method {method.DeclaringType?.FullName}.{method.Name}");
-                Cat.Logging.LogP($"Arguments:", arguments);
             }
 
             [Advice(Kind.After, Targets = Target.Method)]
@@ -40,23 +42,26 @@ namespace Cat
                 [Argument(Source.ReturnValue)] object returnValue,
                 [Argument(Source.ReturnType)] Type returnType)
             {
-                if (method.IsDefined(typeof(RecordTime), false))
+                if (UserData.AspectLogging)
                 {
-                    var key = GetUniqueKey(method, instance);
-                    if (Timers.TryRemove(key, out var stopwatch))
+                    if (method.IsDefined(typeof(RecordTime), false) || UserData.TimeAll)
                     {
-                        stopwatch.Stop();
-                        Cat.Logging.Log($"Exiting method {method.DeclaringType?.FullName}.{method.Name}. Execution time: {stopwatch.ElapsedMilliseconds} ms. Return Value: {Cat.Logging.ProcessMessage(returnValue, 0)} of type {returnType.FullName}");
+                        var key = GetUniqueKey(method, instance);
+                        if (Timers.TryRemove(key, out var stopwatch))
+                        {
+                            stopwatch.Stop();
+                            Cat.Logging.Log($"Exiting method {method.DeclaringType?.FullName?.Replace('+', '.')}.{method.Name}. Execution time: {stopwatch.ElapsedMilliseconds} ms. Return Value: {Cat.Logging.ProcessMessage(returnValue, 0)} of type {returnType.FullName}");
+                        }
                     }
+                    else Cat.Logging.Log($"Exiting method {method.DeclaringType?.FullName?.Replace('+', '.')}.{method.Name}. Return Value: {Cat.Logging.ProcessMessage(returnValue, 0)} of type {returnType.FullName}");
                 }
-                else Cat.Logging.Log($"Exiting method {method.DeclaringType?.FullName}.{method.Name}. Return Value: {Cat.Logging.ProcessMessage(returnValue, 0)} of type {returnType.FullName}");
             }
 
             private static string GetUniqueKey(MethodBase method, object instance)
             {
                 var threadId = Thread.CurrentThread.ManagedThreadId;
                 var instanceId = instance?.GetHashCode() ?? 0;
-                return $"{method.DeclaringType?.FullName}.{method.Name}-{instanceId}-{threadId}";
+                return $"{method.DeclaringType?.FullName?.Replace('+', '.')}.{method.Name}-{instanceId}-{threadId}";
             }
         }
 
@@ -77,11 +82,10 @@ namespace Cat
                 }
                 catch (Exception ex)
                 {
-                    Cat.Logging.Log($"Error while executing command {target.Method.DeclaringType}.{target.Method.Name}");
+                    Cat.Logging.Log($"Error while executing command {target.Method.DeclaringType?.FullName?.Replace('+', '.')}.{target.Method.Name}");
                     Cat.Logging.LogError(ex);
-
                     if (method.IsDefined(typeof(InterfaceNotice), false))
-                        Catowo.Interface.AddTextLogR($"Error caught while executing {target.Method.DeclaringType}.{target.Method.Name}", RED);
+                        Catowo.Interface.AddTextLogR($"Error caught while executing {target.Method.DeclaringType?.FullName?.Replace('+', '.')}.{target.Method.Name}", RED);
                     if (method.IsDefined(typeof(UpsetStomach), false))
                     {
                         Task.Run(async () => await Cat.Logging.FinalFlush()).GetAwaiter().GetResult();
@@ -118,7 +122,6 @@ namespace Cat
                 {
                     try
                     {
-                        // Execute the target method and handle the result for Task or Task<T>.
                         var result = target(args);
                         if (returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(Task<>))
                         {
@@ -127,7 +130,6 @@ namespace Cat
                         }
                         else
                         {
-                            // For Task (non-generic), directly return the task.
                             return result;
                         }
                     }
@@ -177,7 +179,7 @@ namespace Cat
                 Cat.Logging.LogError(ex);
                 if (method.IsDefined(typeof(InterfaceNotice), false))
                 {
-                    Catowo.Interface.AddTextLogR($"Error caught while executing {method.DeclaringType}.{method.Name}", RED);
+                    Catowo.Interface.AddTextLogR($"Error caught while executing {method.DeclaringType?.FullName?.Replace('+', '.')}.{method.Name}", RED);
                 }
 
                 // Check if UpsetStomach attribute is present.

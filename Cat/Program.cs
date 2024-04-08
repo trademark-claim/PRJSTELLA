@@ -1,4 +1,6 @@
-﻿using System.IO;
+﻿using IniParser.Model;
+using IniParser;
+using System.IO;
 
 namespace Cat
 {
@@ -85,11 +87,11 @@ namespace Cat
         private static void LoadInitialFiles()
         {
             Logging.Log("Loading Initial Files...");
-            using (StreamWriter sw = new StreamWriter(File.Create(Environment.LogPath)))
+            using (StreamWriter sw = new StreamWriter(File.Create(LogPath)))
             {
                 sw.WriteLine("[BEGIN LOG]");
             }
-            Logging.Log("Created " + Environment.LogPath + " log file.");
+            Logging.Log("Created " + LogPath + " log file.");
 
             if (!File.Exists(UserDataFile))
             {
@@ -98,6 +100,26 @@ namespace Cat
                 Helpers.IniParsing.GenerateUserData();
                 Logging.Log("Created user data file");
             }
+            else
+            {
+                var parser = new FileIniDataParser();
+                IniData data = parser.ReadFile(UserDataFile);
+                foreach (var section in data.Sections)
+                {
+                    foreach (var key in section.Keys)
+                    {
+                        try
+                        {
+                            UserData.UpdateValue(key.KeyName, key.Value);
+                        }
+                        catch (FormatException ex)
+                        {
+                            Logging.Log($"Error parsing {key.KeyName}: {ex.Message}");
+                        }
+                    }
+                }
+            }
+
         }
     }
 }

@@ -361,9 +361,9 @@ namespace Cat
             AllowsTransparency = true;
             WindowStyle = WindowStyle.None;
             Background = System.Windows.Media.Brushes.Transparent;
-            //Topmost = true;
+            Topmost = true;
             ShowActivated = false;
-            ShowInTaskbar = false;
+            ShowInTaskbar = true; // When making new code, set this to true so you can close the crashed app
             Left = 0;
             Top = 0;
             _screen_ = Array.FindIndex(System.Windows.Forms.Screen.AllScreens, screen => screen.Primary);
@@ -500,7 +500,8 @@ namespace Cat
                     Foreground = SWM.Brushes.Black,
                 };
 
-                inputTextBox.KeyDown += (s, e) => {
+                inputTextBox.PreviewKeyDown += (s, e) => {
+                    Logging.Log(((int)e.Key));
                     switch (e.Key)
                     {
                         case Key.Enter:
@@ -1115,6 +1116,7 @@ namespace Cat
                 private static void FYI()
                     => AddLog("This feature is coming soon.");
 
+                [LoggingAspects.Logging]
                 internal static void HistoryUp()
                 {
                     string? previousraw = History.GetNext();
@@ -1126,6 +1128,7 @@ namespace Cat
                     @interface.inputTextBox.Text = previousraw;
                 }
 
+                [LoggingAspects.Logging]
                 internal static void HistoryDown()
                 {
                     string? nextraw = History.GetPrevious();
@@ -1555,11 +1558,12 @@ namespace Cat
                                     }
 
                                     var (type, constraints) = Helpers.IniParsing.validation[kvp.Key];
-                                    if (type == typeof(float) && constraints is Tuple<float, float> range)
+                                    if ((Type)type == typeof(float) && constraints is Tuple<float, float> range)
                                     {
                                         if (float.TryParse(entryM, out float result) &&
                                             result >= range.Item1 && result <= range.Item2)
                                         {
+                                            UserData.UpdateValue(kvp.Key, entryM);
                                             Helpers.IniParsing.UpAddValue(UserDataFile, section, kvp.Key, result.ToString());
                                         }
                                         else
@@ -1568,10 +1572,11 @@ namespace Cat
                                             return false;
                                         }
                                     }
-                                    else if (type == typeof(bool))
+                                    else if ((Type)type == typeof(bool))
                                     {
                                         if (bool.TryParse(entryM, out bool result))
                                         {
+                                            UserData.UpdateValue(kvp.Key, entryM);
                                             Helpers.IniParsing.UpAddValue(UserDataFile, section, kvp.Key, result.ToString());
                                         }
                                         else
@@ -1582,6 +1587,7 @@ namespace Cat
                                     }
                                     else
                                     {
+                                        UserData.UpdateValue(kvp.Key, entryM);
                                         Helpers.IniParsing.UpAddValue(UserDataFile, section, kvp.Key, entryM);
                                     }
 
@@ -1845,7 +1851,7 @@ namespace Cat
                                 return true;
                             }
                         }
-                        Logging.Log($"[PARSE FAILED] No matching sequence to input found. Please use 'help ;{call}` to see expected command parameters.");
+                        Logging.Log($"[PARSE FAILED] No matching sequence to input found. Please use 'help ;{call}' to see expected command parameters.");
                         error_message = "Unrecognised arguments." + (error_message != "" && error_message != null ? "Additional Error(s): " + error_message : "");
                         return false;
                     }
@@ -1958,8 +1964,8 @@ namespace Cat
                 {
                     Background = SWM.Brushes.Black;
                     Foreground = SWM.Brushes.White;
-                    FontSize = 12;
-                    Opacity = 0.7f;
+                    FontSize = UserData.FontSize;
+                    Opacity = UserData.Opacity;
                     FontFamily = new SWM.FontFamily("Consolas");
 
                     SetValue(VirtualizingStackPanel.IsVirtualizingProperty, true);
@@ -1977,6 +1983,18 @@ namespace Cat
                 internal int AddItem<T>(T Item)
                 {
                     return Items.Add(Item);
+                }
+
+                internal void UpdateFontSize()
+                {
+                    FontSize = UserData.FontSize;
+                    InvalidateVisual();
+                }
+
+                internal void UpdateOpacity()
+                { 
+                    Opacity = UserData.Opacity;
+                    InvalidateVisual();
                 }
             }
         }

@@ -1,4 +1,5 @@
 ﻿using System.Text.RegularExpressions;
+using System.Windows.Input;
 
 namespace Cat
 {
@@ -19,9 +20,6 @@ namespace Cat
         internal const string EPTempF = "C:\\ProgramData\\Kitty\\Cat\\Processes\\temp";
         internal const string UserDataFile = UserFolder + "hello_mr_edit_my_raw_data.ini";
         internal const string FFMPEGPath = ExternalProcessesFolder + "ffmpeg.exe";
-
-        internal static bool AssemblyInformation = false;
-        internal static bool EnvironmentVariables = false;
 
         #region VKs and Styles
 
@@ -172,6 +170,61 @@ namespace Cat
         internal static class UserData
         {
             internal static bool AspectLogging = true;
+            internal static bool LoggingDetails = false;
+            internal static bool FullLogging = true;
+            internal static bool AssemblyInformation = false;
+            internal static bool EnvironmentVariables = false;
+            internal static bool TimeAll = false;
+
+            internal static bool Startup = true;
+
+            internal static float Brightness = 0.7f;
+            internal static float _opacity = 0.7f;
+            internal static float Opacity { get => _opacity; set { _opacity = value; Catowo.Interface.logListBox.UpdateOpacity(); } }
+
+            private static float _fontsize = 10;
+            internal static float FontSize { get => _fontsize; set { _fontsize = value; Catowo.Interface.logListBox.UpdateFontSize(); } }
+
+
+            internal static void UpdateValue(string key, string value) 
+            {
+                switch (key)
+                {
+                    case nameof(AspectLogging) :
+                        AspectLogging = bool.Parse(value);
+                        break;
+                    case nameof(FullLogging) :
+                        FullLogging = bool.Parse(value);
+                        break;
+                    case nameof(AssemblyInformation) :
+                        AssemblyInformation = bool.Parse(value);
+                        break;
+                    case nameof(EnvironmentVariables) :
+                        EnvironmentVariables = bool.Parse(value);
+                        break;
+                    case nameof(Startup) :
+                        Startup = bool.Parse(value);
+                        break;
+                    case nameof(Brightness) :
+                        Brightness = float.Parse(value);
+                        break;
+                    case nameof(Opacity) :
+                        Opacity = float.Parse(value);
+                        break;
+                    case nameof(FontSize) :
+                        FontSize = float.Parse(value);
+                        break;
+                    case nameof(LoggingDetails) :
+                        LoggingDetails = bool.Parse(value);
+                        break;
+                    case nameof(TimeAll) :
+                        TimeAll = bool.Parse(value);
+                        break;
+                    default:
+                        Logging.Log($"Unknown key in INI file: {key}");
+                        break;
+                }
+            }
         }
     }
 }

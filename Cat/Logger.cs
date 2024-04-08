@@ -92,35 +92,34 @@ namespace Cat
                 string processed = ProcessMessage(message, 0);
                 Log(processed);
             }
+            Log(System.Environment.NewLine, true);
         }
 
         internal static void Log(params object[] message)
         {
             foreach (object mess in message)
                 Log(mess?.ToString());
+            Log(System.Environment.NewLine, true);
         }
 
-        private static void Log(string message)
+        private static void Log(string message, bool nodatetime = false)
         {
-            string currentTime = DateTime.Now.ToString("HH:mm:ss:fff");
-            string formattedMessage = $"[{currentTime}] {message}{System.Environment.NewLine}";
-
-            lock (logLock)
+            if (UserData.FullLogging)
             {
-                logQueue.Enqueue(formattedMessage);
-                if (logQueue.Count >= MaxQueueSize)
+                string currentTime = DateTime.Now.ToString("HH:mm:ss:fff");
+                string formattedMessage = $"[{currentTime}] {message}{System.Environment.NewLine}";
+                if (nodatetime)
+                    formattedMessage = $"{message}{System.Environment.NewLine}";
+                lock (logLock)
                 {
-                    FlushLogToFile();
+                    logQueue.Enqueue(formattedMessage);
+                    if (logQueue.Count >= MaxQueueSize)
+                    {
+                        FlushLogToFile();
+                    }
                 }
+                System.Windows.Application.Current.Dispatcher.Invoke(() => inst?.AddLog(message));
             }
-
-            System.Windows.Application.Current.Dispatcher.Invoke(() => inst?.AddLog(message));
-        }
-
-        internal static void Log(object[] message, System.Windows.Media.Color color)
-        {
-            foreach (object mess in message)
-                System.Windows.Application.Current.Dispatcher.Invoke(() => inst?.AddTextLog(mess.ToString(), color));
         }
 
         internal static string ProcessMessage(object message, int indentLevel)
@@ -225,14 +224,17 @@ namespace Cat
         internal static string CompileDetails()
         {
             StringBuilder sb = new();
-            sb.AppendLine(GetProcessDetails());
-            sb.AppendLine(GHI());
-            sb.AppendLine(GSI());
-            sb.AppendLine(GNI());
-            sb.AppendLine(GCLI());
-            if (AssemblyInformation)
+            if (UserData.LoggingDetails)
+            {
+                sb.AppendLine(GetProcessDetails());
+                sb.AppendLine(GHI());
+                sb.AppendLine(GSI());
+                sb.AppendLine(GNI());
+                sb.AppendLine(GCLI());
+            }
+            if (UserData.AssemblyInformation)
                 sb.AppendLine(GLAI());
-            if (EnvironmentVariables)
+            if (UserData.EnvironmentVariables)
                 sb.AppendLine(GEV());
             return sb.ToString();
         }

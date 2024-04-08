@@ -521,19 +521,38 @@ namespace Cat
                 { "Brightness", (typeof(float), (0.0f, 1.0f)) },
                 { "Opacity", (typeof(float), (0.0f, 1.0f)) },
                 { "Startup", (typeof(bool), false) },
+                { "AspectLogging", (typeof(bool), false) },
+                { "FullLogging", (typeof(bool), false) },
+                { "AssemblyInformation", (typeof(bool), false) },
+                { "EnvironmentVariables", (typeof(bool), false) },
+                { "FontSize", (typeof(float), (1.0f, 50.0f)) },
+                { "TimeAll", (typeof(bool), false) },
+                { "LoggingDetails", (typeof(bool), false) }
             };
              
             internal static readonly Dictionary<string, List<(string, object)>> initalsettings = new()
             {
                 { 
                     "Display", new() {
-                        ("Brightness", 0.5f),
-                        ("Opacity", 0.7f)
+                        ("Brightness", 0.8f),
+                        ("Opacity", 0.7f),
+                        ("FontSize", 10)
                     }
                 },
                 {
                     "Misc", new() {
                         ("Startup", true)
+                    }
+                },
+                {
+                    "Logging", new() 
+                    {
+                        ("AspectLogging", true),
+                        ("FullLogging", true),
+                        ("AssemblyInformation", false),
+                        ("EnvironmentVariables", false),
+                        ("TimeAll", false),
+                        ("LoggingDetails", false)
                     }
                 }
             };
