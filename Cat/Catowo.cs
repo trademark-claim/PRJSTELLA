@@ -9,11 +9,13 @@ global using static Cat.Structs;
 global using SWC = System.Windows.Controls;
 using NAudio.Wave;
 using System.CodeDom;
+using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Diagnostics;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -359,7 +361,7 @@ namespace Cat
             AllowsTransparency = true;
             WindowStyle = WindowStyle.None;
             Background = System.Windows.Media.Brushes.Transparent;
-            Topmost = true;
+            //Topmost = true;
             ShowActivated = false;
             ShowInTaskbar = false;
             Left = 0;
@@ -498,7 +500,21 @@ namespace Cat
                     Foreground = SWM.Brushes.Black,
                 };
 
-                inputTextBox.KeyDown += (s, e) => { if (e.Key == Key.Enter) CommandProcessing.ProcessCommand(); };
+                inputTextBox.KeyDown += (s, e) => {
+                    switch (e.Key)
+                    {
+                        case Key.Enter:
+                            CommandProcessing.ProcessCommand();
+                            break;
+                        case Key.Up:
+                            CommandProcessing.HistoryUp();
+                            break;
+                        case Key.Down:
+                            CommandProcessing.HistoryDown();
+                            break;
+                    }
+
+                };
 
 #if TESTCOMMANDS
                 inputTextBox.Text = "dsi";
@@ -642,6 +658,7 @@ namespace Cat
                 private static ParameterParsing.Command? commandstruct;
                 private static bool SilentAudioCleanup = false;
                 private static Window? Logger = null;
+                private static readonly FixedQueue<string> History = new(10);
 
                 private static readonly Dictionary<string, int> cmdmap = new()
                 {
@@ -1098,6 +1115,28 @@ namespace Cat
                 private static void FYI()
                     => AddLog("This feature is coming soon.");
 
+                internal static void HistoryUp()
+                {
+                    string? previousraw = History.GetNext();
+                    if (previousraw == null || History.Failed)
+                    {
+                        History.Failed = false;
+                        return;
+                    }
+                    @interface.inputTextBox.Text = previousraw;
+                }
+
+                internal static void HistoryDown()
+                {
+                    string? nextraw = History.GetPrevious();
+                    if (nextraw == null || History.Failed)
+                    {
+                        History.Failed = false;
+                        return;
+                    }
+                    @interface.inputTextBox.Text = nextraw;
+                }
+
                 [LoggingAspects.Logging]
                 internal static async void ProcessCommand()
                 {
@@ -1118,7 +1157,13 @@ namespace Cat
                         {
                             Logging.Log($"Executing command {call}, index {index} with no entered parameters");
                         }
-                        bool parsestate = ParameterParsing.ParseCommand(cmdtext, value, out commandstruct, out string? error_message);
+                        bool parsestate = ParameterParsing.ParseCommand(cmdtext, value, out ParameterParsing.Command? commandstruct2, out string? error_message);
+                        if (commandstruct2 != commandstruct && commandstruct2 != null)
+                        {
+                            commandstruct = commandstruct2;
+                            History.Enqueue(commandstruct.Value.Raw);
+                        }
+
                         if (!parsestate)
                         {
                             Logging.Log("Failed to parse command.");
@@ -1478,58 +1523,85 @@ namespace Cat
                 [LoggingAspects.ConsumeException]
                 private static bool ChangeSettings()
                 {
-                    (string? entryN, string? entryM) = ((string?)(commandstruct?.Parameters[0][0]), (string?)(commandstruct?.Parameters[0][1]));
-                    if (entryN == null)
+                    try
                     {
-                        Logging.Log("Expected string but parsing failed and returned either a null command struct or a null entry, please submit a bug report. (Key Argument)");
-                        AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
-                        return false;
-                    }
-                    if (entryM == null)
-                    {
-                        Logging.Log("Expected string but parsing failed and returned either a null command struct or a null entry, please submit a bug report. (Value argument)");
-                        AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
-                        return false;
-                    }
-                    var data = Helpers.IniParsing.GetStructure(UserDataFile);
-                    foreach (var section in data.Keys)
-                        foreach (KeyValuePair<string, string> kvp in data[section])
-                            if (kvp.Key.ToLower() == entryN.ToLower())
+                        var entryN = commandstruct?.Parameters[0][0] as string;
+                        var entryM = commandstruct?.Parameters[0][1] as string;
+
+                        if (entryN == null || entryM == null)
+                        {
+                            var message = "Expected string but parsing failed, command struct or entry was null.";
+                            Logging.Log(message);
+                            AddTextLog($"Execution Failed: {message}", RED);
+                            return false;
+                        }
+
+                        var normalizedKey = entryN.ToLower().Trim();
+                        var data = Helpers.IniParsing.GetStructure(UserDataFile);
+
+                        Logging.Log("Processing NM:", entryN, entryM);
+
+                        foreach (var section in data.Keys)
+                        {
+                            foreach (KeyValuePair<string, string> kvp in data[section])
                             {
-                                Type type = Helpers.IniParsing.validation[kvp.Key].Item1 as Type;
-                                if (type == typeof(float))
+                                var currentKey = kvp.Key.ToLower().Trim();
+                                if (currentKey == normalizedKey)
                                 {
-                                    if (float.TryParse(entryM, out float result))
+                                    if (!Helpers.IniParsing.validation.ContainsKey(kvp.Key))
                                     {
-                                        if (result >= (Helpers.IniParsing.validation[kvp.Key].Item2 as Tuple<float, float>).Item1 && result <= (Helpers.IniParsing.validation[kvp.Key].Item2 as Tuple<float, float>).Item2)
+                                        Logging.Log($"Validation for {kvp.Key} not found.");
+                                        continue;
+                                    }
+
+                                    var (type, constraints) = Helpers.IniParsing.validation[kvp.Key];
+                                    if (type == typeof(float) && constraints is Tuple<float, float> range)
+                                    {
+                                        if (float.TryParse(entryM, out float result) &&
+                                            result >= range.Item1 && result <= range.Item2)
                                         {
                                             Helpers.IniParsing.UpAddValue(UserDataFile, section, kvp.Key, result.ToString());
-                                            Interface.AddLog("Updated!");
-                                            return true;
+                                        }
+                                        else
+                                        {
+                                            Interface.AddLog($"Invalid value for {kvp.Key}. Expected a float in the range {range.Item1}-{range.Item2}.");
+                                            return false;
                                         }
                                     }
-                                }
-                                else if (type == typeof(bool))
-                                {
-                                    if (bool.TryParse(entryM, out bool result))
+                                    else if (type == typeof(bool))
                                     {
-                                        Helpers.IniParsing.UpAddValue(UserDataFile, section, kvp.Key, result.ToString());
-                                        Interface.AddLog("Updated!");
-                                        return true;
+                                        if (bool.TryParse(entryM, out bool result))
+                                        {
+                                            Helpers.IniParsing.UpAddValue(UserDataFile, section, kvp.Key, result.ToString());
+                                        }
+                                        else
+                                        {
+                                            Interface.AddLog($"Invalid value for {kvp.Key}. Expected a boolean.");
+                                            return false;
+                                        }
                                     }
-                                }
-                                else
-                                {
-                                    Helpers.IniParsing.UpAddValue(UserDataFile, section, kvp.Key, entryM);
-                                    Interface.AddLog("Updated!");
+                                    else
+                                    {
+                                        Helpers.IniParsing.UpAddValue(UserDataFile, section, kvp.Key, entryM);
+                                    }
+
+                                    Interface.AddLog($"Updated {kvp.Key} in section {section}.");
                                     return true;
                                 }
-                                Interface.AddLog($"Invalid datatype! Expected {type}.");
-                                return false;
                             }
-                    Interface.AddLog("Key not found.");
-                    return false;
+                        }
+
+                        Interface.AddLog("Key not found.");
+                        return false;
+                    }
+                    catch (Exception ex)
+                    {
+                        Logging.LogError(ex);
+                        AddTextLog("An unexpected error occurred, check logs for details.", RED);
+                        return false;
+                    }
                 }
+
 
                 [LoggingAspects.ConsumeException]
                 private static bool TakeProcessSnapshot()

@@ -93,5 +93,72 @@ namespace Cat
             }
             return null;
         }
+
+        public class FixedQueue<T>
+        {
+            private readonly List<T> _queue;
+            private readonly int _maxSize;
+            private int atnow;
+            internal bool Failed { get; set; } = false;
+
+            public FixedQueue(int maxSize)
+            {
+                if (maxSize <= 0)
+                    throw new ArgumentException("Max size must be greater than 0", nameof(maxSize));
+
+                _queue = new List<T>(maxSize);
+                _maxSize = maxSize;
+            }
+
+            [LoggingAspects.ConsumeException]
+            [LoggingAspects.Logging]
+            public T? GetNext()
+            {
+                if (++atnow > _queue.Count)
+                {
+                    --atnow;
+                    Failed = true;
+                    return default;
+                }
+                return _queue[atnow];
+            }
+
+            [LoggingAspects.Logging]
+            [LoggingAspects.ConsumeException]
+            public T? GetPrevious()
+            {
+                if (--atnow < _queue.Count)
+                {
+                    ++atnow;
+                    Failed = true;
+                    return default;
+                }
+                return _queue[atnow];
+            }
+
+            public T First => _queue.First();
+
+            public T Last => _queue.Last();
+
+            public void Enqueue(T item)
+            {
+                if (_queue.Count == _maxSize)
+                    _queue.RemoveAt(9);
+                _queue.Add(item);
+            }
+
+            public T Dequeue()
+            {
+                T nya = _queue.Last();
+                _queue.Remove(nya);
+                return nya;
+            }
+
+            public int Count => _queue.Count;
+
+            public IEnumerable<T> Items => _queue;
+
+        }
+
     }
 }
