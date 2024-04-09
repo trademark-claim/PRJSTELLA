@@ -339,6 +339,7 @@ namespace Cat
             InitKeyHook();
             Logging.Log("Catowo Window created!");
             Mode = Modes.None;
+            Objects.ClaraHerself.RunClara(ClaraHerself.Mode.Introduction, canvas);
         }
 
         ~Catowo()
@@ -369,7 +370,7 @@ namespace Cat
             Background = System.Windows.Media.Brushes.Transparent;
             Topmost = true;
             ShowActivated = false;
-            ShowInTaskbar = true; // When making new code, set this to true so you can close the crashed app
+            ShowInTaskbar = false; // When making new code, set this to true so you can close the crashed app
             Left = 0;
             Top = 0;
             _screen_ = Array.FindIndex(System.Windows.Forms.Screen.AllScreens, screen => screen.Primary);
@@ -446,12 +447,16 @@ namespace Cat
         internal void MakeNormalWindow()
         {
             Logging.Log($"Changing WinStyle of HWND {hwnd}");
-            int os = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
-            SetWindowLongWrapper(hwnd, GWL_EXSTYLE, originalStyle | WS_EX_LAYERED | WS_EX_TOOLWINDOW);
-            int es = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
-            Logging.Log($"Set WinStyle of HWND {hwnd} from {os:X} ({os:B}) [{os}] to {es:X} ({es:B}) [{es}]");
+            int originalStyle = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
+            int newStyle = (originalStyle & ~WS_EX_TRANSPARENT) | WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_TOPMOST;
+            SetWindowLongWrapper(hwnd, GWL_EXSTYLE, newStyle);
+
+            int updatedStyle = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
+            Logging.Log($"Set WinStyle of HWND {hwnd} from {originalStyle:X} to {updatedStyle:X}");
             DestroyKeyHook();
+            Topmost = true;
         }
+
 
         [LoggingAspects.Logging]
         [LoggingAspects.ConsumeException]
@@ -469,8 +474,6 @@ namespace Cat
         internal class Interface : Canvas
         {
             private readonly SWS.Rectangle Backg;
-
-            //internal static readonly List<Logging.ProgressLogging> progresses = new();
             private SWC.TextBox inputTextBox;
 
             internal static LogListBox logListBox = new();
@@ -494,7 +497,7 @@ namespace Cat
             private SWS.Rectangle InitBackg()
             {
                 var scre = GetScreen();
-                SWS.Rectangle rect = new SWS.Rectangle { Width = scre.Bounds.Width, Height = scre.Bounds.Height, Fill = new SWM.SolidColorBrush(SWM.Colors.Gray), Opacity = 0.8f };
+                SWS.Rectangle rect = new SWS.Rectangle { Width = scre.Bounds.Width, Height = scre.Bounds.Height, Fill = new SWM.SolidColorBrush(SWM.Colors.Gray), Opacity = UserData.Opacity };
                 Logging.Log($"{Catowo.inst.Screen}, {rect.Width} {rect.Height}");
                 SetTop(rect, 0);
                 SetLeft(rect, 0);

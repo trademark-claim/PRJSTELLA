@@ -1,6 +1,8 @@
-﻿using System.Windows;
+﻿using System.Runtime.CompilerServices;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Media3D;
 using System.Windows.Shapes;
 
 namespace Cat
@@ -23,25 +25,87 @@ namespace Cat
             }
         }
 
+        internal static class OverlayRect
+        {
+            private static readonly Rectangle Rectangle = new Rectangle { Width = Catowo.GetScreen().Bounds.Width, Height = Catowo.GetScreen().Bounds.Height, Fill = new SolidColorBrush(Colors.Gray), Opacity = UserData.Opacity };
+            internal static void AddToCanvas(Canvas c)
+            {
+                c.Children.Add(Rectangle);
+                UpdateRect();
+            }
+
+            private static void UpdateRect()
+            {
+                Rectangle.Opacity = UserData.Opacity;
+                Rectangle.Width = Catowo.GetScreen().Bounds.Width;
+                Rectangle.Height = Catowo.GetScreen().Bounds.Height;
+            }
+
+            internal static void RemoveFromCanvas(Canvas c)
+                => c.Children.Remove(Rectangle);
+        }
+
         internal static class ClaraHerself
         {
+            private static byte num = 0;
+
             private static readonly string[] Introduction = [
                 "Hey! It's me, Clara! \nIt seems this is the first time you've opened me (or I've been updated owo).\nIf you want to skip this, please type 'skip'. \nIf you want to view the changelog, type 'changelog'\nIf you want to run through the introduction, just press the right arrow key!",
-                "So you wanna do the introduction again... sweet!\nI'm Clara, the Centralised, Logistical, Administrative and Requisition Assistant, and my sole purpose is to automate, optimize and otherwise improve your "
+                "So you wanna do the introduction again... sweet!\nI'm Clara, the Centralised, Logistical, Administrative and Requisition Assistant. \nMy sole purpose is to automate, optimize and otherwise improve your computer experience.\n You can press the left arrow key to move through parts",
+                "There are two (at the moment) main modes to this program: Background and Interface.\nInterface is where there's an overlay with a textbox and an output box, where you can enter commands.\n   Key shortcuts won't work here, but this is where most of the functionality is.\nBackground is where there... is no main overlay (you're currently in background mode!).\n   This is what the app will be in 99% of the time.",
+                "To open the interface, hold both shifts (both th left and right one), then press and hold Q, then press I! (LShift + RShift + Q + I). \n To close the interface run the 'close' command.\nTo view the help page, run 'help'",
+                "Hmmm.. is there anything else..?\nOh right! Local data is stored at C:\\ProgramData\\Kitty\\Cat\\\nHave fun, I hope you enjoy this app! o/"
             ];
+
+            private static string[] CurrentStory = [];
+
+            private static SpeechBubble? bubble;
+
+            private static Canvas? canvas;
 
             internal enum Mode : byte
             {
                 Introduction
             }
 
-            internal static void RunClara(Mode mode)
+            [LoggingAspects.Logging]
+            [LoggingAspects.ConsumeException]
+            internal static void RunClara(Mode mode, Canvas canvas)
             {
+                ClaraHerself.canvas = canvas;
+                OverlayRect.AddToCanvas(canvas);
+                Catowo.inst.MakeNormalWindow();
+                Catowo.inst.PreviewKeyDown += ProgressionKeydown; ;
                 switch (mode)
                 {
                     case Mode.Introduction:
-
+                        CurrentStory = Introduction;
+                        break;
                 }
+                bubble = new SpeechBubble();
+                bubble.Text = CurrentStory[num];
+                canvas.Children.Add(bubble);
+            }
+
+            private static void ProgressionKeydown(object sender, System.Windows.Input.KeyEventArgs e)
+            {
+                if (e.Key == System.Windows.Input.Key.Left)
+                    if (canvas != null) {
+                        if (bubble != null)
+                        {
+                            canvas.Children.Remove(bubble);
+                            bubble = null;
+                        }
+                        if (++num > CurrentStory.Length - 1)
+                        {
+                            num = 0;
+                            Catowo.inst.MakeFunnyWindow();
+                            Catowo.inst.PreviewKeyDown -= ProgressionKeydown;
+                        }
+                        bubble = new SpeechBubble();
+                        bubble.Text = CurrentStory[num];
+                        canvas.Children.Add(bubble);
+                    }
             }
 
             private class SpeechBubble : Canvas
