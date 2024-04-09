@@ -624,25 +624,35 @@ namespace Cat
                 Interface.inst?.Children.Clear();
                 Interface.inst?.parent?.Children.Remove(inst);
                 Interface.inst = null;
-                Logging.Log($"Changing WinStyle of HWND {hwnd}");
-                int os = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
-                SetWindowLongWrapper(hwnd, GWL_EXSTYLE, editedstyle);
-                int es = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
-                Logging.Log($"Set WinStyle of HWND {hwnd} from {os:X} ({os:B}) [{os}] to {es:X} ({es:B}) [{es}]");
-                InitKeyHook();
+                MakeFunnyWindow();
                 return false;
             }
             else
             {
-                Logging.Log($"Changing WinStyle of HWND {hwnd}");
-                int os = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
-                SetWindowLongWrapper(hwnd, GWL_EXSTYLE, originalStyle | WS_EX_LAYERED | WS_EX_TOOLWINDOW);
-                int es = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
-                Logging.Log($"Set WinStyle of HWND {hwnd} from {os:X} ({os:B}) [{os}] to {es:X} ({es:B}) [{es}]");
+                MakeNormalWindow();
                 canvas.Children.Add(new Interface(canvas));
-                DestroyKeyHook();
                 return true;
             }
+        }
+
+        internal void MakeNormalWindow()
+        {
+            Logging.Log($"Changing WinStyle of HWND {hwnd}");
+            int os = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
+            SetWindowLongWrapper(hwnd, GWL_EXSTYLE, originalStyle | WS_EX_LAYERED | WS_EX_TOOLWINDOW);
+            int es = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
+            Logging.Log($"Set WinStyle of HWND {hwnd} from {os:X} ({os:B}) [{os}] to {es:X} ({es:B}) [{es}]");
+            DestroyKeyHook();
+        }
+
+        internal void MakeFunnyWindow() 
+        {
+            Logging.Log($"Changing WinStyle of HWND {hwnd}");
+            int os = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
+            SetWindowLongWrapper(hwnd, GWL_EXSTYLE, editedstyle);
+            int es = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
+            Logging.Log($"Set WinStyle of HWND {hwnd} from {os:X} ({os:B}) [{os}] to {es:X} ({es:B}) [{es}]");
+            InitKeyHook();
         }
 
         internal class Interface : Canvas
