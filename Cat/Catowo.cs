@@ -1,5 +1,28 @@
 ﻿#define ImmedShutdown
 
+/***************************************************************************************
+ * 
+ *  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *                        FILE NAME: Catowo.cs
+ *  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *  
+ *  - File:        Catowo.CS
+ *  - Authors:     Nexus
+ *  - Created:     Not sure (fix)
+ *  - Description: Main file for where all the commmands are defined and their logic is implemented
+ *  
+ *  - Updates/Changes:
+ *      > [Date] - [Change Description] - [Author if different]
+ *  
+ *  - Notes:
+ *      > This file will be continuously worked on throughout the project
+ *      > Consider splitting each different command into their own file just to make it neater
+ *      > 
+ *  
+ ***************************************************************************************/
+
+
+
 global using static Cat.BaselineInputs;
 global using static Cat.Environment;
 global using static Cat.Objects;
@@ -7,12 +30,6 @@ global using static Cat.PInvoke;
 global using static Cat.Statics;
 global using static Cat.Structs;
 global using SWC = System.Windows.Controls;
-global using Brush = System.Windows.Media.Brush;
-global using Brushes = System.Windows.Media.Brushes;
-global using Rectangle = System.Windows.Shapes.Rectangle;
-global using Colors = System.Windows.Media.Colors;
-global using Point = System.Windows.Point;
-global using Size = System.Windows.Size;
 using NAudio.Wave;
 using System.CodeDom;
 using System.ComponentModel.DataAnnotations;
@@ -33,20 +50,64 @@ namespace Cat
 {
     internal class Catowo : Window
     {
+        /// <summary>
+        /// Singleton instance of the Catowo application class.
+        /// </summary>
         internal static Catowo inst;
+        /// <summary>
+        /// Indicates whether the application is currently shutting down.
+        /// Used to handle shutdown logic gracefully.
+        /// </summary>
         internal static bool ShuttingDown = false;
+        /// <summary>
+        /// Holds a pointer to the keyboard hook used for global key event handling.
+        /// </summary>
         internal static IntPtr keyhook = IntPtr.Zero;
-
+        /// <summary>
+        /// The main canvas used in the application's user interface.
+        /// </summary>
         private readonly SWC.Canvas canvas = new SWC.Canvas();
+        /// <summary>
+        /// Label used for displaying debug information within the application's UI.
+        /// </summary>
         internal readonly SWC.Label DebugLabel = new();
 
-        internal int originalStyle = 0, editedstyle = 0;
+        /// <summary>
+        /// Stores the original window style prior to any modifications made by the application.
+        /// </summary>
+        internal int originalStyle = 0;
+        /// <summary>
+        /// Stores the modified windows style
+        /// </summary>    
+        internal int editedstyle = 0;
+        /// <summary>
+        /// Stores the pointer to the window's handler
+        /// </summary>
         internal IntPtr hwnd = IntPtr.Zero;
-
-        private bool RShifted = false, Qd = false, LShifted = false, isCursor = true;
+        /// <summary>
+        /// Flag indicating whether the right shift key is currently pressed.
+        /// </summary>
+        private bool RShifted = false,
+                /// <summary>
+                /// Flag indicating whether the 'Q' key is currently pressed.
+                /// </summary>
+                Qd = false,
+                /// <summary>
+                /// Flag indicating whether the left shift key is currently pressed.
+                /// </summary>
+                LShifted = false,
+                /// <summary>
+                /// Flag indicating the current cursor state, where true denotes the default cursor
+                /// and false denotes a custom or modified cursor state.
+                /// </summary>
+                isCursor = true;
 
         #region Markers
 
+        /// <summary>
+        /// Represents a debug marker as a white ellipse centered within its parent container. 
+        /// Used for visual debugging to mark specific positions in the UI.
+        /// </summary>
         private readonly SWS.Ellipse DEBUGMARKER = new()
         {
             Fill = Statics.WHITE,
@@ -56,6 +117,10 @@ namespace Cat
             VerticalAlignment = VerticalAlignment.Center
         };
 
+        /// <summary>
+        /// Represents a function (fun) marker as a green ellipse centered within its parent container.
+        /// Used for visually marking areas related to functions or features that are stable and safe to use.
+        /// </summary>
         private readonly SWS.Ellipse FUNTMARKER = new()
         {
             Fill = Statics.GREEN,
@@ -65,6 +130,10 @@ namespace Cat
             VerticalAlignment = VerticalAlignment.Center
         };
 
+        /// <summary>
+        /// Represents a danger marker as a red ellipse centered within its parent container.
+        /// Used for visually marking areas that are critical, potentially dangerous, or require special attention.
+        /// </summary>
         private readonly SWS.Ellipse DANGERMARKER = new()
         {
             Fill = Statics.RED,
@@ -74,6 +143,10 @@ namespace Cat
             VerticalAlignment = VerticalAlignment.Center
         };
 
+        /// <summary>
+        /// Represents a shortcuts marker as a blue ellipse centered within its parent container.
+        /// Used for visually marking keyboard shortcuts or areas providing direct access to functionality.
+        /// </summary>
         private readonly SWS.Ellipse SHORTCUTSMARKER = new()
         {
             Fill = Statics.BLUE,
@@ -87,6 +160,23 @@ namespace Cat
 
         private Modes mode = Modes.None;
 
+        /// <summary>
+        /// Gets or sets the current mode of the application. Setting this property triggers
+        /// several side effects including logging the new mode, and toggling the visibility
+        /// of debug, functionality, danger, and shortcuts markers based on the current mode flags.
+        /// </summary>
+        /// <value>
+        /// The current mode of the application, represented by the <see cref="Modes"/> enumeration.
+        /// </value>
+        /// <remarks>
+        /// Setting this property logs the change, formats the log with both the numeric and
+        /// textual representation of the mode, and updates the visibility of various UI markers:
+        /// - DEBUGMARKER and DebugLabel visibility is toggled based on the DEBUG flag.
+        /// - FUNTMARKER visibility is toggled based on the Functionality flag.
+        /// - DANGERMARKER visibility is toggled based on the DANGER flag.
+        /// - SHORTCUTSMARKER visibility is toggled based on the Shortcuts flag.
+        /// This ensures that the UI elements are shown or hidden according to the application's current mode.
+        /// </remarks>
         private Modes Mode
         {
             get => mode; set
@@ -100,9 +190,26 @@ namespace Cat
                 ToggleVis(SHORTCUTSMARKER, mode.HasFlag(Modes.Shortcuts));
             }
         }
-
+        /// <summary>
+        /// Stores the index of the primary screen in the array of all connected screens.
+        /// The primary screen is determined by iterating through <see cref="System.Windows.Forms.Screen.AllScreens"/>
+        /// and identifying the screen marked as primary.
+        /// </summary>
         private static int _screen_ = Array.FindIndex(System.Windows.Forms.Screen.AllScreens, screen => screen.Primary);
 
+        /// <summary>
+        /// Gets or sets the index of the current screen used by the application within the array of all connected screens.
+        /// Changing the screen index updates the application's interface to match the dimensions and position of the selected screen.
+        /// </summary>
+        /// <value>
+        /// The index of the current screen. Must be a valid index within <see cref="System.Windows.Forms.Screen.AllScreens"/>.
+        /// </value>
+        /// <remarks>
+        /// Setting this property to a new value checks if the value is different from the current screen index and
+        /// within the valid range of connected screens. If so, it triggers the interface toggle process, updates the
+        /// application's dimensions and position based on the new screen's properties, and logs the new screen parameters.
+        /// This ensures the application is properly aligned and sized according to the selected screen's dimensions and working area.
+        /// </remarks>
         internal int Screen
         {
             get => _screen_;
@@ -130,6 +237,14 @@ namespace Cat
         #region Low Levels
 
         [LoggingAspects.Logging]
+        /// <summary>
+        /// Initializes the keyboard hook by setting a callback for keyboard events and logging the process.
+        /// </summary>
+        /// <remarks>
+        /// This method logs the start of the keyboard hook setting process, assigns the keyboard procedure callback,
+        /// and then sets the keyboard hook with the system. It logs each step of the process, including the successful
+        /// hooking and the associated hook ID. The hook ID is then stored for future reference and unhooking if necessary.
+        /// </remarks>
         private void InitKeyHook()
         {
             Logging.Log("Setting key hook protocal...");
@@ -141,6 +256,15 @@ namespace Cat
         }
 
         [LoggingAspects.Logging]
+        /// <summary>
+        /// Unhooks the previously set keyboard hook and logs the process.
+        /// </summary>
+        /// <remarks>
+        /// Initiates by logging the intent to unhook. If the current hook ID is the default value (indicating no hook is set),
+        /// logs this status and exits. Otherwise, attempts to unhook using the UnhookWindowsHookExWrapper method and logs the result.
+        /// If successful, resets the global hook ID to its default value.
+        /// </remarks>
+
         internal static void DestroyKeyHook()
         {
             Logging.Log("Unhooking key hook...");
@@ -156,6 +280,16 @@ namespace Cat
         }
 
         [LoggingAspects.Logging]
+        /// <summary>
+        /// Sets up a low-level keyboard hook to monitor keystroke events across the entire system.
+        /// </summary>
+        /// <param name="proc">The callback procedure that will be invoked with every keyboard event.</param>
+        /// <returns>A handle to the keyboard hook.</returns>
+        /// <remarks>
+        /// This method initializes a global keyboard hook by invoking SetWindowsHookExWrapper, passing it
+        /// the type of hook (WH_KEYBOARD_LL), the callback procedure, and the module handle obtained from
+        /// the current process's main module. It logs the process of hook initialization and setting.
+        /// </remarks>
         private static IntPtr SetKeyboardHook(LowLevelKeyboardProc proc)
         {
             Logging.Log("Initing Keyboard hook...");
@@ -168,6 +302,22 @@ namespace Cat
         }
 
         [LoggingAspects.Logging]
+        /// <summary>
+        /// Processes keyboard events captured by the global hook.
+        /// </summary>
+        /// <param name="nCode">A code the hook procedure uses to determine how to process the message.</param>
+        /// <param name="wParam">The identifier of the keyboard message. This parameter can be WM_KEYDOWN, WM_KEYUP, etc.</param>
+        /// <param name="lParam">A pointer to a KBDLLHOOKSTRUCT structure that contains details about the keystroke message.</param>
+        /// <returns>
+        /// If nCode is less than 0, the method calls CallNextHookExWrapper using the same parameters. Otherwise, it processes
+        /// the keystroke event and may block the message by returning a non-zero value, or pass it to the next hook by returning
+        /// the result of CallNextHookExWrapper.
+        /// </returns>
+        /// <remarks>
+        /// This method checks for specific key combinations (e.g., Q, RShift, LShift) and performs actions based on the current
+        /// application mode and the keys pressed. Actions can include shutting down the application, toggling modes, showing or hiding
+        /// the cursor, and more. It logs each key event with its details.
+        /// </remarks>
         private IntPtr KeyboardProc(int nCode, IntPtr wParam, IntPtr lParam)
         {
             int vkCode = Marshal.ReadInt32(lParam);
@@ -327,6 +477,12 @@ namespace Cat
 
         #region Catowo Creation and Init
 
+        /// <summary>
+        /// Constructs a new instance of the Catowo window, setting up the application's environment, initializing key hooks, and configuring the initial mode.
+        /// </summary>
+        /// <remarks>
+        /// This constructor logs the creation process, closes any existing instance, initializes the window and visible objects, sets up key hooks, and logs the completion of the window creation. It initializes the application mode to 'None'.
+        /// </remarks>
         public Catowo()
         {
             Logging.Log("Creating Catowo Window...");
@@ -341,6 +497,12 @@ namespace Cat
             Mode = Modes.None;
         }
 
+        /// <summary>
+        /// Finalizes an instance of the Catowo class, ensuring that key hooks are properly destroyed and resources are cleaned up.
+        /// </summary>
+        /// <remarks>
+        /// Logs the start of the cleanup process, destroys the keyboard hook, and logs the completion of the destruction process.
+        /// </remarks>
         ~Catowo()
         {
             Logging.Log("Cleaning up Catowo...");
@@ -349,6 +511,13 @@ namespace Cat
         }
 
         [LoggingAspects.Logging]
+        /// <summary>
+        /// Retrieves the <see cref="Screen"/> object representing the currently selected screen, falling back to the primary screen if the current screen cannot be determined.
+        /// </summary>
+        /// <returns>The <see cref="Screen"/> object for the current or primary screen.</returns>
+        /// <remarks>
+        /// Attempts to return the screen at the index specified by the internal screen index. If this operation fails, for example, due to an invalid index, the primary screen is returned instead. This method uses exception handling to manage any errors during this process.
+        /// </remarks>
         internal static Screen GetScreen()
         {
             try
@@ -361,7 +530,12 @@ namespace Cat
             }
         }
 
-
+        /// <summary>
+        /// Initializes the main window of the application, setting its appearance and configuring its initial position and size based on the primary screen.
+        /// </summary>
+        /// <remarks>
+        /// Sets window properties to enable transparency, remove the standard window style, and ensure it stays on top and is not activated by default. The method also calculates the window's initial dimensions based on the primary screen's resolution and adjusts the window's extended style to support these features. It logs the window's width and height upon completion.
+        /// </remarks>
         private void InitializeWindow()
         {
             AllowsTransparency = true;
@@ -388,7 +562,12 @@ namespace Cat
                 Logging.Log($"Set Win Style of Handle {hwnd} from {originalStyle:X} ({originalStyle:B}) [{originalStyle}] to {editedstyle:X} ({editedstyle:B}) [{editedstyle}]");
             };
         }
-
+        /// <summary>
+        /// Creates and adds visual elements to the application's main canvas, setting their initial properties and positions.
+        /// </summary>
+        /// <remarks>
+        /// Adds debug, functionality, shortcuts, and danger markers to the canvas, adjusting their positions accordingly. It also configures and adds a debug label with a specific foreground color. This method is part of the window initialization process and sets the application's content to the prepared canvas.
+        /// </remarks>
         private void CreateVisibleObjects()
         {
             canvas.Children.Add(DEBUGMARKER);
@@ -422,6 +601,14 @@ namespace Cat
         [LoggingAspects.Logging]
         [LoggingAspects.ConsumeException]
         [LoggingAspects.UpsetStomach]
+
+        /// <summary>
+        /// Toggles the visibility and functionality of the application's interface.
+        /// </summary>
+        /// <returns>A boolean indicating the visibility state of the interface after the toggle operation. <c>true</c> if the interface is now visible, otherwise <c>false</c>.</returns>
+        /// <remarks>
+        /// If the interface is currently visible, this method clears it and resets the window style to its edited state, logging the change. If the interface is not visible, it sets the window style to include layering and tool window properties, adds a new interface instance to the canvas, and logs the update. In both cases, the method adjusts key hooking accordingly.
+        /// </remarks>
         private bool ToggleInterface()
         {
             if (Interface.inst != null)
@@ -429,45 +616,30 @@ namespace Cat
                 Interface.inst?.Children.Clear();
                 Interface.inst?.parent?.Children.Remove(inst);
                 Interface.inst = null;
-                MakeFunnyWindow();
+                Logging.Log($"Changing WinStyle of HWND {hwnd}");
+                int os = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
+                SetWindowLongWrapper(hwnd, GWL_EXSTYLE, editedstyle);
+                int es = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
+                Logging.Log($"Set WinStyle of HWND {hwnd} from {os:X} ({os:B}) [{os}] to {es:X} ({es:B}) [{es}]");
+                InitKeyHook();
                 return false;
             }
             else
             {
-                MakeNormalWindow();
+                Logging.Log($"Changing WinStyle of HWND {hwnd}");
+                int os = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
+                SetWindowLongWrapper(hwnd, GWL_EXSTYLE, originalStyle | WS_EX_LAYERED | WS_EX_TOOLWINDOW);
+                int es = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
+                Logging.Log($"Set WinStyle of HWND {hwnd} from {os:X} ({os:B}) [{os}] to {es:X} ({es:B}) [{es}]");
                 canvas.Children.Add(new Interface(canvas));
+                DestroyKeyHook();
                 return true;
             }
         }
 
-        [LoggingAspects.Logging]
-        [LoggingAspects.ConsumeException]
-        [LoggingAspects.UpsetStomach]
-        internal void MakeNormalWindow()
-        {
-            Logging.Log($"Changing WinStyle of HWND {hwnd}");
-            int os = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
-            SetWindowLongWrapper(hwnd, GWL_EXSTYLE, originalStyle | WS_EX_LAYERED | WS_EX_TOOLWINDOW);
-            int es = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
-            Logging.Log($"Set WinStyle of HWND {hwnd} from {os:X} ({os:B}) [{os}] to {es:X} ({es:B}) [{es}]");
-            DestroyKeyHook();
-        }
-
-        [LoggingAspects.Logging]
-        [LoggingAspects.ConsumeException]
-        [LoggingAspects.UpsetStomach]
-        internal void MakeFunnyWindow()
-        {
-            Logging.Log($"Changing WinStyle of HWND {hwnd}");
-            int os = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
-            SetWindowLongWrapper(hwnd, GWL_EXSTYLE, editedstyle);
-            int es = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
-            Logging.Log($"Set WinStyle of HWND {hwnd} from {os:X} ({os:B}) [{os}] to {es:X} ({es:B}) [{es}]");
-            InitKeyHook();
-        }
-
         internal class Interface : Canvas
         {
+
             private readonly SWS.Rectangle Backg;
 
             //internal static readonly List<Logging.ProgressLogging> progresses = new();
@@ -477,7 +649,9 @@ namespace Cat
             internal static Interface? inst = null;
             internal Canvas parent;
             private static ScrollViewer _scrollViewer;
-
+            /// <summary>
+            /// Represents the graphical user interface layer of the application, providing methods and properties to manage its visibility and interactions.
+            /// </summary>
             internal Interface(Canvas parent)
             {
                 this.parent = parent;
@@ -491,6 +665,10 @@ namespace Cat
                 //MouseMove += (s, e) => Catowo.inst.ToggleInterface();
             }
 
+            /// <summary>
+            /// Initializes the background rectangle for the interface, setting its dimensions and opacity.
+            /// </summary>
+            /// <returns>A rectangle that serves as the background for the interface.</returns>
             private SWS.Rectangle InitBackg()
             {
                 var scre = GetScreen();
@@ -505,6 +683,10 @@ namespace Cat
             [LoggingAspects.Logging]
             [LoggingAspects.ConsumeException]
             [LoggingAspects.UpsetStomach]
+
+            /// <summary>
+            /// Initializes the components of the interface, including the input text box and log list box, and sets their properties and event handlers.
+            /// </summary>
             private void InitializeComponents()
             {
                 Screen screen = GetScreen();
@@ -564,6 +746,9 @@ namespace Cat
                 //SetTop(Marker, screenHeight - 10);
             }
 
+            /// <summary>
+            /// Asynchronously hides the interface, setting its visibility to collapsed and ensuring the UI updates immediately.
+            /// </summary>
             internal async Task Hide()
             {
                 Logging.Log("Hiding interface...");
@@ -573,6 +758,9 @@ namespace Cat
                 Logging.Log("Interface hidden");
             }
 
+            /// <summary>
+            /// Makes the interface visible.
+            /// </summary>
             internal void Show()
             {
                 Logging.Log("Showing interface...");
@@ -581,6 +769,12 @@ namespace Cat
             }
 
             [LoggingAspects.ConsumeException]
+
+            /// <summary>
+            /// Adds a log message to the interface's log list box.
+            /// </summary>
+            /// <param name="logMessage">The message to log.</param>
+            /// <returns>An integer representing the position of the newly added log message in the log list box.</returns>
             internal static int AddLog(string logMessage)
             {
                 Interface? instance = inst;
@@ -594,6 +788,13 @@ namespace Cat
             }
 
             [LoggingAspects.ConsumeException]
+
+            /// <summary>
+            /// Edits a log message in the interface's log list box at a specified index.
+            /// </summary>
+            /// <param name="message">The new log message.</param>
+            /// <param name="id">The index of the log message to edit.</param>
+            /// <param name="fromEnd">Whether the index is counted from the end of the log list.</param>
             internal static int AddLog(params string[] logs)
             {
                 Interface? instance = inst;
@@ -608,6 +809,13 @@ namespace Cat
             }
 
             [LoggingAspects.ConsumeException]
+
+            /// <summary>
+            /// Edits a log message in the interface's log list box at a specified index.
+            /// </summary>
+            /// <param name="message">The new log message.</param>
+            /// <param name="id">The index of the log message to edit.</param>
+            /// <param name="fromEnd">Whether the index is counted from the end of the log list.</param>
             internal static void EditLog(string message, int id, bool fromEnd)
             {
                 Interface? instance = inst;
@@ -632,6 +840,13 @@ namespace Cat
             }
 
             [LoggingAspects.ConsumeException]
+
+            /// <summary>
+            /// Adds a textual log message to the interface's log list box with specified text color.
+            /// </summary>
+            /// <param name="logMessage">The log message to add.</param>
+            /// <param name="color">The color of the text.</param>
+            /// <returns>An integer representing the position of the newly added log message in the log list box.</returns>
             internal static int AddTextLog(string logMessage, SWM.Color color)
             {
                 Interface? instance = inst;
@@ -673,6 +888,9 @@ namespace Cat
                 return value;
             }
 
+            /// <summary>
+            /// Provides methods for processing user commands input into the interface, including executing specific actions based on command identifiers and managing command history.
+            /// </summary>
             private static class CommandProcessing
             {
                 internal static Interface @interface;
@@ -859,6 +1077,17 @@ namespace Cat
 
                 };
 
+                /// <summary>
+                /// Defines a dictionary mapping command identifiers to their descriptions, parameters, associated functions, and shortcuts.
+                /// </summary>
+                /// <remarks>
+                /// Each command is identified by an integer key and contains a dictionary with the following keys:
+                /// - <c>desc</c>: A string describing what the command does.
+                /// - <c>params</c>: A string detailing the parameters the command accepts, with types and optionality.
+                /// - <c>function</c>: A delegate to the function that implements the command's functionality.
+                /// - <c>shortcut</c>: A string representing the keyboard shortcut associated with the command, if any.
+                /// Commands are used throughout the application to implement functionality accessible through the user interface or keyboard shortcuts.
+                /// </remarks>
                 private static readonly Dictionary<int, Dictionary<string, object>> Commands = new()
                 {
                     {
@@ -1139,6 +1368,14 @@ namespace Cat
                     => AddLog("This feature is coming soon.");
 
                 [LoggingAspects.Logging]
+
+                /// <summary>
+                /// Navigates to the previous command in the history queue and displays it in the input text box.
+                /// </summary>
+                /// <remarks>
+                /// If there is a previously executed command available, it retrieves and sets it as the current text of the input box.
+                /// If no previous command is available or if retrieving the previous command fails, no action is taken.
+                /// </remarks>
                 internal static void HistoryUp()
                 {
                     string? previousraw = History.GetNext();
@@ -1151,6 +1388,15 @@ namespace Cat
                 }
 
                 [LoggingAspects.Logging]
+
+                /// <summary>
+                /// Navigates to the next command in the history queue and displays it in the input text box.
+                /// </summary>
+                /// <remarks>
+                /// If there is a next command available, it retrieves and sets it as the current text of the input box.
+                /// If no next command is available or if retrieving the next command fails, no action is taken.
+                /// This method complements the HistoryUp method, allowing users to navigate through the command history.
+                /// </remarks>
                 internal static void HistoryDown()
                 {
                     string? nextraw = History.GetPrevious();
@@ -1163,6 +1409,17 @@ namespace Cat
                 }
 
                 [LoggingAspects.Logging]
+
+                /// <summary>
+                /// Processes the command currently entered in the input text box, executing the associated action.
+                /// </summary>
+                /// <remarks>
+                /// Extracts the command from the input text box, logs the command input, and attempts to find and execute the command using the command map.
+                /// If the command is successfully found and parsed, it executes the associated action or function.
+                /// If the command execution involves an asynchronous operation, it waits for the operation to complete.
+                /// Logs an error and updates the interface with feedback if the command cannot be found, fails to parse, or if the associated action or function cannot be executed.
+                /// Clears the input text box upon completion.
+                /// </remarks>
                 internal static async void ProcessCommand()
                 {
                     cmdtext = @interface.inputTextBox.Text.Trim().ToLower();
@@ -1221,10 +1478,18 @@ namespace Cat
                 [LoggingAspects.Logging]
                 [LoggingAspects.ConsumeException]
                 [LoggingAspects.InterfaceNotice]
+
+                /// <summary>
+                /// Displays the current settings by reading from a configuration file and logging each setting to the interface.
+                /// </summary>
+                /// <returns>Always returns true, indicating the method has completed execution.</returns>
+                /// <remarks>
+                /// Iterates through all settings obtained from the configuration file, logging both the setting name and its value.
+                /// </remarks>
                 internal static bool ShowSettings()
                 {
                     var data = Helpers.IniParsing.GetStructure(UserDataFile);
-                    foreach (string key in data.Keys) 
+                    foreach (string key in data.Keys)
                     {
                         Interface.AddLog(key);
                         foreach (KeyValuePair<string, string> kvp in data[key])
@@ -1236,6 +1501,14 @@ namespace Cat
                 }
 
                 [LoggingAspects.ConsumeException]
+
+                /// <summary>
+                /// Initiates a test to generate a progressing test sequence.
+                /// </summary>
+                /// <returns>Always returns true, indicating the method has completed execution.</returns>
+                /// <remarks>
+                /// This method is used to trigger a progress test, useful for debugging or demonstration purposes.
+                /// </remarks>
                 private static bool GPT()
                 {
                     Helpers.ProgressTesting.GenerateProgressingTest();
@@ -1243,6 +1516,14 @@ namespace Cat
                 }
 
                 [LoggingAspects.AsyncExceptionSwallower]
+
+                /// <summary>
+                /// Downloads external packages or executes processes based on the provided command parameters.
+                /// </summary>
+                /// <returns>A Task&lt;bool&gt; indicating the success or failure of the operation.</returns>
+                /// <remarks>
+                /// Attempts to identify and execute a download or process execution based on the input parameters. Specific actions, such as downloading FFMPEG, are determined by the command argument.
+                /// </remarks>
                 private static async Task<bool> DEP()
                 {
                     string entry = commandstruct?.Parameters[0][0] as string;
@@ -1266,6 +1547,14 @@ namespace Cat
                 }
 
                 [LoggingAspects.AsyncExceptionSwallower]
+
+                /// <summary>
+                /// Flushes the logging queue, ensuring all pending log messages are written out.
+                /// </summary>
+                /// <returns>A Task&lt;bool&gt; indicating the success or failure of the flush operation.</returns>
+                /// <remarks>
+                /// Asynchronously flushes the log queue, useful for ensuring that all pending log entries are processed and stored as intended, typically before shutdown or when debugging.
+                /// </remarks>
                 private static async Task<bool> FML()
                 {
                     Interface.AddLog("Flushing Log queue...");
@@ -1275,6 +1564,14 @@ namespace Cat
                 }
 
                 [LoggingAspects.ConsumeException]
+
+                /// <summary>
+                /// Initiates the application shutdown process, performing cleanup and closing operations.
+                /// </summary>
+                /// <returns>True if the shutdown process is initiated successfully.</returns>
+                /// <remarks>
+                /// Logs the shutdown intention, hides the application window, and triggers any necessary shutdown logic encapsulated in the App.ShuttingDown method.
+                /// </remarks>
                 private static bool Shutdown()
                 {
                     Interface.AddTextLog("Shutting down... give me a few moments...", SWM.Color.FromRgb(230, 20, 20));
@@ -1284,6 +1581,14 @@ namespace Cat
                 }
 
                 [LoggingAspects.ConsumeException]
+
+                /// <summary>
+                /// Changes the current screen to the one specified by the user, updating the application's interface accordingly.
+                /// </summary>
+                /// <returns>True if the screen change is successful, false otherwise.</returns>
+                /// <remarks>
+                /// Validates the provided screen index against the available screens and, if valid, moves the application's interface to the specified screen.
+                /// </remarks>
                 private static bool ChangeScreen()
                 {
                     int? entry = (int?)(commandstruct?.Parameters[0][0]);
@@ -1309,6 +1614,14 @@ namespace Cat
 
                 [LoggingAspects.AsyncExceptionSwallower]
                 [LoggingAspects.Logging]
+
+                /// <summary>
+                /// Takes a screenshot based on the specified mode and saves it to a predetermined location.
+                /// </summary>
+                /// <returns>A Task&lt;bool&gt; indicating the success or failure of the screenshot operation.</returns>
+                /// <remarks>
+                /// Supports taking individual screenshots of each screen, a stitched screenshot of all screens, or a screenshot of a specific screen, based on the input parameter.
+                /// </remarks>
                 private static async Task<bool> Screenshot()
                 {
                     await @interface.Hide();
@@ -1407,6 +1720,14 @@ namespace Cat
                 }
 
                 [LoggingAspects.ConsumeException]
+
+                /// <summary>
+                /// Logs the details of key interface elements to the application's log display, including dimensions and positions.
+                /// </summary>
+                /// <returns>Always returns true, indicating the method completed its execution.</returns>
+                /// <remarks>
+                /// Useful for debugging layout issues or for verifying that interface elements are being initialized with the correct properties.
+                /// </remarks>
                 internal static bool PrintElementDetails()
                 {
                     Interface.AddLog("Background Rectangle: ", inst.Backg.Width.ToString(), inst.Backg.Height.ToString());
@@ -1417,6 +1738,14 @@ namespace Cat
 
                 [LoggingAspects.ConsumeException]
                 [LoggingAspects.Logging]
+
+                /// <summary>
+                /// Initiates a screen recording session, saving the video to a predetermined path.
+                /// </summary>
+                /// <returns>True if the recording session starts successfully.</returns>
+                /// <remarks>
+                /// Logs the start of the recording session and invokes the screen recording functionality provided by Helpers.ScreenRecording.
+                /// </remarks>
                 private static bool StartRecording()
                 {
                     Interface.AddLog("Starting screen recording session");
@@ -1426,6 +1755,14 @@ namespace Cat
 
                 [LoggingAspects.ConsumeException]
                 [LoggingAspects.Logging]
+
+                /// <summary>
+                /// Placeholder for starting audio recording functionality. Currently notifies the user of upcoming features.
+                /// </summary>
+                /// <returns>Always returns true as a placeholder for future implementation.</returns>
+                /// <remarks>
+                /// This method is a stub for future development and currently triggers a notification about unimplemented functionality.
+                /// </remarks>
                 private static bool StartAudioRecording()
                 {
                     FYI();
@@ -1433,6 +1770,14 @@ namespace Cat
                 }
 
                 [LoggingAspects.ConsumeException]
+
+                /// <summary>
+                /// Stops the current screen recording session and logs the action.
+                /// </summary>
+                /// <returns>True if the recording session is stopped successfully.</returns>
+                /// <remarks>
+                /// Invokes a final logging flush and then stops the recording session using Helpers.ScreenRecording, logging the end of the session.
+                /// </remarks>
                 private static bool StopRecording()
                 {
                     FML();
@@ -1443,6 +1788,14 @@ namespace Cat
                 }
 
                 [LoggingAspects.ConsumeException]
+                
+                /// <summary>
+                /// Placeholder for stopping audio recording functionality. Currently notifies the user of upcoming features.
+                /// </summary>
+                /// <returns>Always returns true as a placeholder for future implementation.</returns>
+                /// <remarks>
+                /// This method is a stub for future development and currently triggers a notification about unimplemented functionality.
+                /// </remarks>
                 private static bool StopAudioRecording()
                 {
                     FYI();
@@ -1450,6 +1803,14 @@ namespace Cat
                 }
 
                 [LoggingAspects.ConsumeException]
+
+                /// <summary>
+                /// Attempts to play an audio file specified by the user input.
+                /// </summary>
+                /// <returns>True if the audio playback starts successfully, false if there is an error or the file path is invalid.</returns>
+                /// <remarks>
+                /// Validates the file path before attempting playback. Stops any currently playing audio before starting the new audio file.
+                /// </remarks>
                 private static bool PlayAudio()
                 {
                     string entry = commandstruct?.Parameters[0][0] as string;
@@ -1510,6 +1871,14 @@ namespace Cat
                 }
 
                 [LoggingAspects.ConsumeException]
+
+                /// <summary>
+                /// Stops any currently playing audio and releases associated resources.
+                /// </summary>
+                /// <returns>True if audio playback was stopped successfully, false if an error occurred during the process.</returns>
+                /// <remarks>
+                /// Checks if an audio file is currently playing and stops it, ensuring all resources are properly disposed.
+                /// </remarks>
                 private static bool StopAudio()
                 {
                     Logging.Log("Stopping Audio playback...");
@@ -1546,6 +1915,14 @@ namespace Cat
                 }
 
                 [LoggingAspects.ConsumeException]
+
+                /// <summary>
+                /// Updates a specific setting based on user input, affecting the application's configuration.
+                /// </summary>
+                /// <returns>True if the setting is updated successfully, false if the setting name is invalid or the value is not appropriate.</returns>
+                /// <remarks>
+                /// Parses the setting name and value from the user input, validating against known settings and applying the change if valid.
+                /// </remarks>
                 private static bool ChangeSettings()
                 {
                     try
@@ -1632,6 +2009,14 @@ namespace Cat
 
 
                 [LoggingAspects.ConsumeException]
+
+                /// <summary>
+                /// Placeholder method for taking a snapshot of process metrics.
+                /// </summary>
+                /// <returns>Always returns true as a placeholder for future implementation.</returns>
+                /// <remarks>
+                /// Intended for future use to capture and log detailed metrics of a specified process.
+                /// </remarks>
                 private static bool TakeProcessSnapshot()
                 {
                     FYI();
@@ -1697,6 +2082,14 @@ namespace Cat
 
                 [LoggingAspects.ConsumeException]
                 [LoggingAspects.Logging]
+
+                /// <summary>
+                /// Displays a random cat picture in a new window.
+                /// </summary>
+                /// <returns>True upon successful display of the cat picture.</returns>
+                /// <remarks>
+                /// Utilizes the Helpers.CatWindow class to create and show a window containing a randomly selected cat image.
+                /// </remarks>
                 private static bool RandomCatPicture()
                 {
                     AddLog("Generating kitty...");
@@ -1706,6 +2099,12 @@ namespace Cat
                 }
 
                 [LoggingAspects.ConsumeException]
+                /// <summary>
+                /// Provides help information to the user, either displaying general help or specific command help based on the input.
+                /// </summary>
+                /// <returns>False if the help request could not be fulfilled, true otherwise.</returns>
+                /// <remarks>
+                /// If no specific command is requested, displays general help information about the application and how to
                 private static bool Help()
                 {
                     if (commandstruct == null || commandstruct.Value.Parameters[1].Length < 1)
@@ -1755,6 +2154,14 @@ namespace Cat
                 }
 
                 [LoggingAspects.ConsumeException]
+
+                /// <summary>
+                /// Displays information about all connected screens or a specific screen, based on user input.
+                /// </summary>
+                /// <returns>True if the information could be displayed, false if there was an issue with the input or fetching the screen data.</returns>
+                /// <remarks>
+                /// Information includes device name, resolution, bounds, primary status, and bits per pixel for each screen.
+                /// </remarks>
                 internal static bool DisplayScreenInformation()
                 {
                     if (commandstruct == null || commandstruct?.Parameters[1].Length < 1)
@@ -1796,6 +2203,14 @@ namespace Cat
                 }
 
                 [LoggingAspects.ConsumeException]
+
+                /// <summary>
+                /// Opens a live logging window to display real-time log messages.
+                /// </summary>
+                /// <returns>True if the logger was opened successfully, false if it was already open.</returns>
+                /// <remarks>
+                /// Ensures that only one instance of the logging window is open at any given time.
+                /// </remarks>
                 private static bool OpenLogger()
                 {
                     if (Logger == null)
@@ -1809,6 +2224,14 @@ namespace Cat
                 }
 
                 [LoggingAspects.ConsumeException]
+
+                /// <summary>
+                /// Closes the currently open live logging window.
+                /// </summary>
+                /// <returns>True if the logger was closed successfully, false if it was not open to begin with.</returns>
+                /// <remarks>
+                /// Verifies if the logging window is open before attempting to close it.
+                /// </remarks>
                 private static bool CloseLogger()
                 {
                     if (Logger != null)
@@ -1822,6 +2245,9 @@ namespace Cat
                     return true;
                 }
 
+                /// <summary>
+                /// Provides functionality for parsing command strings into structured command objects, enabling command execution based on user input.
+                /// </summary>
                 private static class ParameterParsing
                 {
                     internal readonly record struct Command(string Call, string Raw, object[][]? Parameters = null);
@@ -1980,8 +2406,15 @@ namespace Cat
                 }
             }
 
+            /// <summary>
+            /// A custom ListBox control designed to display log messages within the application. It supports virtualization for performance optimization with large numbers of log entries.
+            /// </summary>
             internal class LogListBox : SWC.ListBox
             {
+
+                /// <summary>
+                /// Initializes a new instance of the LogListBox class, setting up its visual appearance and configuring virtualization for efficient rendering of log messages.
+                /// </summary>
                 public LogListBox()
                 {
                     Background = SWM.Brushes.Black;
@@ -2002,19 +2435,31 @@ namespace Cat
                     _scrollViewer = GetScrollViewer(this);
                 }
 
+                /// <summary>
+                /// Adds a new item to the log list box.
+                /// </summary>
+                /// <typeparam name="T">The type of the item being added to the log list box.</typeparam>
+                /// <param name="Item">The item to add to the log list box. This could be a string message or a more complex data structure depending on the logging needs.</param>
+                /// <returns>The index at which the new item was inserted.</returns>
                 internal int AddItem<T>(T Item)
                 {
                     return Items.Add(Item);
                 }
 
+                /// <summary>
+                /// Updates the font size of the log messages displayed in the log list box to match the user-defined setting.
+                /// </summary>
                 internal void UpdateFontSize()
                 {
                     FontSize = UserData.FontSize;
                     InvalidateVisual();
                 }
 
+                /// <summary>
+                /// Updates the opacity of the log list box to match the user-defined setting, allowing for adjustable visibility.
+                /// </summary>
                 internal void UpdateOpacity()
-                { 
+                {
                     Opacity = UserData.Opacity;
                     InvalidateVisual();
                 }
