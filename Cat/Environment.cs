@@ -1,15 +1,31 @@
-﻿using System.Text.RegularExpressions;
+﻿// -----------------------------------------------------------------------
+// Environment.cs
+// Contains definitions for environment settings, paths, and utility methods
+// for the application's runtime environment.
+// Author: Nexus
+// -----------------------------------------------------------------------
+
+
+using System.Text.RegularExpressions;
 using System.Windows.Input;
 
 namespace Cat
 {
+    /// <summary>
+    /// Provides environment settings, utility methods, and constants for application configuration and runtime operations.
+    /// </summary>
     internal static partial class Environment
     {
+        /// <summary>Path to the application's running directory.</summary>
         internal static readonly string RunningPath = AppDomain.CurrentDomain.BaseDirectory;
+        /// <summary>Path to the custom black cursor file.</summary>
         internal const string BCURPATH = "black1.cur";
+        /// <summary>Random number generator for various operations.</summary>
         internal static readonly Random random = new();
+        /// <summary>Path for the current log file, generated dynamically.</summary>
         internal static readonly string LogPath = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\Logs\\L" + GUIDRegex().Replace(Guid.NewGuid().ToString(), "") + ".LOG";
 
+        // Paths to various folders used by the application
         internal const string LogFolder = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\Logs\\";
         internal const string AudioFolder = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\Audio\\";
         internal const string UserFolder = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\User\\";
@@ -96,7 +112,7 @@ namespace Cat
         internal static LowLevelKeyboardProc _keyboardProc;
 
         #endregion VKs and Styles
-
+        /// <summary>Maps virtual key codes to character pairs (lowercase, uppercase).</summary>
         internal static readonly Dictionary<int, (char, char)> vkCodeToCharMap = new()
         {
             // Letters
@@ -152,6 +168,8 @@ namespace Cat
             { VK_OEM_2, ('/', '?')},
             { VK_OEM_3, ('`', '~')}
         };
+
+        /// <summary>Maps modifier key virtual codes to their string representations.</summary>
         internal static readonly Dictionary<int, string> ModifierVkCodetoStringMap = new()
         {
             { VK_RSHIFT, "Right Shift" },
@@ -173,27 +191,41 @@ namespace Cat
         internal static partial Regex GUIDRegex();
 
         #endregion Delegates
-
+        /// <summary>Contains user-configurable settings for application behavior.</summary>
         internal static class UserData
         {
+            /// <summary>Enables or disables aspect logging.</summary>
             internal static bool AspectLogging = true;
+            /// <summary>Enables or disables logging of details.</summary>
             internal static bool LoggingDetails = false;
+            /// <summary>Enables or disables full logging.</summary>
             internal static bool FullLogging = true;
+            /// <summary>Enables or disables assembly information logging.</summary>
             internal static bool AssemblyInformation = false;
+            /// <summary>Enables or disables environment variables logging.</summary>
             internal static bool EnvironmentVariables = false;
+            /// <summary>Enables or disables timing of all methods.</summary>
             internal static bool TimeAll = false;
 
+            /// <summary>Indicates whether the application should start automatically.</summary>
             internal static bool Startup = true;
 
+            /// <summary>Default screen brightness setting.</summary>
             internal static float Brightness = 0.7f;
-            internal static float _opacity = 0.7f;
-            internal static float Opacity { get => _opacity; set { _opacity = value; Catowo.Interface.logListBox.UpdateOpacity(); } }
 
+            private static float _opacity = 0.7f;
+            /// <summary>Application window opacity.</summary>
+            internal static float Opacity { get => _opacity; set { _opacity = value; Catowo.Interface.logListBox.UpdateOpacity(); } }
+            /// <summary>Font size for something (idk)</summary>
             private static float _fontsize = 10;
+            /// <summary>Font size for display elements.</summary>
             internal static float FontSize { get => _fontsize; set { _fontsize = value; Catowo.Interface.logListBox.UpdateFontSize(); } }
 
-            internal static readonly double[] CommandKeys = [];
 
+            internal static readonly double[] CommandKeys = [];
+            /// <summary>Updates a user setting value based on a key-value pair.</summary>
+            /// <param name="key">The setting key to update.</param>
+            /// <param name="value">The new value for the setting.</param>
             internal static void UpdateValue(string key, string value) 
             {
                 switch (key)

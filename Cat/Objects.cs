@@ -5,12 +5,23 @@ using System.Windows.Shapes;
 
 namespace Cat
 {
+    /// <summary>
+    /// Contains classes for creating UI objects like shutdown screens and speech bubbles.
+    /// </summary>
     internal static class Objects
     {
+        /// <summary>
+        /// Represents a full-screen overlay used for shutdown operations.
+        /// </summary>
         internal class ShutDownScreen : Canvas
         {
             private static ShutDownScreen inst;
 
+            /// <summary>
+            /// Toggles the shutdown screen on or off.
+            /// </summary>
+            /// <param name="canv">The canvas to add or remove the shutdown screen from.</param>
+            /// <returns>The instance of the shutdown screen.</returns>
             internal static ShutDownScreen ToggleScreen(Canvas canv)
             { if (inst != null) { canv.Children.Remove(inst); inst = null; return inst; } else { inst = new ShutDownScreen(); canv.Children.Add(inst); return inst; } }
 
@@ -22,7 +33,9 @@ namespace Cat
                 SetLeft(this, 0);
             }
         }
-
+        /// <summary>
+        /// Contains methods and classes for displaying Clara's introduction and speech bubbles.
+        /// </summary>
         internal static class ClaraHerself
         {
             private static readonly string[] Introduction = [
@@ -44,6 +57,9 @@ namespace Cat
                 }
             }
 
+            /// <summary>
+            /// Represents a speech bubble UI element.
+            /// </summary>
             private class SpeechBubble : Canvas
             {
                 private readonly TextBlock textBlock;

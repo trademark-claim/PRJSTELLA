@@ -1,10 +1,36 @@
-﻿using System.IO;
+﻿//-------------------------------------------------------------------------------------
+// <summary>
+//     Statics.cs
+//     Provides a collection of utility methods and properties for UI element manipulation
+//     and file validation within the Cat application.
+// </summary>
+//
+// <author>Nexus</author>
+// <date>2024-04-10</date>
+// <copyright>
+//     Copyright (c) 2024 Nexus.
+//     All rights reserved.
+// </copyright>
+//
+// <notes>
+//     This file is designed to support various UI and file handling operations,
+//     facilitating easier management of visibility, positioning, and validation
+//     within the application's user interface components.
+// </notes>
+//-------------------------------------------------------------------------------------
+
+
+
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 
 namespace Cat
 {
+    /// <summary>
+    /// Contains utility methods and properties for managing UI elements and files.
+    /// </summary>
     internal static class Statics
     {
         internal static SolidColorBrush RED { get; } = new(Colors.Red);
@@ -18,7 +44,13 @@ namespace Cat
         internal static SolidColorBrush DEEPPINK { get; } = new(Colors.DeepPink);
         internal static SolidColorBrush HOTPINK { get; } = new(Colors.HotPink);
 
-
+        /// <summary>
+        /// Sets the left position of a UIElement.
+        /// </summary>
+        /// <typeparam name="T">The type of the position value (int, double, float).</typeparam>
+        /// <param name="obj">The UIElement to position.</param>
+        /// <param name="where">The left position value.</param>
+        /// <returns>The position value.</returns>
         internal static T SetLeft<T>(UIElement obj, T where)
         {
             Logging.Log($"Setting {obj.GetType().FullName}'s left position to {where}");
@@ -28,6 +60,13 @@ namespace Cat
             return where;
         }
 
+        /// <summary>
+        /// Sets the top position of a UIElement.
+        /// </summary>
+        /// <typeparam name="T">The type of the position value (int, double, float).</typeparam>
+        /// <param name="obj">The UIElement to position.</param>
+        /// <param name="where">The top position value.</param>
+        /// <returns>The position value.</returns>
         internal static T SetTop<T>(UIElement obj, T where)
         {
             Logging.Log($"Setting {obj.GetType().FullName}'s top position to {where}");
@@ -37,6 +76,11 @@ namespace Cat
             return where;
         }
 
+        /// <summary>
+        /// Toggles the visibility of a UIElement.
+        /// </summary>
+        /// <param name="obj">The UIElement to toggle.</param>
+        /// <returns>True if the element is now visible; otherwise, false.</returns>
         internal static bool ToggleVis(UIElement obj)
         {
             Logging.Log($"Toggling Visibility of {obj.GetType().FullName}...");
@@ -51,6 +95,11 @@ namespace Cat
             return true;
         }
 
+        /// <summary>
+        /// Sets the visibility of a UIElement.
+        /// </summary>
+        /// <param name="obj">The UIElement to modify.</param>
+        /// <param name="isVisible">Determines the visibility state.</param>
         internal static void ToggleVis(UIElement obj, bool isVisible)
         {
             Logging.Log($"Changing Visibility of {obj.GetType().FullName} to {isVisible}");
@@ -58,7 +107,11 @@ namespace Cat
             Logging.Log($"Visibility changed.");
         }
 
-
+        /// <summary>
+        /// Validates a file path for accessibility.
+        /// </summary>
+        /// <param name="path">The file path to validate.</param>
+        /// <returns>True if the file is accessible; otherwise, false.</returns>
         internal static bool ValidateFile(string path)
         {
             Logging.Log("Validating " + path);
@@ -76,6 +129,11 @@ namespace Cat
             return true;
         }
 
+        /// <summary>
+        /// Retrieves the ScrollViewer from a dependency object.
+        /// </summary>
+        /// <param name="depObj">The dependency object to search within.</param>
+        /// <returns>The ScrollViewer if found; otherwise, null.</returns>
         [LoggingAspects.Logging]
         [LoggingAspects.ConsumeException]
         internal static ScrollViewer GetScrollViewer(DependencyObject depObj)
@@ -94,6 +152,10 @@ namespace Cat
             return null;
         }
 
+        /// <summary>
+        /// Represents a fixed-size queue that overwrites its oldest elements.
+        /// </summary>
+        /// <typeparam name="T">The type of elements in the queue.</typeparam>
         public class FixedQueue<T>
         {
             private readonly List<T> _queue;

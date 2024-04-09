@@ -13,6 +13,9 @@ using System.Windows.Threading;
 
 namespace Cat
 {
+    /// <summary>
+    /// Provides logging functionalities for the application.
+    /// </summary>
     internal static class Logging
     {
         private static LogWindow? inst;
@@ -22,6 +25,10 @@ namespace Cat
         private static readonly SemaphoreSlim fileWriteSemaphore = new SemaphoreSlim(1, 1);
         private static readonly int MaxQueueSize = 500;
 
+        /// <summary>
+        /// Displays the live logger window.
+        /// </summary>
+        /// <returns>The opened logger window.</returns>
         internal static Window ShowLogger()
         {
             Log("Showing Live Logger...");
@@ -31,6 +38,11 @@ namespace Cat
             return inst;
         }
 
+        /// <summary>
+        /// Logs an error with detailed information.
+        /// </summary>
+        /// <param name="exc">The exception to log.</param>
+        /// <param name="initial">Indicates if this is the initial error in a potential chain of errors.</param>
         internal static async void LogError(Exception exc, bool initial = true)
         {
             Log($">>>ERROR START<<<\nMessage:\n   {exc.Message}\nSource:\n   {exc.Source}\nMethod Base:\n   {exc.TargetSite?.Module}.{exc.TargetSite?.DeclaringType}.{exc.TargetSite?.Name} ({exc.TargetSite})\nStackTrace:\n   {exc.StackTrace}\nData:\n   {string.Join("   \n- ", exc.Data.Keys.Cast<object>().Zip(exc.Data.Values.Cast<object>()))}\nHLink:\n   {exc.HelpLink}\nHResult:\n   {exc.HResult}\n>>>END OF ERROR<<<");
@@ -45,6 +57,9 @@ namespace Cat
             }
         }
 
+        /// <summary>
+        /// Hides the live logger window if it's open.
+        /// </summary>
         internal static void HideLogger()
         {
             Log("Closing Live logger...");
@@ -53,6 +68,9 @@ namespace Cat
             Log("Live logger closed.");
         }
 
+        /// <summary>
+        /// Initializes static members of the <see cref="Logging"/> class. Sets up a timer for flushing logs to file periodically.
+        /// </summary>
         static Logging()
         {
             logFlushTimer = new System.Threading.Timer((e) =>
@@ -61,6 +79,9 @@ namespace Cat
             }, null, 10000, 300000);
         }
 
+        /// <summary>
+        /// Flushes log messages from the queue to a file synchronously.
+        /// </summary>
         private static void FlushLogToFile()
         {
             lock (logLock)
@@ -72,6 +93,11 @@ namespace Cat
             }
         }
 
+        /// <summary>
+        /// Writes a log message to the log file asynchronously.
+        /// </summary>
+        /// <param name="text">The log message to be written.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
         private static async Task WriteLog(string text)
         {
             await fileWriteSemaphore.WaitAsync();
@@ -85,6 +111,10 @@ namespace Cat
             }
         }
 
+        /// <summary>
+        /// Logs a series of messages with special processing.
+        /// </summary>
+        /// <param name="messages">The messages to log.</param>
         internal static void LogP(params object[] messages)
         {
             foreach (var message in messages)
@@ -95,6 +125,10 @@ namespace Cat
             Log(System.Environment.NewLine, true);
         }
 
+        /// <summary>
+        /// Logs one or more messages to the logging system.
+        /// </summary>
+        /// <param name="message">The message(s) to log.</param>
         internal static void Log(params object[] message)
         {
             foreach (object mess in message)
@@ -102,6 +136,12 @@ namespace Cat
             Log(System.Environment.NewLine, true);
         }
 
+
+        /// <summary>
+        /// Logs a single message to the logging system, optionally without prepending the datetime stamp.
+        /// </summary>
+        /// <param name="message">The message to log.</param>
+        /// <param name="nodatetime">If true, does not prepend the datetime stamp to the log message.</param>
         private static void Log(string message, bool nodatetime = false)
         {
             if (UserData.FullLogging)
@@ -122,6 +162,11 @@ namespace Cat
             }
         }
 
+        /// <summary>
+        /// Processes and formats a message or enumerable collection for logging.
+        /// </summary>
+        /// <param name="message">The message or enumerable collection to process.</param>
+        /// <param name="indentLevel">The indent level for formatting enumerable collections.</param>
         internal static string ProcessMessage(object message, int indentLevel)
         {
             if (message == null)
@@ -139,6 +184,11 @@ namespace Cat
                 return message.ToString();
         }
 
+        /// <summary>
+        /// Performs a final flush of log messages to the log file asynchronously. Optionally marks the log with an end statement.
+        /// </summary>
+        /// <param name="end">If true, appends an end log statement.</param>
+        /// <returns>A task representing the asynchronous operation.</returns>
         internal static async Task FinalFlush(bool end = false)
         {
             await fileWriteSemaphore.WaitAsync();
@@ -164,11 +214,17 @@ namespace Cat
             }
         }
 
+        /// <summary>
+        /// A window dedicated to displaying real-time logs.
+        /// </summary>
         private class LogWindow : Window
         {
             private readonly SWC.ListBox _listBox;
             private ScrollViewer _scrollViewer;
 
+            /// <summary>
+            /// Initializes a new instance of the <see cref="LogWindow"/> class, creating the log viewer UI.
+            /// </summary>
             public LogWindow()
             {
                 Log("Creating Log Window...");
@@ -200,6 +256,10 @@ namespace Cat
                 Log("Logging Window Created");
             }
 
+            /// <summary>
+            /// Adds a log message to the log viewer.
+            /// </summary>
+            /// <param name="logMessage">The log message to add.</param>
             public void AddLog(string logMessage)
             {
                 inst?.Dispatcher.Invoke(() => _listBox.Items.Add(logMessage));
@@ -210,6 +270,11 @@ namespace Cat
                     _listBox.ScrollIntoView(_listBox.Items[_listBox.Items.Count - 1]);
             }
 
+            /// <summary>
+            /// Adds a colored text log message to the log viewer.
+            /// </summary>
+            /// <param name="logMessage">The log message to add.</param>
+            /// <param name="color">The color of the text.</param>
             public void AddTextLog(string logMessage, System.Windows.Media.Color color)
             {
                 inst?.Dispatcher.Invoke(() => _listBox.Items.Add(new TextBlock() { Text = logMessage, Foreground = new SolidColorBrush(color) }));
@@ -221,6 +286,10 @@ namespace Cat
             }
         }
 
+        /// <summary>
+        /// Compiles various system and process details into a single string for logging.
+        /// </summary>
+        /// <returns>A string containing detailed system and process information.</returns>
         internal static string CompileDetails()
         {
             StringBuilder sb = new();
@@ -239,6 +308,10 @@ namespace Cat
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Gathers detailed process information.
+        /// </summary>
+        /// <returns>A string containing detailed process information.</returns>
         private static string GetProcessDetails()
         {
             return $"System Information" +
@@ -278,6 +351,10 @@ namespace Cat
                     $"\n └──CMD Line Args: {System.Environment.GetCommandLineArgs()}";
         }
 
+        /// <summary>
+        /// Gathers extended hardware information using WMI queries.
+        /// </summary>
+        /// <returns>A string containing extended hardware information.</returns>
         private static string GHI()
         {
             StringBuilder sb = new StringBuilder("Extended Hardware Information:\n");
@@ -341,6 +418,11 @@ namespace Cat
             return sb.ToString();
         }
 
+
+        /// <summary>
+        /// Gathers security information about the current user session.
+        /// </summary>
+        /// <returns>A string containing security information.</returns>
         private static string GSI()
         {
             var currentUser = WindowsIdentity.GetCurrent();
@@ -360,6 +442,10 @@ namespace Cat
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Gathers detailed network information.
+        /// </summary>
+        /// <returns>A string containing detailed network information.</returns>
         private static string GNI()
         {
             StringBuilder sb = new StringBuilder();
@@ -406,6 +492,10 @@ namespace Cat
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Gathers command line arguments passed to the application.
+        /// </summary>
+        /// <returns>A string containing the command line arguments.</returns>
         private static string GCLI()
         {
             StringBuilder sb = new StringBuilder();
@@ -417,6 +507,10 @@ namespace Cat
             return sb.ToString().TrimEnd();
         }
 
+        /// <summary>
+        /// Gathers information about loaded assemblies.
+        /// </summary>
+        /// <returns>A string containing information about loaded assemblies.</returns>
         private static string GLAI()
         {
             StringBuilder sb = new StringBuilder();
@@ -430,6 +524,10 @@ namespace Cat
             return sb.ToString().TrimEnd();
         }
 
+        /// <summary>
+        /// Gathers environment variables.
+        /// </summary>
+        /// <returns>A string containing the environment variables.</returns>
         private static string GEV()
         {
             StringBuilder sb = new StringBuilder();
@@ -441,6 +539,11 @@ namespace Cat
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Converts a memory form factor code into a human-readable format.
+        /// </summary>
+        /// <param name="code">The memory form factor code.</param>
+        /// <returns>A string representing the memory form factor.</returns>
         private static string GetMemoryFormFactor(int code)
         {
             switch (code)
@@ -458,6 +561,11 @@ namespace Cat
             }
         }
 
+        /// <summary>
+        /// Converts a memory type code into a human-readable format.
+        /// </summary>
+        /// <param name="code">The memory type code.</param>
+        /// <returns>A string representing the memory type.</returns>
         internal static string GetMemoryType(int code)
         {
             switch (code)
@@ -502,6 +610,9 @@ namespace Cat
             }
         }
 
+        /// <summary>
+        /// Represents a progress logging mechanism that updates a log with the current progress.
+        /// </summary>
         internal class ProgressLogging
         {
             private byte progress = 0;
@@ -512,6 +623,15 @@ namespace Cat
 
             private TextBlock block;
 
+            /// <summary>
+            /// Initializes a new instance of the <see cref="ProgressLogging"/> class.
+            /// </summary>
+            /// <param name="title">The title of the progress log.</param>
+            /// <param name="LogToInterface">A value indicating whether the log should be output to an interface.</param>
+            /// <remarks>
+            /// When <paramref name="LogToInterface"/> is true, progress updates are displayed on the user interface.
+            /// Otherwise, progress updates are logged internally.
+            /// </remarks>
             [LoggingAspects.Logging]
             [LoggingAspects.ConsumeException]
             [LoggingAspects.InterfaceNotice]
@@ -547,31 +667,55 @@ namespace Cat
                 };
             }
 
+            /// <summary>
+            /// Invokes the progress update event.
+            /// </summary>
+            /// <param name="e">The progress update event arguments containing the new progress value and an optional note.</param>
             internal void InvokeEvent(ProgressUpdateEventArgs e)
             {
-                Logging.Log("Progress Invokation");
+                Logging.Log("Progress Invocation");
                 OnProgressUpdate?.Invoke(e);
             }
 
+            /// <summary>
+            /// Provides data for the progress update event.
+            /// </summary>
             internal class ProgressUpdateEventArgs
             {
-                internal byte NewProgress;
-                internal string? Note = null;
+                /// <summary>
+                /// Gets the new progress value.
+                /// </summary>
+                internal byte NewProgress { get; private set; }
 
+                /// <summary>
+                /// Gets an optional note associated with the progress update.
+                /// </summary>
+                internal string? Note { get; private set; }
+
+                /// <summary>
+                /// Initializes a new instance of the <see cref="ProgressUpdateEventArgs"/> class.
+                /// </summary>
+                /// <param name="np">The new progress value.</param>
                 internal ProgressUpdateEventArgs(byte np)
                 {
                     NewProgress = np;
                 }
             }
-        }
 
-        internal class SpinnyThing
+
+            /// <summary>
+            /// Represents an animated loading indicator.
+            /// </summary>
+            internal class SpinnyThing
         {
             private readonly string[] animation = { "|", "/", "-", "\\" };
             private TextBlock block;
             private byte num = 0;
             private readonly DispatcherTimer timer;
 
+            /// <summary>
+            /// Initializes a new instance of the <see cref="SpinnyThing"/> class and starts the animation.
+            /// </summary>
             internal SpinnyThing()
             {
                 (_, block) = Catowo.Interface.AddTextLogR(animation[num++]);
@@ -581,6 +725,11 @@ namespace Cat
                 timer.Start();
             }
 
+            /// <summary>
+            /// Handles the timer tick event to cycle through animation frames.
+            /// </summary>
+            /// <param name="sender">The source of the event.</param>
+            /// <param name="e">An EventArgs object that contains the event data.</param>
             private void Timer_Tick(object sender, EventArgs e)
             {
                 block.Text = animation[num++];
@@ -588,6 +737,9 @@ namespace Cat
                 Catowo.Interface.logListBox.Items.Refresh();
             }
 
+            /// <summary>
+            /// Stops the animation and removes the animation block from the log list box.
+            /// </summary>
             internal void Stop()
             {
                 timer.Stop();

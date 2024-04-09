@@ -1,10 +1,26 @@
-﻿using NAudio.CoreAudioApi;
+﻿// -----------------------------------------------------------------------
+// BaselineInputs.cs
+// Contains utility methods for manipulating audio settings, cursor appearance, 
+// keyboard inputs, and mouse movements.
+// Author: Nexus
+// -----------------------------------------------------------------------
+
+
+using NAudio.CoreAudioApi;
 using System.IO;
 
 namespace Cat
 {
+    /// <summary>
+    /// Provides methods for manipulating system baseline inputs such as audio, cursor, 
+    /// keyboard, and mouse.
+    /// </summary>
     internal static class BaselineInputs
     {
+        /// <summary>
+        /// Checks if the default audio endpoint device is muted.
+        /// </summary>
+        /// <returns>True if the device is muted; otherwise, false.</returns>
         [LoggingAspects.Logging]
         [LoggingAspects.ConsumeException]
         internal static bool IsMute()
@@ -18,10 +34,19 @@ namespace Cat
             }
         }
 
+
+        /// <summary>
+        /// Handles cursor-related functionalities.
+        /// </summary>
         internal static class Cursor
         {
             internal static CursorType CurrentCursor { get; private set; }
 
+            /// <summary>
+            /// Changes the cursor to a specified file.
+            /// </summary>
+            /// <param name="filename">The path to the cursor file.</param>
+            /// <returns>True if the cursor was successfully changed; otherwise, false.</returns>
             [LoggingAspects.ConsumeException]
             [LoggingAspects.Logging]
             private static bool ChangeCursor(string filename)
@@ -47,6 +72,9 @@ namespace Cat
                 }
             }
 
+            /// <summary>
+            /// Sets the cursor to a black point.
+            /// </summary>
             [LoggingAspects.ConsumeException]
             [LoggingAspects.Logging]
             internal static void BlackPoint()
@@ -57,6 +85,9 @@ namespace Cat
                 ChangeCursor(path);
             }
 
+            /// <summary>
+            /// Resets the cursor to the default system cursor.
+            /// </summary>
             [LoggingAspects.ConsumeException]
             [LoggingAspects.Logging]
             internal static void Reset()
@@ -77,7 +108,10 @@ namespace Cat
             }
         }
 
-
+        /// <summary>
+        /// Simulates keyboard input for a specified virtual key code.
+        /// </summary>
+        /// <param name="virtualKeyCode">The virtual key code of the key.</param>
         internal static void SendKeyboardInput(ushort virtualKeyCode)
         {
             Logging.Log($"Sending KEYUP KEYDOWN for VK {virtualKeyCode}");
@@ -94,6 +128,9 @@ namespace Cat
             SendInputWrapper((uint)inputs.Length, inputs);
         }
 
+        /// <summary>
+        /// Toggles the mute status of the default audio endpoint device.
+        /// </summary>
         [LoggingAspects.Logging]
         internal static void ToggleMuteSound()
         {
@@ -102,6 +139,10 @@ namespace Cat
             Logging.Log($"Mute toggle operation complete.");
         }
 
+        /// <summary>
+        /// Toggles the mute status of the default audio endpoint device based on a given condition.
+        /// </summary>
+        /// <param name="on">Indicates whether to mute (true) or unmute (false) the device.</param>
         [LoggingAspects.Logging]
         internal static void ToggleMuteSound(bool on)
         {
@@ -116,6 +157,10 @@ namespace Cat
             }
         }
 
+        /// <summary>
+        /// Hides the cursor.
+        /// </summary>
+        /// <returns>The new display count of the cursor.</returns>
         [LoggingAspects.Logging]
         internal static int HideCursor()
         {
@@ -126,6 +171,10 @@ namespace Cat
             return curs;
         }
 
+        /// <summary>
+        /// Shows the cursor.
+        /// </summary>
+        /// <returns>The new display count of the cursor.</returns>
         [LoggingAspects.Logging]
         internal static int ShowCursor()
         {
@@ -136,6 +185,9 @@ namespace Cat
             return curs;
         }
 
+        /// <summary>
+        /// Simulates typing "HELLO" using keyboard input.
+        /// </summary>
         [LoggingAspects.Logging]
         [LoggingAspects.ConsumeException]
         internal static void SendHello()
@@ -175,6 +227,10 @@ namespace Cat
             SendInputWrapper((uint)inputs.Count, inputs.ToArray());
         }
 
+        /// <summary>
+        /// Causes the mouse to move erratically on the screen.
+        /// </summary>
+        /// <param name="smooth">Indicates whether the movement should be smooth.</param>
         [LoggingAspects.Logging]
         [LoggingAspects.AsyncExceptionSwallower]
         internal static async void CauseMouseToHaveSpasticAttack(bool smooth = false)
@@ -199,6 +255,12 @@ namespace Cat
             Logging.Log($"Spastic Attack complete.");
         }
 
+        /// <summary>
+        /// Smoothly moves the mouse cursor from one point to another.
+        /// </summary>
+        /// <param name="startX">The starting X coordinate.</param>
+        /// <param name="startY">The starting Y coordinate.</param>
+        /// <param name="endX">The ending X coordinate.</param>
         [LoggingAspects.Logging]
         [LoggingAspects.AsyncExceptionSwallower]
         internal static async Task MoveMouseSmoothly(int startX, int startY, int endX, int endY, int duration)

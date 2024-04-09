@@ -4,8 +4,14 @@ using System.IO;
 
 namespace Cat
 {
+    /// <summary>
+    /// Entry point of the Catowo application.
+    /// </summary>
     internal static class Program
     {
+        /// <summary>
+        /// Starts the Catowo application.
+        /// </summary>
         internal static async void Start()
         {
             await CheckInternalData();
@@ -13,6 +19,9 @@ namespace Cat
             new Catowo().Show();
         }
 
+        /// <summary>
+        /// Checks for necessary internal data and directories before starting the application.
+        /// </summary>
         [LoggingAspects.Logging]
         [LoggingAspects.AsyncExceptionSwallower]
         private static async Task CheckInternalData()
@@ -46,6 +55,9 @@ namespace Cat
             return;
         }
 
+        /// <summary>
+        /// Loads external binaries required by the application.
+        /// </summary>
         [LoggingAspects.Logging]
         [LoggingAspects.AsyncExceptionSwallower]
         private static async Task LoadExternalBinaries()
@@ -82,6 +94,9 @@ namespace Cat
             return;
         }
 
+        /// <summary>
+        /// Loads initial files required by the application.
+        /// </summary>
         [LoggingAspects.Logging]
         [LoggingAspects.ConsumeException]
         private static void LoadInitialFiles()
