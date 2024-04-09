@@ -7,8 +7,18 @@ using System.Windows.Shapes;
 
 namespace Cat
 {
+    /// <summary>
+    /// Static class holding general custom objects for rendering and other
+    /// </summary>
     internal static class Objects
     {
+        /// <summary>
+        /// OLD shutdown screen test that didn't really work too well. For later, I suppose.
+        /// </summary>
+        /// <remarks>
+        /// The windows shutdown circle is an accessible font, use it!
+        /// </remarks>
+        [Obsolete("Incomplete, discontinued / on hold until further notice", true)]
         internal class ShutDownScreen : Canvas
         {
             private static ShutDownScreen inst;
@@ -20,20 +30,37 @@ namespace Cat
             {
                 inst = this;
                 Children.Add(new System.Windows.Shapes.Rectangle() { Width = SystemParameters.PrimaryScreenWidth, Height = SystemParameters.PrimaryScreenHeight });
-                SetTop(this, 0);
-                SetLeft(this, 0);
+                SetTop<double>(this, 0);
+                SetLeft<double>(this, 0);
             }
         }
 
+        /// <summary>
+        /// Creates an overlay for the current screen at the user's set opacity but set grey colour.
+        /// </summary>
+        /// <remarks>
+        /// Need to merge this with the interface's back ground for continuity
+        /// </remarks>
         internal static class OverlayRect
         {
+            /// <summary>
+            /// The rectangle itself, only created once.
+            /// </summary>
             private static readonly Rectangle Rectangle = new Rectangle { Width = Catowo.GetScreen().Bounds.Width, Height = Catowo.GetScreen().Bounds.Height, Fill = new SolidColorBrush(Colors.Gray), Opacity = UserData.Opacity };
+
+            /// <summary>
+            /// Adds <see cref="Rectangle"/> to <paramref name="c"/>
+            /// </summary>
+            /// <param name="c">The canvas to add to</param>
             internal static void AddToCanvas(Canvas c)
             {
                 c.Children.Add(Rectangle);
                 UpdateRect();
             }
 
+            /// <summary>
+            /// Updates the rectangle to the user's data and for screen flexibility
+            /// </summary>
             private static void UpdateRect()
             {
                 Rectangle.Opacity = UserData.Opacity;
@@ -41,14 +68,30 @@ namespace Cat
                 Rectangle.Height = Catowo.GetScreen().Bounds.Height;
             }
 
+            /// <summary>
+            /// Does the opposite of <see cref="AddToCanvas(Canvas)"/>
+            /// </summary>
+            /// <param name="c">The canvas in which to remove from</param>
             internal static void RemoveFromCanvas(Canvas c)
                 => c.Children.Remove(Rectangle);
         }
 
+        /// <summary>
+        /// Static class for dealing with direct Clara interactions, such as speech bubbles and images / animations (if we can get it)
+        /// </summary>
+        /// <remarks>
+        /// Need to have back progression (using left arrow)
+        /// </remarks>
         internal static class ClaraHerself
         {
+            /// <summary>
+            /// Used with the speech bubble arrays to keep track of which array item we're on.
+            /// </summary>
             private static byte num = 0;
 
+            /// <summary>
+            /// Holds the introduction text
+            /// </summary>
             private static readonly string[] Introduction = [
                 "Hey! It's me, Clara! \nIt seems this is the first time you've opened me (or I've been updated owo).\nIf you want to skip this, please type 'skip'. \nIf you want to view the changelog, type 'changelog'\nIf you want to run through the introduction, just press the right arrow key!",
                 "So you wanna do the introduction again... sweet!\nI'm Clara, the Centralised, Logistical, Administrative and Requisition Assistant. \nMy sole purpose is to automate, optimize and otherwise improve your computer experience.\n You can press the left arrow key to move through parts",
@@ -57,20 +100,40 @@ namespace Cat
                 "Hmmm.. is there anything else..?\nOh right! Local data is stored at C:\\ProgramData\\Kitty\\Cat\\\nHave fun, I hope you enjoy this app! o/"
             ];
 
+            /// <summary>
+            /// Whichever array is currently being spoken
+            /// </summary>
             private static string[] CurrentStory = [];
 
+            /// <summary>
+            /// The bubble object being shown
+            /// </summary>
+            /// <remarks>
+            /// Might make this one a solid object for reusability and remove the overhead of making new objects + adding / removing them all the time.
+            /// </remarks>
             private static SpeechBubble? bubble;
 
+            /// <summary>
+            /// The canvas object we're attached to
+            /// </summary>
             private static Canvas? canvas;
 
+            /// <summary>
+            /// Needs to reflect what arrays we have
+            /// </summary>
             internal enum Mode : byte
             {
                 Introduction
             }
 
+            /// <summary>
+            /// Cancer cures smoking.
+            /// </summary>
+            /// <param name="mode">Which array to run through</param>
+            /// <param name="canvas">The canvas ref</param>
             [LoggingAspects.Logging]
             [LoggingAspects.ConsumeException]
-            internal static void RunClara(Mode mode, Canvas canvas)
+            internal static void RunClara(Mode mode, ref Canvas canvas)
             {
                 ClaraHerself.canvas = canvas;
                 OverlayRect.AddToCanvas(canvas);
@@ -82,14 +145,20 @@ namespace Cat
                         CurrentStory = Introduction;
                         break;
                 }
-                bubble = new SpeechBubble();
+                // The first message
+                bubble = new();
                 bubble.Text = CurrentStory[num];
                 canvas.Children.Add(bubble);
             }
 
+            /// <summary>
+            /// Event handler for the pressing of keys while a speech is activated. This is the base method to be used in tangent with specific methods for each set of speech, and is to be loading in and out as needed.
+            /// </summary>
+            /// <param name="sender">The caller of the event</param>
+            /// <param name="e">The key event args</param>
             private static void ProgressionKeydown(object sender, System.Windows.Input.KeyEventArgs e)
             {
-                if (e.Key == System.Windows.Input.Key.Left)
+                if (e.Key == System.Windows.Input.Key.Right)
                     if (canvas != null) {
                         if (bubble != null)
                         {
@@ -101,6 +170,8 @@ namespace Cat
                             num = 0;
                             Catowo.inst.MakeFunnyWindow();
                             Catowo.inst.PreviewKeyDown -= ProgressionKeydown;
+                            OverlayRect.RemoveFromCanvas(canvas);
+                            return;
                         }
                         bubble = new SpeechBubble();
                         bubble.Text = CurrentStory[num];
@@ -108,13 +179,35 @@ namespace Cat
                     }
             }
 
+            /// <summary>
+            /// The actual speech bubbles
+            /// </summary>
             private class SpeechBubble : Canvas
             {
+                /// <summary>
+                /// The text displayed
+                /// </summary>
                 private readonly TextBlock textBlock;
-                private readonly System.Windows.Shapes.Rectangle rectangle;
+                /// <summary>
+                /// The bubble part
+                /// </summary>
+                private readonly Rectangle rectangle;
+                /// <summary>
+                /// The arrow part that really completes the bubble
+                /// </summary>
                 private readonly Polygon tail;
+                /// <summary>
+                /// Controls padding
+                /// </summary>
                 private const float Control = 5.0F;
+                /// <summary>
+                /// Fixed position for the lower right corner
+                /// </summary>
+                internal Point LowerRightCornerFreeze = new(1550, 1250);
 
+                /// <summary>
+                /// Abstraction Property
+                /// </summary>
                 public string Text
                 {
                     get => textBlock.Text;
@@ -124,19 +217,28 @@ namespace Cat
                     }
                 }
 
+                /// <summary>
+                /// Abstraction Property
+                /// </summary>
                 public double FontSize
                 {
                     get => textBlock.FontSize;
                     set => textBlock.FontSize = value;
                 }
 
+                /// <summary>
+                /// Abstraction Property
+                /// </summary>
                 public double BubbleOpacity
                 {
                     get => Opacity;
                     set => Opacity = value;
                 }
 
-                public System.Windows.Media.Brush BubbleColor
+                /// <summary>
+                /// Abstraction Property
+                /// </summary>
+                public Brush BubbleColor
                 {
                     get => rectangle.Fill;
                     set
@@ -146,13 +248,18 @@ namespace Cat
                     }
                 }
 
+                /// <summary>
+                /// Abstraction Property
+                /// </summary>
                 public Thickness TextPadding
                 {
                     get => textBlock.Margin;
                     set => textBlock.Margin = value;
                 }
 
-
+                /// <summary>
+                /// Constructor
+                /// </summary>
                 public SpeechBubble()
                 {
                     rectangle = new()
@@ -182,7 +289,7 @@ namespace Cat
                     Children.Add(rectangle);
                     Children.Add(tail);
                     Children.Add(textBlock);
-                    FontSize = UserData.FontSize;
+                    FontSize = 20.0f;//UserData.FontSize;
 
                     SizeChanged += (s, e) => UpdateLayout();
                 }
@@ -190,18 +297,23 @@ namespace Cat
                 public void UpdateLayout()
                 {
                     textBlock.Measure(new Size(Double.PositiveInfinity, Double.PositiveInfinity));
+
                     double textWidth = textBlock.DesiredSize.Width + TextPadding.Left + TextPadding.Right;
                     double textHeight = textBlock.DesiredSize.Height + TextPadding.Top + TextPadding.Bottom;
+
                     rectangle.Width = textWidth + (Control * 2);
-                    rectangle.Height = textHeight + (Control * 2);
-
-                    SetLeft(textBlock, TextPadding.Left + Control);
-                    SetTop(textBlock, TextPadding.Top + Control);
-                    //tail.Margin = new Thickness(0, rectangle.Height - 30, 0, 0);
-                    SetLeft<double>(tail, rectangle.Width - 30);
-                    SetTop<double>(tail, rectangle.Height);
+                    rectangle.Height = textHeight + (Control * 2) + 20;
+                    SetLeft<double>(textBlock, TextPadding.Left + Control);
+                    SetTop<double>(textBlock, TextPadding.Top + Control);
+                    SetLeft<double>(tail, rectangle.Width - 30); 
+                    SetTop<double>(tail, rectangle.Height - 20);
+                    double left = LowerRightCornerFreeze.X - rectangle.Width;
+                    double top = LowerRightCornerFreeze.Y - rectangle.Height;
+                    SetLeft<double>(this, left);
+                    SetTop<double>(this, top);
+                    Width = rectangle.Width;
+                    Height = rectangle.Height;
                 }
-
             }
 
         }

@@ -177,7 +177,7 @@ namespace Cat
             Logging.Log(log);
             if (isKeyDown)
             {
-                DebugLabel.Content += $"A {Qd}, {RShifted}, {LShifted}, {vkCode}, {wParam}, {(Keys)vkCode}";
+                DebugLabel.Content += $"{Qd}, {RShifted}, {LShifted}, {vkCode}, {wParam}, {(Keys)vkCode}";
                 if (!Qd && vkCode == VK_Q)
                 {
                     Qd = true;
@@ -339,8 +339,8 @@ namespace Cat
             InitKeyHook();
             Logging.Log("Catowo Window created!");
             Mode = Modes.None;
-            Objects.ClaraHerself.RunClara(ClaraHerself.Mode.Introduction, canvas);
         }
+
 
         ~Catowo()
         {
@@ -387,6 +387,8 @@ namespace Cat
                 SetWindowLongWrapper(hwnd, GWL_EXSTYLE, originalStyle | WS_EX_TRANSPARENT | WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE);
                 editedstyle = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
                 Logging.Log($"Set Win Style of Handle {hwnd} from {originalStyle:X} ({originalStyle:B}) [{originalStyle}] to {editedstyle:X} ({editedstyle:B}) [{editedstyle}]");
+                if (!Program.hadUserData)
+                    Objects.ClaraHerself.RunClara(ClaraHerself.Mode.Introduction, canvas);
             };
         }
 
@@ -394,11 +396,11 @@ namespace Cat
         {
             canvas.Children.Add(DEBUGMARKER);
             canvas.Children.Add(FUNTMARKER);
-            Statics.SetLeft(FUNTMARKER, 4);
+            Statics.SetLeft<double>(FUNTMARKER, 4);
             canvas.Children.Add(SHORTCUTSMARKER);
-            Statics.SetLeft(SHORTCUTSMARKER, 8);
+            Statics.SetLeft<double>(SHORTCUTSMARKER, 8);
             canvas.Children.Add(DANGERMARKER);
-            Statics.SetLeft(DANGERMARKER, 12);
+            Statics.SetLeft<double>(DANGERMARKER, 12);
             canvas.Children.Add(DebugLabel);
             Mode = Modes.None;
             DebugLabel.Foreground = new SolidColorBrush(Colors.LimeGreen);
@@ -447,10 +449,8 @@ namespace Cat
         internal void MakeNormalWindow()
         {
             Logging.Log($"Changing WinStyle of HWND {hwnd}");
-            int originalStyle = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
-            int newStyle = (originalStyle & ~WS_EX_TRANSPARENT) | WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_TOPMOST;
+            int newStyle = originalStyle | WS_EX_LAYERED | WS_EX_TOOLWINDOW;
             SetWindowLongWrapper(hwnd, GWL_EXSTYLE, newStyle);
-
             int updatedStyle = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
             Logging.Log($"Set WinStyle of HWND {hwnd} from {originalStyle:X} to {updatedStyle:X}");
             DestroyKeyHook();
@@ -499,8 +499,8 @@ namespace Cat
                 var scre = GetScreen();
                 SWS.Rectangle rect = new SWS.Rectangle { Width = scre.Bounds.Width, Height = scre.Bounds.Height, Fill = new SWM.SolidColorBrush(SWM.Colors.Gray), Opacity = UserData.Opacity };
                 Logging.Log($"{Catowo.inst.Screen}, {rect.Width} {rect.Height}");
-                SetTop(rect, 0);
-                SetLeft(rect, 0);
+                SetTop<double>(rect, 0);
+                SetLeft<double>(rect, 0);
                 Children.Add(rect);
                 return rect;
             }
@@ -541,7 +541,7 @@ namespace Cat
                     }
 
                 };
-
+                
 #if TESTCOMMANDS
                 inputTextBox.Text = "dsi";
                 CommandProcessing.ProcessCommand();
@@ -555,16 +555,16 @@ namespace Cat
                 logListBox.Width = screenWidth - (padding * 2);
                 logListBox.Height = screenHeight - taskbarHeight - inputTextBoxHeight - (padding * 3);
 
-                SetLeft(logListBox, padding);
-                SetTop(logListBox, padding);
+                SetLeft<double>(logListBox, padding);
+                SetTop<double>(logListBox, padding);
                 Children.Add(inputTextBox);
                 Children.Add(logListBox);
                 Catowo.inst.Focus();
                 inputTextBox.Focus();
 
                 //Children.Add(Marker);
-                //SetLeft(Marker, screenWidth - 10);
-                //SetTop(Marker, screenHeight - 10);
+                //SetLeft<double>(Marker, screenWidth - 10);
+                //SetTop<double>(Marker, screenHeight - 10);
             }
 
             internal async Task Hide()

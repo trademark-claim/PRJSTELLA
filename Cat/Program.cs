@@ -6,6 +6,11 @@ namespace Cat
 {
     internal static class Program
     {
+        /// <summary>
+        /// Temporary solution for showing the tutorial / introductory dialogue.
+        /// </summary>
+        internal static bool hadUserData = true;
+
         internal static async void Start()
         {
             await CheckInternalData();
@@ -99,6 +104,7 @@ namespace Cat
                 File.Create(UserDataFile).Dispose();
                 Helpers.IniParsing.GenerateUserData();
                 Logging.Log("Created user data file");
+                hadUserData = false;
             }
             else
             {

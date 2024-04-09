@@ -52,6 +52,8 @@ namespace Cat
             memoryUsageTimer.Start();
             Program.Start();
             base.OnStartup(e);
+            // Attaches the shutdown sequence to app exit, should run it when the app is closed through non-planned methods.
+            this.Exit += (sender, e) => ShuttingDown();
         }
 
         internal static void ShuttingDown()
