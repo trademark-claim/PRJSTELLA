@@ -101,7 +101,7 @@ namespace Cat
                 "Hey! It's me, Clara! \nIt seems this is the first time you've opened me (or I've been updated owo).\nIf you want to skip this, please type 'skip'. \nIf you want to view the changelog, type 'changelog'\nIf you want to run through the introduction, just press the right arrow key!",
                 "So you wanna do the introduction again... sweet!\nI'm Clara, the Centralised, Logistical, Administrative and Requisition Assistant. \nMy sole purpose is to automate, optimize and otherwise improve your computer experience.\n You can press the left arrow key to move through parts",
                 "There are two (at the moment) main modes to this program: Background and Interface.\nInterface is where there's an overlay with a textbox and an output box, where you can enter commands.\n   Key shortcuts won't work here, but this is where most of the functionality is.\nBackground is where there... is no main overlay (you're currently in background mode!).\n   This is what the app will be in 99% of the time.",
-                "To open the interface, hold both shifts (both th left and right one), then press and hold Q, then press I! (LShift + RShift + Q + I). \n To close the interface run the 'close' command.\nTo view the help page, run 'help'",
+                "To open the interface:\n  Hold both shifts (both th left and right one),\n  Then press and hold Q,\n  then press I!\n  (LShift + RShift + Q + I). \n To close the interface run the 'close' command.\nTo view the help page, run 'help'",
                 "Hmmm.. is there anything else..?\nOh right! Local data is stored at C:\\ProgramData\\Kitty\\Cat\\\nHave fun, I hope you enjoy this app! o/"
             ];
 
@@ -138,7 +138,7 @@ namespace Cat
             /// <param name="canvas">The canvas ref</param>
             [LoggingAspects.Logging]
             [LoggingAspects.ConsumeException]
-            internal static void RunClara(Mode mode, ref Canvas canvas)
+            internal static void RunClara(Mode mode, Canvas canvas)
             {
                 ClaraHerself.canvas = canvas;
                 OverlayRect.AddToCanvas(canvas);
@@ -208,7 +208,7 @@ namespace Cat
                 /// <summary>
                 /// Fixed position for the lower right corner
                 /// </summary>
-                internal Point LowerRightCornerFreeze = new(1550, 1250);
+                internal Point LowerRightCornerFreeze = new(1000, 500);
 
                 /// <summary>
                 /// Abstraction Property
@@ -310,8 +310,8 @@ namespace Cat
                     rectangle.Height = textHeight + (Control * 2) + 20;
                     SetLeft<double>(textBlock, TextPadding.Left + Control);
                     SetTop<double>(textBlock, TextPadding.Top + Control);
-                    SetLeft<double>(tail, rectangle.Width - 30); 
-                    SetTop<double>(tail, rectangle.Height - 20);
+                    SetLeft<double>(tail, rectangle.Width - 10); 
+                    SetTop<double>(tail, rectangle.Height);
                     double left = LowerRightCornerFreeze.X - rectangle.Width;
                     double top = LowerRightCornerFreeze.Y - rectangle.Height;
                     SetLeft<double>(this, left);

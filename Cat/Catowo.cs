@@ -241,7 +241,6 @@ namespace Cat
 
         #region Low Levels
 
-        [LoggingAspects.Logging]
         /// <summary>
         /// Initializes the keyboard hook by setting a callback for keyboard events and logging the process.
         /// </summary>
@@ -250,6 +249,7 @@ namespace Cat
         /// and then sets the keyboard hook with the system. It logs each step of the process, including the successful
         /// hooking and the associated hook ID. The hook ID is then stored for future reference and unhooking if necessary.
         /// </remarks>
+        [LoggingAspects.Logging]
         private void InitKeyHook()
         {
             Logging.Log("Setting key hook protocal...");
@@ -260,7 +260,6 @@ namespace Cat
             keyhook = _keyboardHookID;
         }
 
-        [LoggingAspects.Logging]
         /// <summary>
         /// Unhooks the previously set keyboard hook and logs the process.
         /// </summary>
@@ -270,6 +269,7 @@ namespace Cat
         /// If successful, resets the global hook ID to its default value.
         /// </remarks>
 
+        [LoggingAspects.Logging]
         internal static void DestroyKeyHook()
         {
             Logging.Log("Unhooking key hook...");
@@ -284,7 +284,6 @@ namespace Cat
                 keyhook = IntPtr.Zero;
         }
 
-        [LoggingAspects.Logging]
         /// <summary>
         /// Sets up a low-level keyboard hook to monitor keystroke events across the entire system.
         /// </summary>
@@ -295,6 +294,7 @@ namespace Cat
         /// the type of hook (WH_KEYBOARD_LL), the callback procedure, and the module handle obtained from
         /// the current process's main module. It logs the process of hook initialization and setting.
         /// </remarks>
+        [LoggingAspects.Logging]
         private static IntPtr SetKeyboardHook(LowLevelKeyboardProc proc)
         {
             Logging.Log("Initing Keyboard hook...");
@@ -306,7 +306,6 @@ namespace Cat
             }
         }
 
-        [LoggingAspects.Logging]
         /// <summary>
         /// Processes keyboard events captured by the global hook.
         /// </summary>
@@ -323,6 +322,7 @@ namespace Cat
         /// application mode and the keys pressed. Actions can include shutting down the application, toggling modes, showing or hiding
         /// the cursor, and more. It logs each key event with its details.
         /// </remarks>
+        [LoggingAspects.Logging]
         private IntPtr KeyboardProc(int nCode, IntPtr wParam, IntPtr lParam)
         {
             int vkCode = Marshal.ReadInt32(lParam);
@@ -447,7 +447,7 @@ namespace Cat
                             switch (vkCode)
                             {
                                 case VK_S:
-                                    ShutDownScreen.ToggleScreen(canvas);
+                                    //ShutDownScreen.ToggleScreen(canvas);
                                     break;
 
                                 default:
@@ -516,7 +516,6 @@ namespace Cat
             Logging.Log("Catowo Destroyed.");
         }
 
-        [LoggingAspects.Logging]
         /// <summary>
         /// Retrieves the <see cref="Screen"/> object representing the currently selected screen, falling back to the primary screen if the current screen cannot be determined.
         /// </summary>
@@ -524,6 +523,7 @@ namespace Cat
         /// <remarks>
         /// Attempts to return the screen at the index specified by the internal screen index. If this operation fails, for example, due to an invalid index, the primary screen is returned instead. This method uses exception handling to manage any errors during this process.
         /// </remarks>
+        [LoggingAspects.Logging]
         internal static Screen GetScreen()
         {
             try
@@ -606,9 +606,6 @@ namespace Cat
 
         #region Interface
 
-        [LoggingAspects.Logging]
-        [LoggingAspects.ConsumeException]
-        [LoggingAspects.UpsetStomach]
 
         /// <summary>
         /// Toggles the visibility and functionality of the application's interface.
@@ -617,6 +614,9 @@ namespace Cat
         /// <remarks>
         /// If the interface is currently visible, this method clears it and resets the window style to its edited state, logging the change. If the interface is not visible, it sets the window style to include layering and tool window properties, adds a new interface instance to the canvas, and logs the update. In both cases, the method adjusts key hooking accordingly.
         /// </remarks>
+        [LoggingAspects.Logging]
+        [LoggingAspects.ConsumeException]
+        [LoggingAspects.UpsetStomach]
         private bool ToggleInterface()
         {
             if (Interface.inst != null)
@@ -635,6 +635,7 @@ namespace Cat
             }
         }
 
+        [LoggingAspects.Logging]
         internal void MakeNormalWindow()
         {
             Logging.Log($"Changing WinStyle of HWND {hwnd}");
@@ -645,6 +646,7 @@ namespace Cat
             DestroyKeyHook();
         }
 
+        [LoggingAspects.Logging]
         internal void MakeFunnyWindow() 
         {
             Logging.Log($"Changing WinStyle of HWND {hwnd}");
@@ -665,6 +667,7 @@ namespace Cat
             internal static Interface? inst = null;
             internal Canvas parent;
             private static ScrollViewer _scrollViewer;
+
             /// <summary>
             /// Represents the graphical user interface layer of the application, providing methods and properties to manage its visibility and interactions.
             /// </summary>
@@ -681,7 +684,7 @@ namespace Cat
                 //MouseMove += (s, e) => Catowo.inst.ToggleInterface();
             }
 
-            /// <summary>
+           /// <summary>
             /// Initializes the background rectangle for the interface, setting its dimensions and opacity.
             /// </summary>
             /// <returns>A rectangle that serves as the background for the interface.</returns>
@@ -700,7 +703,7 @@ namespace Cat
             [LoggingAspects.ConsumeException]
             [LoggingAspects.UpsetStomach]
 
-            /// <summary>
+           /// <summary>
             /// Initializes the components of the interface, including the input text box and log list box, and sets their properties and event handlers.
             /// </summary>
             private void InitializeComponents()
@@ -762,7 +765,7 @@ namespace Cat
                 //SetTop<double>(Marker, screenHeight - 10);
             }
 
-            /// <summary>
+           /// <summary>
             /// Asynchronously hides the interface, setting its visibility to collapsed and ensuring the UI updates immediately.
             /// </summary>
             internal async Task Hide()
@@ -784,13 +787,13 @@ namespace Cat
                 Logging.Log("Interface Shown");
             }
 
-            [LoggingAspects.ConsumeException]
 
             /// <summary>
             /// Adds a log message to the interface's log list box.
             /// </summary>
             /// <param name="logMessage">The message to log.</param>
             /// <returns>An integer representing the position of the newly added log message in the log list box.</returns>
+            [LoggingAspects.ConsumeException]
             internal static int AddLog(string logMessage)
             {
                 Interface? instance = inst;
@@ -803,14 +806,13 @@ namespace Cat
                 return value;
             }
 
-            [LoggingAspects.ConsumeException]
-
             /// <summary>
             /// Edits a log message in the interface's log list box at a specified index.
             /// </summary>
             /// <param name="message">The new log message.</param>
             /// <param name="id">The index of the log message to edit.</param>
             /// <param name="fromEnd">Whether the index is counted from the end of the log list.</param>
+            [LoggingAspects.ConsumeException]
             internal static int AddLog(params string[] logs)
             {
                 Interface? instance = inst;
@@ -826,7 +828,7 @@ namespace Cat
 
             [LoggingAspects.ConsumeException]
 
-            /// <summary>
+           /// <summary>
             /// Edits a log message in the interface's log list box at a specified index.
             /// </summary>
             /// <param name="message">The new log message.</param>

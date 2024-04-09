@@ -329,7 +329,7 @@ namespace Cat
             private readonly HttpClient _client = new HttpClient();
             private readonly SWC.Image _imageControl = new SWC.Image();
             private Logging.ProgressLogging Progress = new("Cat Window Image Download:", true);
-            private Logging.SpinnyThing spinnything;
+            private Logging.ProgressLogging.SpinnyThing spinnything;
 
             /// <summary>
             /// Initializes a new instance of the <see cref="CatWindow"/> class.
@@ -534,7 +534,7 @@ namespace Cat
             {
                 Logging.Log($"Extracting {archivePath} to {ExternalProcessesFolder}");
                 SectionProgress = new Logging.ProgressLogging("Extracting FFMPEG:", true);
-                var loader = new Logging.SpinnyThing();
+                var loader = new Logging.ProgressLogging.SpinnyThing();
                 try
                 {
                     if (!Directory.Exists(ExternalProcessesFolder))
@@ -673,7 +673,7 @@ namespace Cat
             {
                 uint rnd = (uint)random.Next(int.MaxValue);
                 Logging.ProgressLogging plog = new($"Progress test {rnd}:", true);
-                var spin = new Logging.SpinnyThing();
+                var spin = new Logging.ProgressLogging.SpinnyThing();
                 byte progress = 0;
                 while (progress < 100)
                 {

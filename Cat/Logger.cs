@@ -707,44 +707,45 @@ namespace Cat
             /// Represents an animated loading indicator.
             /// </summary>
             internal class SpinnyThing
-        {
-            private readonly string[] animation = { "|", "/", "-", "\\" };
-            private TextBlock block;
-            private byte num = 0;
-            private readonly DispatcherTimer timer;
-
-            /// <summary>
-            /// Initializes a new instance of the <see cref="SpinnyThing"/> class and starts the animation.
-            /// </summary>
-            internal SpinnyThing()
             {
-                (_, block) = Catowo.Interface.AddTextLogR(animation[num++]);
-                timer = new DispatcherTimer();
-                timer.Interval = TimeSpan.FromMilliseconds(50);
-                timer.Tick += Timer_Tick;
-                timer.Start();
-            }
+                private readonly string[] animation = { "|", "/", "-", "\\" };
+                private TextBlock block;
+                private byte num = 0;
+                private readonly DispatcherTimer timer;
 
-            /// <summary>
-            /// Handles the timer tick event to cycle through animation frames.
-            /// </summary>
-            /// <param name="sender">The source of the event.</param>
-            /// <param name="e">An EventArgs object that contains the event data.</param>
-            private void Timer_Tick(object sender, EventArgs e)
-            {
-                block.Text = animation[num++];
-                if (num == animation.Length) num = 0;
-                Catowo.Interface.logListBox.Items.Refresh();
-            }
+                /// <summary>
+                /// Initializes a new instance of the <see cref="SpinnyThing"/> class and starts the animation.
+                /// </summary>
+                internal SpinnyThing()
+                {
+                    (_, block) = Catowo.Interface.AddTextLogR(animation[num++]);
+                    timer = new DispatcherTimer();
+                    timer.Interval = TimeSpan.FromMilliseconds(50);
+                    timer.Tick += Timer_Tick;
+                    timer.Start();
+                }
 
-            /// <summary>
-            /// Stops the animation and removes the animation block from the log list box.
-            /// </summary>
-            internal void Stop()
-            {
-                timer.Stop();
-                timer.Tick -= Timer_Tick;
-                Catowo.Interface.logListBox.Items.Remove(block);
+                /// <summary>
+                /// Handles the timer tick event to cycle through animation frames.
+                /// </summary>
+                /// <param name="sender">The source of the event.</param>
+                /// <param name="e">An EventArgs object that contains the event data.</param>
+                private void Timer_Tick(object sender, EventArgs e)
+                {
+                    block.Text = animation[num++];
+                    if (num == animation.Length) num = 0;
+                    Catowo.Interface.logListBox.Items.Refresh();
+                }
+
+                /// <summary>
+                /// Stops the animation and removes the animation block from the log list box.
+                /// </summary>
+                internal void Stop()
+                {
+                    timer.Stop();
+                    timer.Tick -= Timer_Tick;
+                    Catowo.Interface.logListBox.Items.Remove(block);
+                }
             }
         }
     }
