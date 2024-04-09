@@ -50,7 +50,7 @@ namespace Cat
                         if (Timers.TryRemove(key, out var stopwatch))
                         {
                             stopwatch.Stop();
-                            Cat.Logging.Log($"Exiting method {method.DeclaringType?.FullName?.Replace('+', '.')}.{method.Name}. Execution time: {stopwatch.ElapsedMilliseconds} ms. Return Value: {Cat.Logging.ProcessMessage(returnValue, 0)} of type {returnType.FullName}");
+                            Cat.Logging.Log($"Exiting method {method.DeclaringType?.FullName?.Replace('+', '.')}.{method.Name}. Execution time: {stopwatch.Elapsed.Seconds}s {stopwatch.Elapsed.Milliseconds}ms {stopwatch.Elapsed.Microseconds}µs {stopwatch.Elapsed.Nanoseconds}ns Return Value: {Cat.Logging.ProcessMessage(returnValue, 0)} of type {returnType.FullName}");
                         }
                     }
                     else Cat.Logging.Log($"Exiting method {method.DeclaringType?.FullName?.Replace('+', '.')}.{method.Name}. Return Value: {Cat.Logging.ProcessMessage(returnValue, 0)} of type {returnType.FullName}");

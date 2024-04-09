@@ -85,7 +85,7 @@ namespace Cat
                 Logging.Log("Entering helper Screenshotting.StitchCapture()");
                 error_message = null;
 
-                var totalBounds = Screen.AllScreens.Select(s => s.Bounds).Aggregate(Rectangle.Union);
+                var totalBounds = Screen.AllScreens.Select(s => s.Bounds).Aggregate(System.Drawing.Rectangle.Union);
                 Logging.Log($"Aggregated Bounds: {totalBounds.Width}px Width, {totalBounds.Height}px Height, {totalBounds.X}x, {totalBounds.Y}y");
                 IntPtr desktopWnd = GetDesktopWindowWrapper();
                 IntPtr desktopDC = GetWindowDCWrapper(desktopWnd);

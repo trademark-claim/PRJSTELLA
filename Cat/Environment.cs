@@ -152,7 +152,14 @@ namespace Cat
             { VK_OEM_2, ('/', '?')},
             { VK_OEM_3, ('`', '~')}
         };
-
+        internal static readonly Dictionary<int, string> ModifierVkCodetoStringMap = new()
+        {
+            { VK_RSHIFT, "Right Shift" },
+            { VK_LSHIFT, "Left Shift" },
+            { VK_RMENU, "Right Menu" },
+            { VK_LMENU, "Left Menu" },
+            { VK_BACK, "Back" },
+        };
         internal const uint OCR_NORMAL = 32512;
         internal const uint SPI_SETCURSORS = 0x0057;
         internal const uint SPIF_UPDATEINIFILE = 0x01;
@@ -185,6 +192,7 @@ namespace Cat
             private static float _fontsize = 10;
             internal static float FontSize { get => _fontsize; set { _fontsize = value; Catowo.Interface.logListBox.UpdateFontSize(); } }
 
+            internal static readonly double[] CommandKeys = [];
 
             internal static void UpdateValue(string key, string value) 
             {

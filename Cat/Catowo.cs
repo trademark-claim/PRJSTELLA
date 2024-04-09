@@ -7,6 +7,12 @@ global using static Cat.PInvoke;
 global using static Cat.Statics;
 global using static Cat.Structs;
 global using SWC = System.Windows.Controls;
+global using Brush = System.Windows.Media.Brush;
+global using Brushes = System.Windows.Media.Brushes;
+global using Rectangle = System.Windows.Shapes.Rectangle;
+global using Colors = System.Windows.Media.Colors;
+global using Point = System.Windows.Point;
+global using Size = System.Windows.Size;
 using NAudio.Wave;
 using System.CodeDom;
 using System.ComponentModel.DataAnnotations;
@@ -423,25 +429,41 @@ namespace Cat
                 Interface.inst?.Children.Clear();
                 Interface.inst?.parent?.Children.Remove(inst);
                 Interface.inst = null;
-                Logging.Log($"Changing WinStyle of HWND {hwnd}");
-                int os = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
-                SetWindowLongWrapper(hwnd, GWL_EXSTYLE, editedstyle);
-                int es = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
-                Logging.Log($"Set WinStyle of HWND {hwnd} from {os:X} ({os:B}) [{os}] to {es:X} ({es:B}) [{es}]");
-                InitKeyHook();
+                MakeFunnyWindow();
                 return false;
             }
             else
             {
-                Logging.Log($"Changing WinStyle of HWND {hwnd}");
-                int os = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
-                SetWindowLongWrapper(hwnd, GWL_EXSTYLE, originalStyle | WS_EX_LAYERED | WS_EX_TOOLWINDOW);
-                int es = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
-                Logging.Log($"Set WinStyle of HWND {hwnd} from {os:X} ({os:B}) [{os}] to {es:X} ({es:B}) [{es}]");
+                MakeNormalWindow();
                 canvas.Children.Add(new Interface(canvas));
-                DestroyKeyHook();
                 return true;
             }
+        }
+
+        [LoggingAspects.Logging]
+        [LoggingAspects.ConsumeException]
+        [LoggingAspects.UpsetStomach]
+        internal void MakeNormalWindow()
+        {
+            Logging.Log($"Changing WinStyle of HWND {hwnd}");
+            int os = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
+            SetWindowLongWrapper(hwnd, GWL_EXSTYLE, originalStyle | WS_EX_LAYERED | WS_EX_TOOLWINDOW);
+            int es = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
+            Logging.Log($"Set WinStyle of HWND {hwnd} from {os:X} ({os:B}) [{os}] to {es:X} ({es:B}) [{es}]");
+            DestroyKeyHook();
+        }
+
+        [LoggingAspects.Logging]
+        [LoggingAspects.ConsumeException]
+        [LoggingAspects.UpsetStomach]
+        internal void MakeFunnyWindow()
+        {
+            Logging.Log($"Changing WinStyle of HWND {hwnd}");
+            int os = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
+            SetWindowLongWrapper(hwnd, GWL_EXSTYLE, editedstyle);
+            int es = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
+            Logging.Log($"Set WinStyle of HWND {hwnd} from {os:X} ({os:B}) [{os}] to {es:X} ({es:B}) [{es}]");
+            InitKeyHook();
         }
 
         internal class Interface : Canvas
