@@ -40,7 +40,7 @@ namespace Cat
                 switch (mode)
                 {
                     case Mode.Introduction:
-
+                        break;
                 }
             }
 
