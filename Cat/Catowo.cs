@@ -327,7 +327,7 @@ namespace Cat
             Logging.Log(log);
             if (isKeyDown)
             {
-                DebugLabel.Content += $"A {Qd}, {RShifted}, {LShifted}, {vkCode}, {wParam}, {(Keys)vkCode}";
+                DebugLabel.Content += $"{Qd}, {RShifted}, {LShifted}, {vkCode}, {wParam}, {(Keys)vkCode}";
                 if (!Qd && vkCode == VK_Q)
                 {
                     Qd = true;
@@ -503,6 +503,7 @@ namespace Cat
         /// <remarks>
         /// Logs the start of the cleanup process, destroys the keyboard hook, and logs the completion of the destruction process.
         /// </remarks>
+
         ~Catowo()
         {
             Logging.Log("Cleaning up Catowo...");
@@ -543,7 +544,7 @@ namespace Cat
             Background = System.Windows.Media.Brushes.Transparent;
             Topmost = true;
             ShowActivated = false;
-            ShowInTaskbar = true; // When making new code, set this to true so you can close the crashed app
+            ShowInTaskbar = false; // When making new code, set this to true so you can close the crashed app
             Left = 0;
             Top = 0;
             _screen_ = Array.FindIndex(System.Windows.Forms.Screen.AllScreens, screen => screen.Primary);
@@ -560,6 +561,8 @@ namespace Cat
                 SetWindowLongWrapper(hwnd, GWL_EXSTYLE, originalStyle | WS_EX_TRANSPARENT | WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE);
                 editedstyle = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
                 Logging.Log($"Set Win Style of Handle {hwnd} from {originalStyle:X} ({originalStyle:B}) [{originalStyle}] to {editedstyle:X} ({editedstyle:B}) [{editedstyle}]");
+                if (!Program.hadUserData)
+                    Objects.ClaraHerself.RunClara(ClaraHerself.Mode.Introduction, canvas);
             };
         }
         /// <summary>
@@ -572,11 +575,11 @@ namespace Cat
         {
             canvas.Children.Add(DEBUGMARKER);
             canvas.Children.Add(FUNTMARKER);
-            Statics.SetLeft(FUNTMARKER, 4);
+            Statics.SetLeft<double>(FUNTMARKER, 4);
             canvas.Children.Add(SHORTCUTSMARKER);
-            Statics.SetLeft(SHORTCUTSMARKER, 8);
+            Statics.SetLeft<double>(SHORTCUTSMARKER, 8);
             canvas.Children.Add(DANGERMARKER);
-            Statics.SetLeft(DANGERMARKER, 12);
+            Statics.SetLeft<double>(DANGERMARKER, 12);
             canvas.Children.Add(DebugLabel);
             Mode = Modes.None;
             DebugLabel.Foreground = new SolidColorBrush(Colors.LimeGreen);
@@ -641,8 +644,6 @@ namespace Cat
         {
 
             private readonly SWS.Rectangle Backg;
-
-            //internal static readonly List<Logging.ProgressLogging> progresses = new();
             private SWC.TextBox inputTextBox;
 
             internal static LogListBox logListBox = new();
@@ -672,10 +673,10 @@ namespace Cat
             private SWS.Rectangle InitBackg()
             {
                 var scre = GetScreen();
-                SWS.Rectangle rect = new SWS.Rectangle { Width = scre.Bounds.Width, Height = scre.Bounds.Height, Fill = new SWM.SolidColorBrush(SWM.Colors.Gray), Opacity = 0.8f };
+                SWS.Rectangle rect = new SWS.Rectangle { Width = scre.Bounds.Width, Height = scre.Bounds.Height, Fill = new SWM.SolidColorBrush(SWM.Colors.Gray), Opacity = UserData.Opacity };
                 Logging.Log($"{Catowo.inst.Screen}, {rect.Width} {rect.Height}");
-                SetTop(rect, 0);
-                SetLeft(rect, 0);
+                SetTop<double>(rect, 0);
+                SetLeft<double>(rect, 0);
                 Children.Add(rect);
                 return rect;
             }
@@ -720,7 +721,7 @@ namespace Cat
                     }
 
                 };
-
+                
 #if TESTCOMMANDS
                 inputTextBox.Text = "dsi";
                 CommandProcessing.ProcessCommand();
@@ -734,16 +735,16 @@ namespace Cat
                 logListBox.Width = screenWidth - (padding * 2);
                 logListBox.Height = screenHeight - taskbarHeight - inputTextBoxHeight - (padding * 3);
 
-                SetLeft(logListBox, padding);
-                SetTop(logListBox, padding);
+                SetLeft<double>(logListBox, padding);
+                SetTop<double>(logListBox, padding);
                 Children.Add(inputTextBox);
                 Children.Add(logListBox);
                 Catowo.inst.Focus();
                 inputTextBox.Focus();
 
                 //Children.Add(Marker);
-                //SetLeft(Marker, screenWidth - 10);
-                //SetTop(Marker, screenHeight - 10);
+                //SetLeft<double>(Marker, screenWidth - 10);
+                //SetTop<double>(Marker, screenHeight - 10);
             }
 
             /// <summary>

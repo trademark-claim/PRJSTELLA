@@ -43,7 +43,7 @@ namespace Cat
         internal const int WS_EX_TRANSPARENT = 0x20;
         internal const int WS_EX_LAYERED = 0x80000;
         internal const int WS_EX_TOOLWINDOW = 0x80;
-
+        internal const int WS_EX_TOPMOST = 0x8;
         internal const int WS_EX_NOACTIVATE = 0x08000000;
 
         internal const int WH_KEYBOARD_LL = 13;
