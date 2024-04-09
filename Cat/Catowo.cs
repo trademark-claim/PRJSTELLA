@@ -1,4 +1,4 @@
-﻿#define ImmedShutdown
+#define ImmedShutdown
 
 /***************************************************************************************
  * 
@@ -29,6 +29,11 @@ global using static Cat.Objects;
 global using static Cat.PInvoke;
 global using static Cat.Statics;
 global using static Cat.Structs;
+global using Point = System.Windows.Point;
+global using Size = System.Windows.Size;
+global using Rectangle = System.Windows.Shapes.Rectangle;
+global using Brush = System.Windows.Media.Brush;
+global using Brushes = System.Windows.Media.Brushes;
 global using SWC = System.Windows.Controls;
 using NAudio.Wave;
 using System.CodeDom;
