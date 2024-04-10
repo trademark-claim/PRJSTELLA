@@ -700,7 +700,8 @@ namespace Cat
                 { "EnvironmentVariables", (typeof(bool), false) },
                 { "FontSize", (typeof(float), (1.0f, 50.0f)) },
                 { "TimeAll", (typeof(bool), false) },
-                { "LoggingDetails", (typeof(bool), false) }
+                { "LoggingDetails", (typeof(bool), false) },
+                { "AllowRegistryEdits", (typeof(bool), false) }
             };
              
             internal static readonly Dictionary<string, List<(string, object)>> initalsettings = new()
@@ -714,7 +715,8 @@ namespace Cat
                 },
                 {
                     "Misc", new() {
-                        ("Startup", true)
+                        ("Startup", true),
+                        ("AllowRegistryEdits", false)
                     }
                 },
                 {

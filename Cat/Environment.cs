@@ -34,6 +34,7 @@ namespace Cat
         internal const string NotesFolder = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\Notes\\";
         internal const string ExternalProcessesFolder = "C:\\ProgramData\\Kitty\\Cat\\Processes\\";
         internal const string EPTempF = "C:\\ProgramData\\Kitty\\Cat\\Processes\\temp";
+        internal const string CursorsFilePath = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\Cursors\\";
         internal const string UserDataFile = UserFolder + "hello_mr_edit_my_raw_data.ini";
         internal const string FFMPEGPath = ExternalProcessesFolder + "ffmpeg.exe";
 
@@ -178,7 +179,80 @@ namespace Cat
             { VK_LMENU, "Left Menu" },
             { VK_BACK, "Back" },
         };
+
+        // Cursors
+        /// <summary>
+        /// Standard arrow and small hourglass
+        /// </summary>
+        internal const uint OCR_APPSTARTING = 32650;
+
+        /// <summary>
+        /// Standard arrow
+        /// </summary>
         internal const uint OCR_NORMAL = 32512;
+
+        /// <summary>
+        /// Crosshair
+        /// </summary>
+        internal const uint OCR_CROSS = 32515;
+
+        /// <summary>
+        /// Hand
+        /// </summary>
+        internal const uint OCR_HAND = 32649;
+
+        /// <summary>
+        /// Arrow and question mark
+        /// </summary>
+        internal const uint OCR_HELP = 32651;
+
+        /// <summary>
+        /// I-beam
+        /// </summary>
+        internal const uint OCR_IBEAM = 32513;
+
+        /// <summary>
+        /// Slashed circle
+        /// </summary>
+        internal const uint OCR_NO = 32648;
+
+        /// <summary>
+        /// Four-pointed arrow pointing north, south, east, and west
+        /// </summary>
+        internal const uint OCR_SIZEALL = 32646;
+
+        /// <summary>
+        /// Double-pointed arrow pointing northeast and southwest
+        /// </summary>
+        internal const uint OCR_SIZENESW = 32643;
+
+        /// <summary>
+        /// Double-pointed arrow pointing north and south
+        /// </summary>
+        internal const uint OCR_SIZENS = 32645;
+
+        /// <summary>
+        /// Double-pointed arrow pointing northwest and southeast
+        /// </summary>
+        internal const uint OCR_SIZENWSE = 32642;
+
+        /// <summary>
+        /// Double-pointed arrow pointing west and east
+        /// </summary>
+        internal const uint OCR_SIZEWE = 32644;
+
+        /// <summary>
+        /// Arrow pointing up
+        /// </summary>
+        internal const uint OCR_UP = 32516;
+
+        /// <summary>
+        /// Hourglass
+        /// </summary>
+        internal const uint OCR_WAIT = 32514;
+
+
+        /// PINVOKE Flags for cursor changing.
         internal const uint SPI_SETCURSORS = 0x0057;
         internal const uint SPIF_UPDATEINIFILE = 0x01;
         internal const uint SPIF_SENDCHANGE = 0x02;
@@ -209,6 +283,10 @@ namespace Cat
 
             /// <summary>Indicates whether the application should start automatically.</summary>
             internal static bool Startup = true;
+            /// <summary>
+            /// Asks the user if they're fine with the program editing the registry.
+            /// </summary>
+            internal static bool AllowRegistryEdits = false;
 
             /// <summary>Default screen brightness setting.</summary>
             internal static float Brightness = 0.7f;
@@ -259,6 +337,9 @@ namespace Cat
                         break;
                     case nameof(TimeAll) :
                         TimeAll = bool.Parse(value);
+                        break;
+                    case nameof(AllowRegistryEdits) :
+                        AllowRegistryEdits = bool.Parse(value);
                         break;
                     default:
                         Logging.Log($"Unknown key in INI file: {key}");

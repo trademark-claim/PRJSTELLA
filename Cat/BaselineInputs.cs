@@ -49,7 +49,7 @@ namespace Cat
             /// <returns>True if the cursor was successfully changed; otherwise, false.</returns>
             [LoggingAspects.ConsumeException]
             [LoggingAspects.Logging]
-            private static bool ChangeCursor(string filename)
+            internal static bool ChangeCursor(string filename, uint id = OCR_NORMAL)
             {
                 Logging.Log("Changing cursor to: " + filename);
                 bool isValid = ValidateFile(filename);
@@ -63,7 +63,7 @@ namespace Cat
                 Logging.Log($"Loaded handle: {cursorHandle}");
                 if (cursorHandle != IntPtr.Zero)
                 {
-                    SetSystemCursorWrapper(cursorHandle, OCR_NORMAL);
+                    SetSystemCursorWrapper(cursorHandle, id);
                     return true;
                 }
                 else

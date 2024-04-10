@@ -113,9 +113,6 @@ namespace Cat
             /// <summary>
             /// The bubble object being shown
             /// </summary>
-            /// <remarks>
-            /// Might make this one a solid object for reusability and remove the overhead of making new objects + adding / removing them all the time.
-            /// </remarks>
             private static SpeechBubble? bubble;
 
             /// <summary>
@@ -123,6 +120,15 @@ namespace Cat
             /// </summary>
             private static Canvas? canvas;
 
+            /// <summary>
+            /// However lonely you feel, you're never alone. There are literally millions of bugs, mites and bacteria living in your house. Goodnight.
+            /// </summary>
+            /// <param name="parameters"></param>
+            /// <returns></returns>
+            private delegate object? UniversalDelegate();
+
+            private static UniversalDelegate delegation = null;//(args) => { _ = "Lorum Ipsum"; return null; };
+            
             /// <summary>
             /// Needs to reflect what arrays we have
             /// </summary>
@@ -135,7 +141,7 @@ namespace Cat
             /// Cancer cures smoking.
             /// </summary>
             /// <param name="mode">Which array to run through</param>
-            /// <param name="canvas">The canvas ref</param>
+            /// <param name="canvas">The canvas</param>
             [LoggingAspects.Logging]
             [LoggingAspects.ConsumeException]
             internal static void RunClara(Mode mode, Canvas canvas)
@@ -143,7 +149,6 @@ namespace Cat
                 ClaraHerself.canvas = canvas;
                 OverlayRect.AddToCanvas(canvas);
                 Catowo.inst.MakeNormalWindow();
-                Catowo.inst.PreviewKeyDown += ProgressionKeydown; ;
                 switch (mode)
                 {
                     case Mode.Introduction:
@@ -152,8 +157,13 @@ namespace Cat
                 }
                 // The first message
                 bubble = new();
+                Point location = new(Catowo.inst.Width - 30, Catowo.inst.Height - 30);
+                Logging.LogP("Location", location);
+                bubble.LowerRightCornerFreeze = location;
                 bubble.Text = CurrentStory[num];
                 canvas.Children.Add(bubble);
+                Catowo.inst.PreviewKeyDown += ProgressionKeydown;
+
             }
 
             /// <summary>
@@ -163,25 +173,52 @@ namespace Cat
             /// <param name="e">The key event args</param>
             private static void ProgressionKeydown(object sender, System.Windows.Input.KeyEventArgs e)
             {
-                if (e.Key == System.Windows.Input.Key.Right)
+                if (e.Key == Key.Right)
                     if (canvas != null) {
-                        if (bubble != null)
-                        {
-                            canvas.Children.Remove(bubble);
-                            bubble = null;
-                        }
                         if (++num > CurrentStory.Length - 1)
                         {
                             num = 0;
                             Catowo.inst.MakeFunnyWindow();
                             Catowo.inst.PreviewKeyDown -= ProgressionKeydown;
                             OverlayRect.RemoveFromCanvas(canvas);
+                            if (bubble != null)
+                            {
+                                canvas.Children.Remove(bubble);
+                                bubble = null;
+                            }
                             return;
                         }
-                        bubble = new SpeechBubble();
-                        bubble.Text = CurrentStory[num];
-                        canvas.Children.Add(bubble);
+                        if (bubble != null)
+                            bubble.Text = CurrentStory[num];
+                        return;
                     }
+                if (e.Key == Key.Left)
+                    if (canvas != null) 
+                    {
+                        num--;
+                        if (num >= 0)
+                            if (bubble != null)
+                                bubble.Text = CurrentStory[num];
+                        return;
+                    }
+                if (e.Key == Key.Up)
+                    if (canvas != null)
+                    {
+                        num = 0;
+                        Catowo.inst.MakeFunnyWindow();
+                        Catowo.inst.PreviewKeyDown -= ProgressionKeydown;
+                        OverlayRect.RemoveFromCanvas(canvas);
+                        if (bubble != null)
+                        {
+                            canvas.Children.Remove(bubble);
+                            bubble = null;
+                        }
+                        return;
+                    }
+                if (e.Key == Key.Down)
+                    if (delegation != null)
+                        delegation();
+
             }
 
             /// <summary>
@@ -322,5 +359,7 @@ namespace Cat
             }
 
         }
+
+        internal readonly record struct Command(string Call, string Raw, object[][]? Parameters = null);
     }
 }

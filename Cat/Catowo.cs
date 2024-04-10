@@ -35,16 +35,15 @@ global using Rectangle = System.Windows.Shapes.Rectangle;
 global using Brush = System.Windows.Media.Brush;
 global using Brushes = System.Windows.Media.Brushes;
 global using SWC = System.Windows.Controls;
+global using Key = System.Windows.Input.Key;
+global using Interface = Cat.Catowo.Interface;
+global using Command = Cat.Objects.Command;
+global using Canvas = System.Windows.Controls.Canvas;
 using NAudio.Wave;
-using System.CodeDom;
-using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
-using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Diagnostics;
-using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -549,7 +548,7 @@ namespace Cat
             Background = System.Windows.Media.Brushes.Transparent;
             Topmost = true;
             ShowActivated = false;
-            ShowInTaskbar = false; // When making new code, set this to true so you can close the crashed app
+            ShowInTaskbar = true; // When making new code, set this to true so you can close the crashed app
             Left = 0;
             Top = 0;
             _screen_ = Array.FindIndex(System.Windows.Forms.Screen.AllScreens, screen => screen.Primary);
@@ -588,8 +587,7 @@ namespace Cat
             canvas.Children.Add(DebugLabel);
             Mode = Modes.None;
             DebugLabel.Foreground = new SolidColorBrush(Colors.LimeGreen);
-
-            this.Content = canvas;
+            Content = canvas;
         }
 
         [Flags]
@@ -660,8 +658,8 @@ namespace Cat
         internal class Interface : Canvas
         {
 
-            private readonly SWS.Rectangle Backg;
-            private SWC.TextBox inputTextBox;
+            internal SWS.Rectangle Backg { get; }
+            internal SWC.TextBox inputTextBox { get; private set; }
 
             internal static LogListBox logListBox = new();
             internal static Interface? inst = null;
@@ -909,17 +907,17 @@ namespace Cat
             /// <summary>
             /// Provides methods for processing user commands input into the interface, including executing specific actions based on command identifiers and managing command history.
             /// </summary>
-            private static class CommandProcessing
+            internal static class CommandProcessing
             {
                 internal static Interface @interface;
-                private static IWavePlayer WavePlayer;
+                private static WaveOut? WavePlayer;
                 private static AudioFileReader AFR;
-                private static ParameterParsing.Command? commandstruct;
-                private static bool SilentAudioCleanup = false;
+                private static Command? commandstruct;
+                internal static bool SilentAudioCleanup = false;
                 private static Window? Logger = null;
                 private static readonly FixedQueue<string> History = new(10);
-
-                private static readonly Dictionary<string, int> cmdmap = new()
+                private static string cmdtext;
+                internal static Dictionary<string, int> cmdmap { get; } = new()
                 {
                     { "shutdown", 0 },
                     { "exit", 0 },
@@ -1093,6 +1091,16 @@ namespace Cat
                     { "print settings", 29 },
                     { "vs", 29 },
 
+                    { "load cursor preset", 30 },
+                    { "lcp", 30 },
+                    { "load cursors", 30 },
+
+                    { "add cursor preset", 31 },
+                    { "acp", 31 },
+                    { "create cursor preset", 31 },
+
+                    { "add cursor to preset", 31 },
+                    { "actp", 31 },
                 };
 
                 /// <summary>
@@ -1106,14 +1114,14 @@ namespace Cat
                 /// - <c>shortcut</c>: A string representing the keyboard shortcut associated with the command, if any.
                 /// Commands are used throughout the application to implement functionality accessible through the user interface or keyboard shortcuts.
                 /// </remarks>
-                private static readonly Dictionary<int, Dictionary<string, object>> Commands = new()
+                internal static Dictionary<int, Dictionary<string, object>> Cmds { get; } = new()
                 {
                     {
                         0, new Dictionary<string, object>
                         {
                             { "desc", "Shuts down the entire program" },
                             { "params", "" },
-                            { "function", (Func<bool>)Shutdown },
+                            { "function", (Func<bool>)Cat.Commands.Shutdown },
                             { "shortcut", "Shift Q E"}
                         }
                     },
@@ -1131,7 +1139,7 @@ namespace Cat
                         {
                             { "desc", "Shifts the interface screen to another monitor, takes in a number corresponding to the monitor you want it to shift to (1 being primary)" },
                             { "params", "screennum{int}" },
-                            { "function", (Func<bool>)ChangeScreen },
+                            { "function", (Func<bool>)Cat.Commands.ChangeScreen },
                             { "shortcut", "Shifts Q (number)"}
                         }
                     },
@@ -1140,7 +1148,7 @@ namespace Cat
                         {
                             { "desc", "Takes a screenshot of the screen, without the interface. -2 for a stiched image of all screens, -1 for individual screen pics, (number) for an individual screen, leave empty for the current screen Kitty is running on.\nE.g: screenshot ;-2" },
                             { "params", "[mode{int}]" },
-                            { "function", (Func<Task<bool>>)Screenshot },
+                            { "function", (Func<Task<bool>>)Cat.Commands.Screenshot },
                             { "shortcut", "Shifts Q S"}
                         }
                     },
@@ -1149,7 +1157,7 @@ namespace Cat
                          {
                             { "desc", "Begins capturing screen as a video, mutlimonitor support coming soon. Closes the interface when ran." },
                             { "params", "" },
-                            { "function", (Func<bool>)StartRecording },
+                            { "function", (Func<bool>)Cat.Commands.StartRecording },
                             { "shortcut", "Shifts Q R"}
                          }
                     },
@@ -1158,7 +1166,7 @@ namespace Cat
                         {
                             { "desc", "Starts capturing system audio, with optional audio input (0/exclusive, 1/inclusive).\n- Exclusive means only audio input, inclusive means audio input and system audio\nE.g: capture audio ;exclusive\nE.g: capture audio ;1" },
                             { "params", "[mode{int/string}]" },
-                            { "function", (Func<bool>)StartAudioRecording },
+                            { "function", (Func<bool>)Cat.Commands.StartAudioRecording },
                             { "shortcut", ""}
                         }
                     },
@@ -1167,7 +1175,7 @@ namespace Cat
                         {
                             { "desc", "Stops a currently running recording session, with an optional opening of the recording location after saving (true)\nE.g: stop recording ;true" },
                             { "params", "" },
-                            { "function", (Func<bool>)StopRecording },
+                            { "function", (Func<bool>)Cat.Commands.StopRecording },
                             { "shortcut", "Shifts Q D"}
                         }
                     },
@@ -1176,7 +1184,7 @@ namespace Cat
                         {
                             { "desc", "Stops a currently running audio session, with optional opening of the file location after saving.\nE.g: stop audio ;true" },
                             { "params", "" },
-                            { "function", (Func<bool>)StopAudioRecording },
+                            { "function", (Func<bool>)Cat.Commands.StopAudioRecording },
                             { "shortcut", ""}
                         }
                     },
@@ -1185,7 +1193,7 @@ namespace Cat
                         {
                             { "desc", "Plays an audio file, present the filepath as an argument with optional looping.\nE.g: play audio ;C:/Downloads/Sussyaudio.mp4 ;true" },
                             { "params", "filepath{str}, [looping{bool}]" },
-                            { "function", (Func<bool>)PlayAudio },
+                            { "function", (Func<bool>)Cat.Commands.PlayAudio },
                             { "shortcut", ""}
                         }
                     },
@@ -1194,7 +1202,7 @@ namespace Cat
                         {
                             { "desc", "Changes a control setting, you must specify the \nE.g: change setting ;LogAssemblies ;true\nE.g: change setting ;background ;green" },
                             { "params", "variablename{string}, value{string}" },
-                            { "function", (Func<bool>)ChangeSettings },
+                            { "function", (Func<bool>)Cat.Commands.ChangeSettings },
                             { "shortcut", ""}
                         }
                     },
@@ -1203,7 +1211,7 @@ namespace Cat
                         {
                             { "desc", "Takes a 'snapshot' of a specified process and shows information like it's memory usage, cpu usage, etc.\nE.g: take process snapshot ;devenv\nE.g: take process snapshot ;9926381232" },
                             { "params", "process{string/int}" },
-                            { "function", (Func<bool>)TakeProcessSnapshot },
+                            { "function", (Func<bool>)Cat.Commands.TakeProcessSnapshot },
                             { "shortcut", "Shifts Q T"}
                         }
                     },
@@ -1212,7 +1220,7 @@ namespace Cat
                         {
                             { "desc", "Starts measuring a processes's information until stopped.\nE.g: start measuring process ;devenv" },
                             { "params", "process{string/int}" },
-                            { "function", (Func<bool>)StartProcessMeasuring },
+                            { "function", (Func<bool>)Cat.Commands.StartProcessMeasuring },
                             { "shortcut", "Shifts Q X"}
                         }
                     },
@@ -1221,7 +1229,7 @@ namespace Cat
                         {
                             { "desc", "Stops a currently running process measuring session, with an optional saving of the data.\nE.g: stop measuring process ;false" },
                             { "params", "[savedata{bool}]" },
-                            { "function", (Func<bool>)StopProcessMeasuring },
+                            { "function", (Func<bool>)Cat.Commands.StopProcessMeasuring },
                             { "shortcut", "Shifts Q C"}
                         }
                     },
@@ -1230,7 +1238,7 @@ namespace Cat
                         {
                             { "desc", "Opens the logs folder.\nE.g: open logs" },
                             { "params", "" },
-                            { "function", (Func<bool>)OpenLogs },
+                            { "function", (Func<bool>)Cat.Commands.OpenLogs },
                             { "shortcut", ""}
                         }
                     },
@@ -1239,7 +1247,7 @@ namespace Cat
                         {
                             { "desc", "Opens a specified log file for viewing, specifying index or name.\nE.g: view log ;1\nE.g: view log ;Lcc0648800552499facf099d368686f0c" },
                             { "params", "filename{string/int}" },
-                            { "function", (Func<bool>)ViewLog },
+                            { "function", (Func<bool>)Cat.Commands.ViewLog },
                             { "shortcut", ""}
                         }
                     },
@@ -1247,8 +1255,8 @@ namespace Cat
                         15, new Dictionary<string, object>
                         {
                             { "desc", "(Attempts to) Changes the cursor to the specified cursor file, specifying file path.\nE.g: change cursor ;the/path/to/your/.cur/file" },
-                            { "params", "" },
-                            { "function", (Func<bool>)ChangeCursor },
+                            { "params", "path{string}" },
+                            { "function", (Func<bool>)Cat.Commands.ChangeCursor },
                             { "shortcut", ""}
                         }
                     },
@@ -1257,7 +1265,7 @@ namespace Cat
                         {
                             { "desc", "Resets all system cursors" },
                             { "params", "" },
-                            { "function", (Func<bool>)ResetCursor },
+                            { "function", (Func<bool>)Cat.Commands.ResetCursor },
                             { "shortcut", ""}
                         }
                     },
@@ -1266,7 +1274,7 @@ namespace Cat
                         {
                             { "desc", "Plots a set of data, specifying file path(s) or data in the format: ;int, int, int, ... int ;int, int, int, ... int (two sets of data).\nE.g: plot ;path/to/a/csv/with/two/lines/of/data\nE.g: plot ;path/to/csv/with/x_axis/data ;path/to/2nd/csv/with/y_axis/data\nE.g: plot ;1, 2, 3, 4, 5, 6 ;66, 33, 231, 53242, 564345" },
                             { "params", "filepath{string} | filepath1{string} filepath2{string} | data1{int[]} data2{int[]}" },
-                            { "function", (Func<bool>)Plot },
+                            { "function", (Func<bool>)Cat.Commands.Plot },
                             { "shortcut", ""}
                         }
                     },
@@ -1275,7 +1283,7 @@ namespace Cat
                         {
                             { "desc", "Saves a currently open plot (Plot must be open) to a file.\nE.g: save plot" },
                             { "params", "" },
-                            { "function", (Func<bool>)SavePlot },
+                            { "function", (Func<bool>)Cat.Commands.SavePlot },
                             { "shortcut", ""}
                         }
                     },
@@ -1284,7 +1292,7 @@ namespace Cat
                         {
                             { "desc", "Shows a random kitty :3" },
                             { "params", "" },
-                            { "function", (Func<bool>)RandomCatPicture },
+                            { "function", (Func<bool>)Cat.Commands.RandomCatPicture },
                             { "shortcut", "Shifts Q K"}
                         }
                     },
@@ -1293,7 +1301,7 @@ namespace Cat
                         {
                             { "desc", "Shows a list of commands, specific command info or general info.\nE.g: help\nE.g: help ;commands\nE.g:help ;plot" },
                             { "params", "[cmdname{string}]" },
-                            { "function", (Func<bool>)Help },
+                            { "function", (Func<bool>)Cat.Commands.Help },
                             { "shortcut", ""}
                         }
                     },
@@ -1302,7 +1310,7 @@ namespace Cat
                         {
                             { "desc", "Displays either all screen information, or just a specified one.\ndsi ;1" },
                             { "params", "[screennumber{int}]" },
-                            { "function", (Func<bool>)DisplayScreenInformation },
+                            { "function", (Func<bool>)Cat.Commands.DisplayScreenInformation },
                             { "shortcut", ""}
                         }
                     },
@@ -1311,7 +1319,7 @@ namespace Cat
                         {
                             { "desc", "Opens the live logger. \nE.g:sll" },
                             { "params", "" },
-                            { "function", (Func<bool>)OpenLogger},
+                            { "function", (Func<bool>)Cat.Commands.OpenLogger},
                             { "shortcut", "Shifts Q ,"}
                         }
                     },
@@ -1320,7 +1328,7 @@ namespace Cat
                         {
                             { "desc", "Closes an open live logger\nE.g: cll" },
                             { "params", "" },
-                            { "function", (Func<bool>)CloseLogger },
+                            { "function", (Func<bool>)Cat.Commands.CloseLogger },
                             { "shortcut", "Shifts Q ."}
                         }
                     },
@@ -1329,7 +1337,7 @@ namespace Cat
                         {
                             { "desc", "Aborts a currently playing audio file." },
                             { "params", "" },
-                            { "function", (Func<bool>)StopAudio },
+                            { "function", (Func<bool>)Cat.Commands.StopAudio },
                             { "shortcut", "Shifts Q V"}
                         }
                     },
@@ -1338,7 +1346,7 @@ namespace Cat
                         {
                             { "desc", "Prints the interface element details" },
                             { "params", "" },
-                            { "function", (Func<bool>)PrintElementDetails },
+                            { "function", (Func<bool>)Cat.Commands.PrintElementDetails },
                             { "shortcut", ""}
                         }
                     },
@@ -1347,7 +1355,7 @@ namespace Cat
                         {
                             { "desc", "Forces a logging flush" },
                             { "params", "" },
-                            { "function", (Func<Task<bool>>)FML },
+                            { "function", (Func<Task<bool>>)Cat.Commands.FML },
                             { "shortcut", "Shifts Q F"}
                         }
                     },
@@ -1356,7 +1364,7 @@ namespace Cat
                         {
                             { "desc", "Downloads exprs" },
                             { "params", "processname{string}" },
-                            { "function", (Func<Task<bool>>)DEP },
+                            { "function", (Func<Task<bool>>)Cat.Commands.DEP },
                             { "shortcut", ""}
                         }
                     },
@@ -1365,7 +1373,7 @@ namespace Cat
                         {
                             { "desc", "Generates a progress bar test" },
                             { "params", "" },
-                            { "function", (Func<bool>)GPT },
+                            { "function", (Func<bool>)Cat.Commands.GPT },
                             { "shortcut", ""}
                         }
                     },
@@ -1374,16 +1382,39 @@ namespace Cat
                         {
                             { "desc", "Prints all user settings in the format:\n[Section]\n  [Key]: [Value]" },
                             { "params", "" },
-                            { "function", (Func<bool>)ShowSettings },
+                            { "function", (Func<bool>)Cat.Commands.ShowSettings },
+                            { "shortcut", ""}
+                        }
+                    },
+                    {
+                        30, new Dictionary<string, object>
+                        {
+                            { "desc", "Loads a specified cursor preset" },
+                            { "params", "listname{string}" },
+                            { "function", (Func<bool>)Cat.Commands.LoadCursorPreset },
+                            { "shortcut", ""}
+                        }
+                    },
+                    {
+                        31, new Dictionary<string, object>
+                        {
+                            { "desc", "Creates a new cursor preset" },
+                            { "params", "listname{string}" },
+                            { "function", (Func<bool>)Cat.Commands.AddCursorPreset },
+                            { "shortcut", ""}
+                        }
+                    },
+                    {
+                        32, new Dictionary<string, object>
+                        {
+                            { "desc", "Adds a cursor to a preset" },
+                            { "params", "filepath{string}, cursortooverwrite{string}" },
+                            { "function", (Func<bool>)Cat.Commands.AddCursorToPreset },
                             { "shortcut", ""}
                         }
                     },
                 };
 
-                private static string cmdtext;
-
-                private static void FYI()
-                    => AddLog("This feature is coming soon.");
 
                 [LoggingAspects.Logging]
 
@@ -1405,8 +1436,6 @@ namespace Cat
                     @interface.inputTextBox.Text = previousraw;
                 }
 
-                [LoggingAspects.Logging]
-
                 /// <summary>
                 /// Navigates to the next command in the history queue and displays it in the input text box.
                 /// </summary>
@@ -1415,6 +1444,7 @@ namespace Cat
                 /// If no next command is available or if retrieving the next command fails, no action is taken.
                 /// This method complements the HistoryUp method, allowing users to navigate through the command history.
                 /// </remarks>
+                [LoggingAspects.Logging]
                 internal static void HistoryDown()
                 {
                     string? nextraw = History.GetPrevious();
@@ -1426,7 +1456,6 @@ namespace Cat
                     @interface.inputTextBox.Text = nextraw;
                 }
 
-                [LoggingAspects.Logging]
 
                 /// <summary>
                 /// Processes the command currently entered in the input text box, executing the associated action.
@@ -1438,6 +1467,7 @@ namespace Cat
                 /// Logs an error and updates the interface with feedback if the command cannot be found, fails to parse, or if the associated action or function cannot be executed.
                 /// Clears the input text box upon completion.
                 /// </remarks>
+                [LoggingAspects.Logging]
                 internal static async void ProcessCommand()
                 {
                     cmdtext = @interface.inputTextBox.Text.Trim().ToLower();
@@ -1446,7 +1476,7 @@ namespace Cat
                     if (cmdmap.TryGetValue(call, out int value))
                     {
                         int index = value;
-                        Dictionary<string, object> metadata = Commands[index];
+                        Dictionary<string, object> metadata = Cmds[index];
                         var parts = cmdtext.Split(';');
                         if (parts.Length > 1)
                         {
@@ -1457,7 +1487,7 @@ namespace Cat
                         {
                             Logging.Log($"Executing command {call}, index {index} with no entered parameters");
                         }
-                        bool parsestate = ParameterParsing.ParseCommand(cmdtext, value, out ParameterParsing.Command? commandstruct2, out string? error_message);
+                        bool parsestate = ParameterParsing.ParseCommand(cmdtext, value, out Command? commandstruct2, out string? error_message);
                         if (commandstruct2 != commandstruct && commandstruct2 != null)
                         {
                             commandstruct = commandstruct2;
@@ -1471,7 +1501,7 @@ namespace Cat
                             return;
                         }
                         if (!string.IsNullOrEmpty(error_message))
-                            AddTextLog(error_message, RED);
+                            Interface.AddTextLog(error_message, RED);
 
                         if (metadata.TryGetValue("function", out var actionObj) && actionObj is Func<bool> func)
                             func();
@@ -1493,783 +1523,11 @@ namespace Cat
                     Interface.AddLog("\n");
                 }
 
-                [LoggingAspects.Logging]
-                [LoggingAspects.ConsumeException]
-                [LoggingAspects.InterfaceNotice]
-
-                /// <summary>
-                /// Displays the current settings by reading from a configuration file and logging each setting to the interface.
-                /// </summary>
-                /// <returns>Always returns true, indicating the method has completed execution.</returns>
-                /// <remarks>
-                /// Iterates through all settings obtained from the configuration file, logging both the setting name and its value.
-                /// </remarks>
-                internal static bool ShowSettings()
-                {
-                    var data = Helpers.IniParsing.GetStructure(UserDataFile);
-                    foreach (string key in data.Keys)
-                    {
-                        Interface.AddLog(key);
-                        foreach (KeyValuePair<string, string> kvp in data[key])
-                        {
-                            Interface.AddLog($"   {kvp.Key}: {kvp.Value}");
-                        }
-                    }
-                    return true;
-                }
-
-                [LoggingAspects.ConsumeException]
-
-                /// <summary>
-                /// Initiates a test to generate a progressing test sequence.
-                /// </summary>
-                /// <returns>Always returns true, indicating the method has completed execution.</returns>
-                /// <remarks>
-                /// This method is used to trigger a progress test, useful for debugging or demonstration purposes.
-                /// </remarks>
-                private static bool GPT()
-                {
-                    Helpers.ProgressTesting.GenerateProgressingTest();
-                    return true;
-                }
-
-                [LoggingAspects.AsyncExceptionSwallower]
-
-                /// <summary>
-                /// Downloads external packages or executes processes based on the provided command parameters.
-                /// </summary>
-                /// <returns>A Task&lt;bool&gt; indicating the success or failure of the operation.</returns>
-                /// <remarks>
-                /// Attempts to identify and execute a download or process execution based on the input parameters. Specific actions, such as downloading FFMPEG, are determined by the command argument.
-                /// </remarks>
-                private static async Task<bool> DEP()
-                {
-                    string entry = commandstruct?.Parameters[0][0] as string;
-                    if (entry == null)
-                    {
-                        Logging.Log("Expected string but parsing failed and returned either a null command struct or a null entry, please submit a bug report.");
-                        AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
-                        return false;
-                    }
-                    if (entry == "ffmpeg")
-                    {
-                        await Helpers.FFMpegManager.DownloadFFMPEG();
-                        Logging.Log("DEP Execution " + Helpers.BackendHelping.Glycemia("Complete"));
-                    }
-                    else
-                    {
-                        Interface.AddLog("Unrecognised Process name.");
-                        return false;
-                    }
-                    return true;
-                }
-
-                [LoggingAspects.AsyncExceptionSwallower]
-
-                /// <summary>
-                /// Flushes the logging queue, ensuring all pending log messages are written out.
-                /// </summary>
-                /// <returns>A Task&lt;bool&gt; indicating the success or failure of the flush operation.</returns>
-                /// <remarks>
-                /// Asynchronously flushes the log queue, useful for ensuring that all pending log entries are processed and stored as intended, typically before shutdown or when debugging.
-                /// </remarks>
-                private static async Task<bool> FML()
-                {
-                    Interface.AddLog("Flushing Log queue...");
-                    await Logging.FinalFlush();
-                    Interface.AddLog("Logs flushed!");
-                    return true;
-                }
-
-                [LoggingAspects.ConsumeException]
-
-                /// <summary>
-                /// Initiates the application shutdown process, performing cleanup and closing operations.
-                /// </summary>
-                /// <returns>True if the shutdown process is initiated successfully.</returns>
-                /// <remarks>
-                /// Logs the shutdown intention, hides the application window, and triggers any necessary shutdown logic encapsulated in the App.ShuttingDown method.
-                /// </remarks>
-                private static bool Shutdown()
-                {
-                    Interface.AddTextLog("Shutting down... give me a few moments...", SWM.Color.FromRgb(230, 20, 20));
-                    Catowo.inst.Hide();
-                    App.ShuttingDown();
-                    return true;
-                }
-
-                [LoggingAspects.ConsumeException]
-
-                /// <summary>
-                /// Changes the current screen to the one specified by the user, updating the application's interface accordingly.
-                /// </summary>
-                /// <returns>True if the screen change is successful, false otherwise.</returns>
-                /// <remarks>
-                /// Validates the provided screen index against the available screens and, if valid, moves the application's interface to the specified screen.
-                /// </remarks>
-                private static bool ChangeScreen()
-                {
-                    int? entry = (int?)(commandstruct?.Parameters[0][0]);
-                    if (entry == null)
-                    {
-                        Logging.Log("Expected string but parsing failed and returned either a null command struct or a null entry, please submit a bug report.");
-                        AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
-                        return false;
-                    }
-                    if (entry >= 0 && entry < System.Windows.Forms.Screen.AllScreens.Length)
-                    {
-                        Logging.Log($"Changing screen to Screen #{entry}");
-                        Catowo.inst.Screen = entry.Value;
-                        return true;
-                    }
-                    else
-                    {
-                        Logging.Log("Screen index out of bounds of array.");
-                        Interface.AddLog($"Failed to find screen with index: {entry}");
-                        return false;
-                    }
-                }
-
-                [LoggingAspects.AsyncExceptionSwallower]
-                [LoggingAspects.Logging]
-
-                /// <summary>
-                /// Takes a screenshot based on the specified mode and saves it to a predetermined location.
-                /// </summary>
-                /// <returns>A Task&lt;bool&gt; indicating the success or failure of the screenshot operation.</returns>
-                /// <remarks>
-                /// Supports taking individual screenshots of each screen, a stitched screenshot of all screens, or a screenshot of a specific screen, based on the input parameter.
-                /// </remarks>
-                private static async Task<bool> Screenshot()
-                {
-                    await @interface.Hide();
-                    int? entryN = (int?)(commandstruct?.Parameters[0][0]);
-                    if (entryN == null)
-                    {
-                        Logging.Log("Expected int but parsing failed and returned either a null command struct or a null entry, please submit a bug report.");
-                        AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
-                        return false;
-                    }
-                    int entry = entryN.Value;
-                    Logging.Log("Taking screenshots...");
-                    switch (entry)
-                    {
-                        case >= 0 when entry < System.Windows.Forms.Screen.AllScreens.Length:
-                            {
-                                Logging.Log($"Capturing screen {entry}");
-                                Bitmap bmp = Helpers.Screenshotting.CaptureScreen(entry, out string? error);
-                                if (error != "" && error != null)
-                                {
-                                    AddTextLog(error, RED);
-                                    @interface.Show();
-                                    return false;
-                                }
-                                Logging.Log("Captured!");
-                                string path = SSFolder + $"Shot{GUIDRegex().Replace(Guid.NewGuid().ToString(), "")}.png";
-                                bmp.Save(path, ImageFormat.Png);
-                                bmp.Dispose();
-                                AddLog("Screenshot saved!");
-                                Logging.Log($"Shot saved to {path}");
-                                break;
-                            }
-
-                        case -1:
-                            {
-                                Logging.Log("Capturing all screens, individual mode");
-                                List<Bitmap> bmps = Helpers.Screenshotting.AllIndivCapture(out var errors);
-                                errors?.RemoveAll(x => x == null);
-                                if (errors != null && errors?.Count > 0)
-                                {
-                                    for (int i = 0; i < errors.Count; i++)
-                                    {
-                                        string? error = errors[i];
-                                        if (error != null)
-                                            AddTextLog($"Error when shooting screen {i}" + error, RED);
-                                        Logging.Log(error == null ? "no error" : error);
-                                    }
-                                    @interface.Show();
-                                    Logging.Log("Exiting Screenshotting due to errors.");
-                                    return false;
-                                }
-                                Logging.Log($"{bmps.Count} shots taken!");
-                                for (int i = 0; i < bmps.Count; i++)
-                                {
-                                    Bitmap bmp = bmps[i];
-                                    string path = SSFolder + $"IShot{i}{GUIDRegex().Replace(Guid.NewGuid().ToString(), "")}.png";
-                                    bmp.Save(path, ImageFormat.Png);
-                                    Logging.Log($"Saved shot {i} to {path}");
-                                    bmp.Dispose();
-                                }
-                                AddLog("Screenshots saved!");
-                                break;
-                            }
-
-                        case -2:
-                            {
-                                Logging.Log("Capturing all screens, stitch mode");
-                                Bitmap bmp = Helpers.Screenshotting.StitchCapture(out var error);
-                                if (error != "" && error != null)
-                                {
-                                    Logging.Log(error);
-                                    AddTextLog(error, RED);
-                                    @interface.Show();
-                                    return false;
-                                }
-                                Logging.Log("Captured!");
-                                string path = SSFolder + $"SShot{GUIDRegex().Replace(Guid.NewGuid().ToString(), "")}.png";
-                                bmp.Save(path, ImageFormat.Png);
-                                bmp.Dispose();
-                                AddLog("Screenshot saved!");
-                                Logging.Log($"Shot saved to {path}");
-                                break;
-                            }
-
-                        default:
-                            {
-                                string str = $"Expected arg1 value within -2 to {System.Windows.Forms.Screen.AllScreens.Length}";
-                                AddTextLog(str, LIGHTRED);
-                                Logging.Log(str);
-                                @interface.Show();
-                                return false;
-                            }
-                    }
-                    @interface.Show();
-                    return true;
-                }
-
-                [LoggingAspects.ConsumeException]
-
-                /// <summary>
-                /// Logs the details of key interface elements to the application's log display, including dimensions and positions.
-                /// </summary>
-                /// <returns>Always returns true, indicating the method completed its execution.</returns>
-                /// <remarks>
-                /// Useful for debugging layout issues or for verifying that interface elements are being initialized with the correct properties.
-                /// </remarks>
-                internal static bool PrintElementDetails()
-                {
-                    Interface.AddLog("Background Rectangle: ", inst.Backg.Width.ToString(), inst.Backg.Height.ToString());
-                    Interface.AddLog("Display box: ", logListBox.Width.ToString(), logListBox.Height.ToString(), GetLeft(logListBox).ToString());
-                    Interface.AddLog("Input box: ", @interface.inputTextBox.Width.ToString(), @interface.inputTextBox.Height.ToString(), GetLeft(@interface.inputTextBox).ToString(), GetTop(@interface.inputTextBox).ToString());
-                    return true;
-                }
-
-                [LoggingAspects.ConsumeException]
-                [LoggingAspects.Logging]
-
-                /// <summary>
-                /// Initiates a screen recording session, saving the video to a predetermined path.
-                /// </summary>
-                /// <returns>True if the recording session starts successfully.</returns>
-                /// <remarks>
-                /// Logs the start of the recording session and invokes the screen recording functionality provided by Helpers.ScreenRecording.
-                /// </remarks>
-                private static bool StartRecording()
-                {
-                    Interface.AddLog("Starting screen recording session");
-                    Helpers.ScreenRecording.StartRecording(_screen_, VideoFolder + "V" + GUIDRegex().Replace(Guid.NewGuid().ToString(), "") + ".mp4");
-                    return true;
-                }
-
-                [LoggingAspects.ConsumeException]
-                [LoggingAspects.Logging]
-
-                /// <summary>
-                /// Placeholder for starting audio recording functionality. Currently notifies the user of upcoming features.
-                /// </summary>
-                /// <returns>Always returns true as a placeholder for future implementation.</returns>
-                /// <remarks>
-                /// This method is a stub for future development and currently triggers a notification about unimplemented functionality.
-                /// </remarks>
-                private static bool StartAudioRecording()
-                {
-                    FYI();
-                    return true;
-                }
-
-                [LoggingAspects.ConsumeException]
-
-                /// <summary>
-                /// Stops the current screen recording session and logs the action.
-                /// </summary>
-                /// <returns>True if the recording session is stopped successfully.</returns>
-                /// <remarks>
-                /// Invokes a final logging flush and then stops the recording session using Helpers.ScreenRecording, logging the end of the session.
-                /// </remarks>
-                private static bool StopRecording()
-                {
-                    FML();
-                    Interface.AddLog("Ending screen recording session");
-                    Helpers.ScreenRecording.StopRecording();
-                    Interface.AddLog("Screen recording session ended.");
-                    return true;
-                }
-
-                [LoggingAspects.ConsumeException]
-                
-                /// <summary>
-                /// Placeholder for stopping audio recording functionality. Currently notifies the user of upcoming features.
-                /// </summary>
-                /// <returns>Always returns true as a placeholder for future implementation.</returns>
-                /// <remarks>
-                /// This method is a stub for future development and currently triggers a notification about unimplemented functionality.
-                /// </remarks>
-                private static bool StopAudioRecording()
-                {
-                    FYI();
-                    return true;
-                }
-
-                [LoggingAspects.ConsumeException]
-
-                /// <summary>
-                /// Attempts to play an audio file specified by the user input.
-                /// </summary>
-                /// <returns>True if the audio playback starts successfully, false if there is an error or the file path is invalid.</returns>
-                /// <remarks>
-                /// Validates the file path before attempting playback. Stops any currently playing audio before starting the new audio file.
-                /// </remarks>
-                private static bool PlayAudio()
-                {
-                    string entry = commandstruct?.Parameters[0][0] as string;
-                    if (entry == null)
-                    {
-                        Logging.Log("Expected string but parsing failed and returned either a null command struct or a null entry, please submit a bug report.");
-                        AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
-                        return false;
-                    }
-                    try
-                    {
-                        if (string.IsNullOrWhiteSpace(entry) || !ValidateFile(entry))
-                        {
-                            Logging.Log($"Invalid or inaccessible file path: {entry}");
-                            Interface.AddTextLog($"Invalid or inaccessible file path: {entry}", RED);
-                            return false;
-                        }
-                        Logging.Log($"Attempting to play audio file: {entry}");
-
-                        if (WavePlayer != null)
-                        {
-                            Logging.Log("An audio file is already playing. Stopping current audio.");
-                            Interface.AddLog("An audio file is already playing. Stopping current audio...");
-                            StopAudio();
-                        }
-                        Logging.Log("Creating Waveout and Audio file reader objects...");
-                        WavePlayer = new WaveOut();
-                        AFR = new AudioFileReader(entry);
-                        WavePlayer.Init(AFR);
-
-                        WavePlayer.PlaybackStopped += (s, e) =>
-                        {
-                            if (e.Exception != null)
-                            {
-                                Logging.Log($"Playback stopped due to an exception.");
-                                Logging.LogError(e.Exception);
-                            }
-                            else
-                            {
-                                Logging.Log("Playback stopped without any exception.");
-                            }
-                            StopAudio();
-                        };
-                        Logging.Log("Objects created successfully.");
-
-                        WavePlayer.Play();
-
-                        Logging.Log("Audio playback started successfully.");
-                        Interface.AddLog($"Playing {entry}");
-                    }
-                    catch (Exception ex)
-                    {
-                        Logging.Log($"Error while attempting to play audio:");
-                        Logging.LogError(ex);
-                        return false;
-                    }
-                    return true;
-                }
-
-                [LoggingAspects.ConsumeException]
-
-                /// <summary>
-                /// Stops any currently playing audio and releases associated resources.
-                /// </summary>
-                /// <returns>True if audio playback was stopped successfully, false if an error occurred during the process.</returns>
-                /// <remarks>
-                /// Checks if an audio file is currently playing and stops it, ensuring all resources are properly disposed.
-                /// </remarks>
-                private static bool StopAudio()
-                {
-                    Logging.Log("Stopping Audio playback...");
-                    try
-                    {
-                        if (WavePlayer != null)
-                        {
-                            WavePlayer.Stop();
-                            WavePlayer.Dispose();
-                            WavePlayer = null;
-
-                            AFR.Dispose();
-                            AFR = null;
-
-                            Logging.Log("Audio playback stopped.");
-                            if (!SilentAudioCleanup)
-                                Interface.AddLog("Audio playback stopped.");
-                        }
-                        else
-                        {
-                            Logging.Log("No audio is currently playing.");
-                            if (!SilentAudioCleanup)
-                                Interface.AddLog("Yes, I too enjoy perfect silence... but you can't tell me to stop playing nothing -- existence isn't an audio file, yk?");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Logging.Log($"Error stopping audio playback.");
-                        Logging.LogError(ex);
-                        return false;
-                    }
-                    SilentAudioCleanup = false;
-                    return true;
-                }
-
-                [LoggingAspects.ConsumeException]
-
-                /// <summary>
-                /// Updates a specific setting based on user input, affecting the application's configuration.
-                /// </summary>
-                /// <returns>True if the setting is updated successfully, false if the setting name is invalid or the value is not appropriate.</returns>
-                /// <remarks>
-                /// Parses the setting name and value from the user input, validating against known settings and applying the change if valid.
-                /// </remarks>
-                private static bool ChangeSettings()
-                {
-                    try
-                    {
-                        var entryN = commandstruct?.Parameters[0][0] as string;
-                        var entryM = commandstruct?.Parameters[0][1] as string;
-
-                        if (entryN == null || entryM == null)
-                        {
-                            var message = "Expected string but parsing failed, command struct or entry was null.";
-                            Logging.Log(message);
-                            AddTextLog($"Execution Failed: {message}", RED);
-                            return false;
-                        }
-
-                        var normalizedKey = entryN.ToLower().Trim();
-                        var data = Helpers.IniParsing.GetStructure(UserDataFile);
-
-                        Logging.Log("Processing NM:", entryN, entryM);
-
-                        foreach (var section in data.Keys)
-                        {
-                            foreach (KeyValuePair<string, string> kvp in data[section])
-                            {
-                                var currentKey = kvp.Key.ToLower().Trim();
-                                if (currentKey == normalizedKey)
-                                {
-                                    if (!Helpers.IniParsing.validation.ContainsKey(kvp.Key))
-                                    {
-                                        Logging.Log($"Validation for {kvp.Key} not found.");
-                                        continue;
-                                    }
-
-                                    var (type, constraints) = Helpers.IniParsing.validation[kvp.Key];
-                                    if ((Type)type == typeof(float) && constraints is Tuple<float, float> range)
-                                    {
-                                        if (float.TryParse(entryM, out float result) &&
-                                            result >= range.Item1 && result <= range.Item2)
-                                        {
-                                            UserData.UpdateValue(kvp.Key, entryM);
-                                            Helpers.IniParsing.UpAddValue(UserDataFile, section, kvp.Key, result.ToString());
-                                        }
-                                        else
-                                        {
-                                            Interface.AddLog($"Invalid value for {kvp.Key}. Expected a float in the range {range.Item1}-{range.Item2}.");
-                                            return false;
-                                        }
-                                    }
-                                    else if ((Type)type == typeof(bool))
-                                    {
-                                        if (bool.TryParse(entryM, out bool result))
-                                        {
-                                            UserData.UpdateValue(kvp.Key, entryM);
-                                            Helpers.IniParsing.UpAddValue(UserDataFile, section, kvp.Key, result.ToString());
-                                        }
-                                        else
-                                        {
-                                            Interface.AddLog($"Invalid value for {kvp.Key}. Expected a boolean.");
-                                            return false;
-                                        }
-                                    }
-                                    else
-                                    {
-                                        UserData.UpdateValue(kvp.Key, entryM);
-                                        Helpers.IniParsing.UpAddValue(UserDataFile, section, kvp.Key, entryM);
-                                    }
-
-                                    Interface.AddLog($"Updated {kvp.Key} in section {section}.");
-                                    return true;
-                                }
-                            }
-                        }
-
-                        Interface.AddLog("Key not found.");
-                        return false;
-                    }
-                    catch (Exception ex)
-                    {
-                        Logging.LogError(ex);
-                        AddTextLog("An unexpected error occurred, check logs for details.", RED);
-                        return false;
-                    }
-                }
-
-
-                [LoggingAspects.ConsumeException]
-
-                /// <summary>
-                /// Placeholder method for taking a snapshot of process metrics.
-                /// </summary>
-                /// <returns>Always returns true as a placeholder for future implementation.</returns>
-                /// <remarks>
-                /// Intended for future use to capture and log detailed metrics of a specified process.
-                /// </remarks>
-                private static bool TakeProcessSnapshot()
-                {
-                    FYI();
-                    return true;
-                }
-
-                [LoggingAspects.ConsumeException]
-                private static bool StartProcessMeasuring()
-                {
-                    FYI();
-                    return true;
-                }
-
-                [LoggingAspects.ConsumeException]
-                private static bool StopProcessMeasuring()
-                {
-                    FYI();
-                    return true;
-                }
-
-                [LoggingAspects.ConsumeException]
-                private static bool OpenLogs()
-                {
-                    FYI();
-                    return true;
-                }
-
-                [LoggingAspects.ConsumeException]
-                private static bool ViewLog()
-                {
-                    FYI();
-                    return true;
-                }
-
-                [LoggingAspects.ConsumeException]
-                private static bool ChangeCursor()
-                {
-                    FYI();
-                    return true;
-                }
-
-                [LoggingAspects.ConsumeException]
-                private static bool ResetCursor()
-                {
-                    FYI();
-                    return true;
-                }
-
-                [LoggingAspects.ConsumeException]
-                [LoggingAspects.Logging]
-                private static bool Plot()
-                {
-                    FYI();
-                    return true;
-                }
-
-                [LoggingAspects.ConsumeException]
-                private static bool SavePlot()
-                {
-                    FYI();
-                    return true;
-                }
-
-                [LoggingAspects.ConsumeException]
-                [LoggingAspects.Logging]
-
-                /// <summary>
-                /// Displays a random cat picture in a new window.
-                /// </summary>
-                /// <returns>True upon successful display of the cat picture.</returns>
-                /// <remarks>
-                /// Utilizes the Helpers.CatWindow class to create and show a window containing a randomly selected cat image.
-                /// </remarks>
-                private static bool RandomCatPicture()
-                {
-                    AddLog("Generating kitty...");
-                    var r = new Helpers.CatWindow();
-                    r.Show();
-                    return true;
-                }
-
-                [LoggingAspects.ConsumeException]
-                /// <summary>
-                /// Provides help information to the user, either displaying general help or specific command help based on the input.
-                /// </summary>
-                /// <returns>False if the help request could not be fulfilled, true otherwise.</returns>
-                /// <remarks>
-                /// If no specific command is requested, displays general help information about the application and how to
-                private static bool Help()
-                {
-                    if (commandstruct == null || commandstruct.Value.Parameters[1].Length < 1)
-                    {
-                        Interface.AddLog("Welcome to the help page!\nThis is the interface for the Kitty program, and is where you can run all the commands");
-                        Interface.AddTextLog("Run 'help ;commands' to see a list of commands\nRun 'help ;(cmdname)\n    E.g: 'help ;screenshot'\n  to see extended help for that command.", SWM.Color.FromRgb(0xC0, 0xC0, 0xC0));
-                        Interface.AddLog("This is a program created to help automate, manage, and improve overall effectiveness of your computer, currently only for Windows machines.");
-                        Interface.AddLog("Uhhh... don't really know what else to put here apart from some general notes:\n   For the PARAMS field when viewing command specific help, the symbols are defined as such:\n      | means OR, so you can input the stuff on the left OR the stuff on the right of the bar\n      [] means OPTIONAL PARAMETER, in other words you don't need to input it.\n      {} denotes a datatype, the expected type you input. bool is true/false, int is any whole number.");
-                        return false;
-                    }
-                    else
-                    {
-                        string str = commandstruct?.Parameters[1][0] as string;
-                        if (str == null)
-                        {
-                            Logging.Log("Something went wronng when getting the string command input... uh oh......REEEEEEEEEEEEEEEEEEEE");
-                            Interface.AddTextLog("[(Potentially?) CRITICAL ERROR] Failed to get string value from inputted parameters, even though ParseCommands() returned true. Send bug report with log, thanks! (or just try again)", SWM.Color.FromRgb(0xff, 0xc0, 0xcb));
-                            return false;
-                        }
-                        if (str == "commands")
-                        {
-                            Interface.AddLog("Heres a list of every command:");
-                            foreach (int key in Commands.Keys)
-                            {
-                                var firstKey = cmdmap.FirstOrDefault(x => x.Value == key).Key;
-                                Interface.AddLog($"- {firstKey}");
-                            }
-                        }
-                        else if (cmdmap.TryGetValue(str, out int result))
-                        {
-                            var Keys = cmdmap.Where(x => x.Value == result).Select(x => x.Key).ToArray();
-                            var metadata = Commands[result];
-                            Interface.AddLog($"Command: {Keys[0]}");
-                            Interface.AddLog($"Description: {metadata["desc"]}");
-                            Interface.AddLog($"Parameter Format: {metadata["params"]}");
-                            Interface.AddLog($"Shortcut: {metadata["shortcut"]}");
-                            Interface.AddLog($"Aliases: {string.Join(", ", Keys)}");
-                        }
-                        else
-                        {
-                            Logging.Log($"Failed to find command for help command {str}");
-                            Interface.AddLog($"Failed to find command '{str}'.");
-                            return false;
-                        }
-                        return true;
-                    }
-                }
-
-                [LoggingAspects.ConsumeException]
-
-                /// <summary>
-                /// Displays information about all connected screens or a specific screen, based on user input.
-                /// </summary>
-                /// <returns>True if the information could be displayed, false if there was an issue with the input or fetching the screen data.</returns>
-                /// <remarks>
-                /// Information includes device name, resolution, bounds, primary status, and bits per pixel for each screen.
-                /// </remarks>
-                internal static bool DisplayScreenInformation()
-                {
-                    if (commandstruct == null || commandstruct?.Parameters[1].Length < 1)
-                    {
-                        Logging.Log("Displaying all connected screens' information...");
-                        for (int i = 0; i < System.Windows.Forms.Screen.AllScreens.Length; i++)
-                        {
-                            Screen screen = System.Windows.Forms.Screen.AllScreens[i];
-                            if (screen != null)
-                                Interface.AddLog($"Screen {i + 1}", $"   Device Name: {screen.DeviceName}", $"   Bounds: {screen.Bounds.Width}px Width, {screen.Bounds.Height}px Height, {screen.Bounds.X}x, {screen.Bounds.Y}y, {screen.Bounds.Top}px Top, {screen.Bounds.Left}px left.", $"   Is Primary: {screen.Primary}", $"   BPP: {screen.BitsPerPixel}");
-                            else
-                                Interface.AddTextLog($"Failed to get Screen #{i}'s information.", RED);
-                        }
-                        return true;
-                    }
-                    else
-                    {
-                        int? entryN = (int?)(commandstruct?.Parameters[1][0]);
-                        if (entryN == null)
-                        {
-                            Logging.Log("Expected int but parsing failed and returned either a null command struct or a null entry, please submit a bug report.");
-                            AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
-                            return false;
-                        }
-                        int entry = entryN.Value;
-                        if (entry >= 0 && entry < System.Windows.Forms.Screen.AllScreens.Length)
-                        {
-                            Screen screen = System.Windows.Forms.Screen.AllScreens[entry];
-                            Interface.AddLog($"Screen {entry + 1}", $"   Device Name: {screen.DeviceName}", $"   Bounds: {screen.Bounds.Width}px Width, {screen.Bounds.Height}px Height, {screen.Bounds.X}x, {screen.Bounds.Y}y, {screen.Bounds.Top}px Top, {screen.Bounds.Left}px left.", $"   Is Primary: {screen.Primary}", $"   BPP: {screen.BitsPerPixel}");
-                        }
-                        else
-                        {
-                            Logging.Log("Specified index was outside the bounds of the screen array");
-                            Interface.AddTextLog("Please select a valid screen index.", LIGHTRED);
-                            return false;
-                        }
-                        return true;
-                    }
-                }
-
-                [LoggingAspects.ConsumeException]
-
-                /// <summary>
-                /// Opens a live logging window to display real-time log messages.
-                /// </summary>
-                /// <returns>True if the logger was opened successfully, false if it was already open.</returns>
-                /// <remarks>
-                /// Ensures that only one instance of the logging window is open at any given time.
-                /// </remarks>
-                private static bool OpenLogger()
-                {
-                    if (Logger == null)
-                    {
-                        Logger = Logging.ShowLogger();
-                        Interface.AddLog("Live Logging window opened!");
-                    }
-                    else
-                        Interface.AddTextLog("Live logger already open...", HOTPINK);
-                    return true;
-                }
-
-                [LoggingAspects.ConsumeException]
-
-                /// <summary>
-                /// Closes the currently open live logging window.
-                /// </summary>
-                /// <returns>True if the logger was closed successfully, false if it was not open to begin with.</returns>
-                /// <remarks>
-                /// Verifies if the logging window is open before attempting to close it.
-                /// </remarks>
-                private static bool CloseLogger()
-                {
-                    if (Logger != null)
-                    {
-                        Logger = null;
-                        Logging.HideLogger();
-                        Interface.AddLog("Live Logging window closed!");
-                    }
-                    else
-                        Interface.AddTextLog("This would be great to run... if there was a log window to run it on.", HOTPINK);
-                    return true;
-                }
-
                 /// <summary>
                 /// Provides functionality for parsing command strings into structured command objects, enabling command execution based on user input.
                 /// </summary>
                 private static class ParameterParsing
                 {
-                    internal readonly record struct Command(string Call, string Raw, object[][]? Parameters = null);
-
                     [LoggingAspects.ConsumeException]
                     [LoggingAspects.Logging]
                     internal static bool ParseCommand(in string raw, in int num, out Command? command, out string? error_message)
@@ -2278,7 +1536,7 @@ namespace Cat
                         // First, get the different sequences of expected parameters
                         command = null;
                         error_message = "";
-                        string metadata = CommandProcessing.Commands[num]["params"] as string;
+                        string metadata = CommandProcessing.Cmds[num]["params"] as string;
                         string call = raw.Split(";")[0].Trim();
                         // If metadata is null then something's gone wrong with extracting it from the
                         // Commands dictionary... which is really bad.
@@ -2324,7 +1582,7 @@ namespace Cat
 
                     [LoggingAspects.ConsumeException]
                     [LoggingAspects.Logging]
-                    private static bool? ParseSequence(string[] inputs, string sequence, out string? error_message, out object[][]? parsedparams)
+                    internal static bool? ParseSequence(string[] inputs, string sequence, out string? error_message, out object[][]? parsedparams)
                     {
                         error_message = null;
                         parsedparams = null;
