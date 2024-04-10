@@ -7,8 +7,8 @@ namespace Cat
         internal static Interface @interface;
         private static WaveOut? WavePlayer;
         private static AudioFileReader AFR;
-        private static Command? commandstruct;
-        internal static bool SilentAudioCleanup = false;
+        internal static Command? commandstruct;
+        private static bool SilentAudioCleanup = false;
         private static System.Windows.Window? Logger = null;
     }
 }

@@ -26,6 +26,7 @@ namespace Cat
                 Interface.AddTextLog($"Preset with name {entryN} found, names must be unqiue", RED);
                 return false;
             }
+            Directory.CreateDirectory(dir);
             string file = dir + "\\preset.CLF";
             Logging.Log("Creating preset file");
             File.Create(file);

@@ -910,11 +910,7 @@ namespace Cat
             internal static class CommandProcessing
             {
                 internal static Interface @interface;
-                private static WaveOut? WavePlayer;
-                private static AudioFileReader AFR;
                 private static Command? commandstruct;
-                internal static bool SilentAudioCleanup = false;
-                private static Window? Logger = null;
                 private static readonly FixedQueue<string> History = new(10);
                 private static string cmdtext;
                 internal static Dictionary<string, int> cmdmap { get; } = new()
@@ -1099,8 +1095,8 @@ namespace Cat
                     { "acp", 31 },
                     { "create cursor preset", 31 },
 
-                    { "add cursor to preset", 31 },
-                    { "actp", 31 },
+                    { "add cursor to preset", 32 },
+                    { "actp", 32 },
                 };
 
                 /// <summary>
@@ -1408,7 +1404,7 @@ namespace Cat
                         32, new Dictionary<string, object>
                         {
                             { "desc", "Adds a cursor to a preset" },
-                            { "params", "filepath{string}, cursortooverwrite{string}" },
+                            { "params", "preset{string}, cursorid{string}, filepath{string}" },
                             { "function", (Func<bool>)Cat.Commands.AddCursorToPreset },
                             { "shortcut", ""}
                         }
@@ -1491,6 +1487,7 @@ namespace Cat
                         if (commandstruct2 != commandstruct && commandstruct2 != null)
                         {
                             commandstruct = commandstruct2;
+                            Commands.commandstruct = commandstruct;
                             History.Enqueue(commandstruct.Value.Raw);
                         }
 
@@ -1503,15 +1500,18 @@ namespace Cat
                         if (!string.IsNullOrEmpty(error_message))
                             Interface.AddTextLog(error_message, RED);
 
+                        bool? result = null;
                         if (metadata.TryGetValue("function", out var actionObj) && actionObj is Func<bool> func)
-                            func();
+                            result = func();
                         else if (metadata.TryGetValue("function", out var funcObj) && actionObj is Func<Task<bool>> tfunc)
-                            await tfunc();
+                            result = await tfunc();
                         else
                         {
                             Logging.Log(">>>ERROR<<< Action nor TFunct not found for the given command ID.");
                             Interface.AddTextLog($"Action nor TFunct object not found for command {call}, stopping command execution.\nThis... shouldn't happen. hm.", SWM.Color.FromRgb(200, 0, 40));
                         }
+                        if (result == false)
+                            Interface.AddTextLog($"Something went wrong executing {cmdtext}", RED);
                         Logging.Log($"Finished Processing command {call}");
                     }
                     else

@@ -39,9 +39,9 @@ namespace Cat
                 AudioFolder,
                 NotesFolder,
                 UserFolder,
-                ExternalProcessesFolder
+                ExternalProcessesFolder,
+                CursorsFilePath
             ];
-
             foreach (string dir in dirs)
             {
                 Logging.Log($"Checking {dir}...");
