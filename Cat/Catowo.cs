@@ -1097,6 +1097,9 @@ namespace Cat
 
                     { "add cursor to preset", 32 },
                     { "actp", 32 },
+
+                    {"Open Log Editor", 35 },
+                    {"ole", 35}
                 };
 
                 /// <summary>
@@ -1406,6 +1409,16 @@ namespace Cat
                             { "desc", "Adds a cursor to a preset" },
                             { "params", "preset{string}, cursorid{string}, filepath{string}" },
                             { "function", (Func<bool>)Cat.Commands.AddCursorToPreset },
+                            { "shortcut", ""}
+                        }
+                    },
+
+                    {
+                        35, new Dictionary<string, object>
+                        {
+                            { "desc", "Opens the log editing GUI" },
+                            { "params", "" },
+                            { "function", (Func<bool>)Cat.Commands.OpenLogEditor},
                             { "shortcut", ""}
                         }
                     },
