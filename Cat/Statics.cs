@@ -44,6 +44,63 @@ namespace Cat
         internal static SolidColorBrush DEEPPINK { get; } = new(Colors.DeepPink);
         internal static SolidColorBrush HOTPINK { get; } = new(Colors.HotPink);
 
+        internal static readonly LinearGradientBrush brush = new()
+        {
+            GradientStops =
+                {
+                    new(Colors.Red, 1.0),
+                    new(Color.FromArgb((byte)(255 * 0.75), 0xFF, 0x99, 0xFF), 0.75),
+                    new(Color.FromArgb((byte)(255 * 0.50), 0x66, 0xFF, 0xFF), 0.55),
+                    new(Color.FromArgb((byte)(255 * 0.25), 0xFF, 0x00, 0x00), 0.30),
+                    new(Colors.Transparent, 0.0)
+                }
+        };
+
+        internal static readonly LinearGradientBrush rainbowbrush = new()
+        {
+            GradientStops =
+                {
+                    new GradientStop(Colors.Red, 1.0),
+                    new GradientStop(Color.FromRgb(255, 127, 0), 0.07),
+                    new GradientStop(Colors.Orange, 0.14),
+                    new GradientStop(Color.FromRgb(255, 255, 0), 0.21),
+                    new GradientStop(Colors.Yellow, 0.28),
+                    new GradientStop(Color.FromRgb(127, 255, 0), 0.35),
+                    new GradientStop(Colors.Green, 0.42),
+                    new GradientStop(Color.FromRgb(0, 255, 127), 0.49),
+                    new GradientStop(Color.FromRgb(0, 255, 255), 0.57),
+                    new GradientStop(Color.FromRgb(0, 127, 255), 0.64),
+                    new GradientStop(Colors.Blue, 0.71),
+                    new GradientStop(Color.FromRgb(127, 0, 255), 0.78),
+                    new GradientStop(Colors.Indigo, 0.85),
+                    new GradientStop(Color.FromRgb(255, 0, 255), 0.92),
+                    new GradientStop(Colors.Violet, 0.99),
+                    new GradientStop(Colors.Transparent, 0.0)
+                }
+        };
+
+        internal static readonly LinearGradientBrush dyingrainbow = new()
+        {
+            GradientStops =
+                {
+                    new GradientStop(Color.FromArgb(255, 255, 0, 0), 1.0), // Red
+                    new GradientStop(Color.FromArgb(230, 255, 127, 0), 0.92), // Orange-Red
+                    new GradientStop(Color.FromArgb(204, 255, 165, 0), 0.85), // Orange
+                    new GradientStop(Color.FromArgb(178, 255, 255, 0), 0.78), // Yellow-Orange
+                    new GradientStop(Color.FromArgb(153, 255, 255, 0), 0.71), // Yellow
+                    new GradientStop(Color.FromArgb(127, 127, 255, 0), 0.64), // Yellow-Green
+                    new GradientStop(Color.FromArgb(102, 0, 255, 0), 0.57), // Green
+                    new GradientStop(Color.FromArgb(76, 0, 255, 127), 0.50), // Green-Cyan
+                    new GradientStop(Color.FromArgb(51, 0, 255, 255), 0.43), // Cyan
+                    new GradientStop(Color.FromArgb(25, 0, 127, 255), 0.36), // Cyan-Blue
+                    new GradientStop(Color.FromArgb(0, 0, 0, 255), 0.29), // Blue
+                    new GradientStop(Color.FromArgb(25, 127, 0, 255), 0.22), // Blue-Indigo
+                    new GradientStop(Color.FromArgb(51, 75, 0, 130), 0.15), // Indigo
+                    new GradientStop(Color.FromArgb(76, 238, 130, 238), 0.08), // Indigo-Violet
+                    new GradientStop(Colors.Transparent, 0.0) // Fade to transparent at the end
+                }
+        };
+
         /// <summary>
         /// Sets the left position of a UIElement.
         /// </summary>

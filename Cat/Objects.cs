@@ -1,10 +1,14 @@
-﻿using System.Globalization;
+﻿using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Ribbon;
 using System.Windows.Forms;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using System.Windows.Shapes;
@@ -104,10 +108,11 @@ namespace Cat
             /// Holds the introduction text
             /// </summary>
             private static readonly string[] Introduction = [
-                "Hey! It's me, Clara! \nIt seems this is the first time you've opened me (or I've been updated owo).\nIf you want to skip this, please type 'skip'. \nIf you want to view the changelog, type 'changelog'\nIf you want to run through the introduction, just press the right arrow key!",
-                "So you wanna do the introduction again... sweet!\nI'm Clara, the Centralised, Logistical, Administrative and Requisition Assistant. \nMy sole purpose is to automate, optimize and otherwise improve your computer experience.\n You can press the left arrow key to move through parts",
+                "Hey! It's me, Clara! (Made by Nexus) \nIt seems this is the first time you've opened me (or I've been updated).\nIf you want to skip this, press the up arrow. \nIf you want to view the changelog, press the down arrow (not working)'\nIf you want to run through the introduction, just press the right arrow key!",
+                "So you wanna do the introduction again... sweet!\nI'm Clara, the Centralised, Logistical, Administrative and Requisition Assistant. \nMy sole purpose is to automate, optimize and otherwise improve your computer experience.\n You can press the left arrow key to move through parts.",
                 "There are two (at the moment) main modes to this program: Background and Interface.\nInterface is where there's an overlay with a textbox and an output box, where you can enter commands.\n   Key shortcuts won't work here, but this is where most of the functionality is.\nBackground is where there... is no main overlay (you're currently in background mode!).\n   This is what the app will be in 99% of the time.",
                 "To open the interface:\n  Hold both shifts (both th left and right one),\n  Then press and hold Q,\n  then press I!\n  (LShift + RShift + Q + I). \n To close the interface run the 'close' command.\nTo view the help page, run 'help'",
+                "This program is in a pre-pre-pre-pre-alpha stage, and there will be bugs and stuff.\nYou can send logs to me (Discord: _dissociation_) (Gmail: brainjuice.work23@gmail.com) with bug reports and feedback and stuff. Enjoy!",
                 "Hmmm.. is there anything else..?\nOh right! Local data is stored at C:\\ProgramData\\Kitty\\Cat\\\nHave fun, I hope you enjoy this app! o/"
             ];
 
@@ -368,11 +373,20 @@ namespace Cat
 
         }
 
+        internal record class Memento<T>(T Store);
+
         internal static class CursorEffects
         {
             private static bool isOn = false;
-            private static DispatcherTimer timer;
+            private static DispatcherTimer fadeTimer;
             private static Window allencompassing;
+            private delegate void CursorTrailDelegate(in Point mousepos);
+            private static dynamic Memento;
+            private static CursorTrailDelegate _method;
+            private static Canvas canvas;
+
+            private static LowLevelProc _proc = HookCallback;
+            private static nint _hookID = nint.Zero;
 
             internal static void Toggle()
             {
@@ -390,7 +404,7 @@ namespace Cat
                 int bottom = Screen.AllScreens.Max(screen => screen.Bounds.Bottom);
                 int width = right - left;
                 int height = bottom - top;
-
+                canvas = new() { IsHitTestVisible = false };
                 allencompassing = new Window
                 {
                     WindowStartupLocation = WindowStartupLocation.Manual,
@@ -398,7 +412,12 @@ namespace Cat
                     Top = top,
                     Width = width,
                     Height = height,
-                    Background = Brushes.Transparent
+                    Background = Brushes.Transparent,
+                    Content = canvas,
+                    Topmost = true,
+                    ShowInTaskbar = false,
+                    WindowStyle = WindowStyle.None,
+                    AllowsTransparency = true
                 };
                 allencompassing.Show();
                 allencompassing.Loaded += (sender, e) =>
@@ -409,27 +428,306 @@ namespace Cat
                     var editedstyle = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
                     Logging.Log($"Set Win Style of Handle {hwnd} from {originalStyle:X} ({originalStyle:B}) [{originalStyle}] to {editedstyle:X} ({editedstyle:B}) [{editedstyle}]");
                 };
-                timer = new() { Interval = TimeSpan.FromSeconds(0.5) };
-                timer.Tick += (s, e) =>
-                {
-                    GetCursorPosWrapper(out POINT mouseposition);
-                };
+                Particles.LineTrail.Init();
                 isOn = true;
+            }
+
+            private static IntPtr SetHook(LowLevelProc proc)
+            {
+                using (System.Diagnostics.Process curProcess = System.Diagnostics.Process.GetCurrentProcess())
+                using (System.Diagnostics.ProcessModule curModule = curProcess.MainModule)
+                {
+                    return SetWindowsHookExWrapper(WH_MOUSE_LL, proc,
+                        GetModuleHandleWrapper(curModule.ModuleName), 0);
+                }
+            }
+
+            private static IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
+            {
+                if (nCode >= 0)
+                {
+                    MOUSEINPUT hookStruct = Marshal.PtrToStructure<MOUSEINPUT>(lParam);
+                    switch ((MouseMessages)wParam)
+                    {
+                        case MouseMessages.WM_MOUSEMOVE:
+                            Point p = allencompassing.PointFromScreen(new(hookStruct.pt.X, hookStruct.pt.Y));
+                            p.Offset(5, 5);
+                            _method(p);
+                            break;
+                        case MouseMessages.WM_LBUTTONDOWN:
+                            Particles.RectangleClick.Trigger.Activate(canvas, allencompassing.PointFromScreen(new(hookStruct.pt.X, hookStruct.pt.Y)));
+                            break;
+                        case MouseMessages.WM_RBUTTONDOWN:
+                            break;
+                    }
+                }
+                return CallNextHookExWrapper(_hookID, nCode, wParam, lParam);
             }
 
             private static void Stop()
             {
                 if (!isOn) return;
             }
+
+            private static class Particles
+            {
+                internal static class RectangleTrail
+                {
+                    private class Effect
+                    {
+                        internal Rectangle Rect = new() { Fill = Brushes.Pink, Width = 5.0, Height = 5.0, Opacity = 1.0, IsHitTestVisible = false };
+                        internal double OpacityDecrement = 0.05;
+                    }
+
+                    private static Queue<Effect> effectsQueue = new();
+
+                    internal static void SetUpRectangles()
+                    {
+                        Memento = new List<Effect>(200);
+                        for (int i = 0; i < 200; i++)
+                        {
+                            Effect effect = new Effect();
+                            canvas.Children.Add(effect.Rect);
+                            Memento.Add(effect);
+                            effectsQueue.Enqueue(effect);
+                        }
+                        _method = RectangleTick;
+                    }
+
+                    internal static void RectangleTick(in Point point)
+                    {
+
+                        foreach (Effect effect in Memento)
+                        {
+                            if (effect.Rect.Opacity > 0)
+                            {
+                                effect.Rect.Opacity = Math.Max(0, effect.Rect.Opacity - effect.OpacityDecrement);
+                            }
+                        }
+
+                        if (effectsQueue.Peek().Rect.Opacity == 0)
+                        {
+                            Effect effect = effectsQueue.Dequeue(); 
+                            Canvas.SetTop(effect.Rect, point.Y - effect.Rect.Height / 2);
+                            Canvas.SetLeft(effect.Rect, point.X - effect.Rect.Width / 2);
+                            effect.Rect.Opacity = 1.0; 
+                            effectsQueue.Enqueue(effect);
+                        }
+                    }
+                }
+
+                internal static class LineTrail
+                {
+                    internal static void Init()
+                    {
+                        Memento = new DynamicLineDrawer(canvas);
+                        _method = (in Point p) => (Memento as DynamicLineDrawer).AddPoint(p);
+                        fadeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(15) };
+                        _hookID = SetHook(_proc);
+                        fadeTimer.Tick += (s, e) => (Memento as DynamicLineDrawer).RemoveOldest();
+                        fadeTimer.Start();
+                    }
+                }
+
+                internal static class BiLineTrail
+                {
+                    internal static void Init()
+                    {
+                        Memento = new Tuple<DynamicLineDrawer, DynamicLineDrawer>(new DynamicLineDrawer(canvas, 9, new SolidColorBrush(Colors.White)), new DynamicLineDrawer(canvas, 4, new SolidColorBrush(Colors.Pink)));
+                        _method = (in Point p) => { var (m1, m2) = (Memento as Tuple<DynamicLineDrawer, DynamicLineDrawer>); m1.AddPoint(p); m2.AddPoint(p); };
+                        fadeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(15) };
+                        _hookID = SetHook(_proc);
+                        fadeTimer.Tick += (s, e) => { var (m1, m2) = (Memento as Tuple<DynamicLineDrawer, DynamicLineDrawer>); m1.RemoveOldest(); m2.RemoveOldest(); };
+                        fadeTimer.Start();
+                    }
+                }
+
+                internal static class RectangleClick
+                {
+                    private const double gravity = 0.05;
+
+                    internal class Effect
+                    {
+                        internal readonly Rectangle rect;
+                        private double speedX;
+                        private double speedY;
+                        private double opacitySpeed = 0.01; // Adjust for faster/slower fade
+                        private Canvas canvas;
+                        private DateTime lastUpdate = DateTime.Now;
+
+                        internal Effect(Canvas canvas, Point p)
+                        {
+                            this.canvas = canvas;
+                            rect = new Rectangle
+                            {
+                                Fill = new SolidColorBrush(Color.FromArgb(255, (byte)random.Next(256), (byte)random.Next(256), (byte)random.Next(256))),
+                                Width = 5,
+                                Height = 5,
+                                Opacity = 1
+                            };
+
+                            Canvas.SetLeft(rect, p.X - rect.Width / 2);
+                            Canvas.SetTop(rect, p.Y - rect.Height / 2);
+
+                            // Random speed
+                            double speed = random.NextDouble() * 2 + 1; // Speed range [1, 3)
+
+                            // More bias towards bottom 180 degrees
+                            double angle = random.NextDouble() * 360; // Full 360 degrees
+
+                            angle *= Math.PI / 180; // Convert to radians
+
+                            speedX = speed * Math.Cos(angle);
+                            speedY = speed * Math.Sin(angle);
+
+                            canvas.Children.Add(rect);
+                        }
+
+                        internal bool Tick()
+                        {
+                            var now = DateTime.Now;
+                            var elapsedTime = (now - lastUpdate).TotalSeconds;
+                            lastUpdate = now;
+
+                            Canvas.SetLeft(rect, Canvas.GetLeft(rect) + speedX * elapsedTime * 60);
+                            Canvas.SetTop(rect, Canvas.GetTop(rect) + speedY * elapsedTime * 60);
+
+                            // Apply gravity to Y speed
+                            speedY += gravity * elapsedTime * 60; // Adjust gravity effect here if needed
+
+                            // Fade out effect
+                            rect.Opacity -= opacitySpeed * elapsedTime * 60; ;
+                            if (rect.Opacity <= 0)
+                            {
+                                canvas.Children.Remove(rect);
+                                return false; // Effect finished
+                            }
+                            return true; // Effect continues
+                        }
+                    }
+
+
+                    internal static class Trigger
+                    {
+                        private static readonly List<Effect> effects = new List<Effect>();
+                        private static Canvas canvas;
+
+                        internal static void Activate(Canvas targetCanvas, Point p)
+                        {
+                            canvas = targetCanvas;
+
+                            // Adding several effects at the click point
+                            int numberOfEffects = random.Next(10, 51); // Or another number based on your preference
+                            for (int i = 0; i < numberOfEffects; i++)
+                            {
+                                effects.Add(new Effect(canvas, p));
+                            }
+
+                            if (!isRenderingSubscribed)
+                            {
+                                CompositionTarget.Rendering += Update;
+                                isRenderingSubscribed = true;
+                            }
+                        }
+
+                        private static bool isRenderingSubscribed = false;
+
+                        private static void Update(object sender, EventArgs e)
+                        {
+                            for (int i = effects.Count - 1; i >= 0; i--)
+                            {
+                                if (!effects[i].Tick())
+                                {
+                                    effects.RemoveAt(i); // Remove finished effects
+                                }
+                            }
+
+                            // If no more effects to update, unsubscribe to stop calling Update
+                            if (effects.Count == 0 && isRenderingSubscribed)
+                            {
+                                CompositionTarget.Rendering -= Update;
+                                isRenderingSubscribed = false;
+                            }
+                        }
+                    }
+
+                }
+
+            }
+
         }
 
         internal readonly record struct Command(string Call, string Raw, object[][]? Parameters = null);
 
+        internal class DynamicLineDrawer
+        {
+            private Polyline polyline;
+            private Point previous = new(-999999, -99999);
+            private bool oncedown = false;
 
+            public DynamicLineDrawer(Canvas canvas)
+            {
+                if (canvas == null) throw new ArgumentNullException(nameof(canvas));
+
+                // Initialize the Polyline and add it to the canvas
+                polyline = new Polyline
+                {
+                    Stroke = dyingrainbow,
+                    StrokeThickness = 2,
+                };
+                canvas.Children.Add(polyline);
+            }
+
+            public DynamicLineDrawer(Canvas canvas, double thickness, Brush brush)
+            {
+                if (canvas == null) throw new ArgumentNullException(nameof(canvas));
+
+                // Initialize the Polyline and add it to the canvas
+                polyline = new Polyline
+                {
+                    Stroke = brush,
+                    StrokeThickness = thickness
+                };
+                canvas.Children.Add(polyline);
+            }
+
+
+            // Method to add a point
+            public void AddPoint(Point point)
+            {
+                if (Helpers.BackendHelping.IsPointWithinOtherPointForSmoothing(point, previous, 5)) return;
+                if (Helpers.BackendHelping.IsPointWithinOtherPointForSmoothing(point, previous, 15))
+                {
+                    oncedown = !oncedown;
+                    if(oncedown)
+                        return;
+                }
+
+                previous = point;
+                polyline.Points.Add(point);
+                if (polyline.Points.Count > 25)
+                    RemoveOldest();
+            }
+
+            // Method to remove a point
+            public void RemovePoint(Point point)
+            {
+                polyline.Points.Remove(point);
+            }
+
+            public void RemoveOldest()
+            {
+                if (polyline.Points.Count > 0)
+                {
+                    polyline.Points.RemoveAt(0);
+                }
+            }
+
+        }
 
         internal class LogEditor : Window // Code the GUI here
         {
-            private LogListBox logListBox;
+            private LoggingListBox logListBox;
             private Canvas canvas; // Content Container
             internal static LogEditor inst = null;
             private menuBar menu;
@@ -457,15 +755,12 @@ namespace Cat
                 canvas = new Canvas();
                 Content = canvas;
 
-                logListBox = new LogListBox();
-                Canvas.SetTop(logListBox, 0); // Position the ListBox below the menuBar
+                logListBox = new LoggingListBox();
+                Canvas.SetTop(logListBox, 0);
                 canvas.Children.Add(logListBox);
                 Canvas.SetLeft(logListBox, 0);
                 menu = new menuBar();
                 canvas.Children.Add(menu);
-
-
-
             }
 
             [LoggingAspects.Logging]
@@ -611,29 +906,29 @@ namespace Cat
 
 
                 }
+            }
 
-                private class LoggingListBox : Catowo.Interface.LogListBox
+            private class LoggingListBox : Catowo.Interface.LogListBox
+            {
+                public LoggingListBox()
                 {
-                    public LoggingListBox()
-                    {
-                        ScrollViewer.SetVerticalScrollBarVisibility(this, ScrollBarVisibility.Auto);
-                        Height = LogEditor.inst.Height;
-                        var screen = Catowo.GetScreen();
-                        Width = screen.Bounds.Width - 200;
-                    }
-
-                    public void ScrollIntoView(string item)
-                    {
-                        var itemContainer = (ListBoxItem)this.ItemContainerGenerator.ContainerFromItem(item);
-                        if (itemContainer != null)
-                        {
-                            this.ScrollIntoView(item);
-                        }
-                    }
-
-
-
+                    ScrollViewer.SetVerticalScrollBarVisibility(this, ScrollBarVisibility.Auto);
+                    Height = LogEditor.inst.Height;
+                    var screen = Catowo.GetScreen();
+                    Width = screen.Bounds.Width - 200;
                 }
+
+                public void ScrollIntoView(string item)
+                {
+                    var itemContainer = (ListBoxItem)this.ItemContainerGenerator.ContainerFromItem(item);
+                    if (itemContainer != null)
+                    {
+                        this.ScrollIntoView(item);
+                    }
+                }
+
+
+
             }
 
         }

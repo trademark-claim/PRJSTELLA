@@ -22,7 +22,7 @@ namespace Cat
         private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 
         [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelKeyboardProc lpfn, IntPtr hMod, uint dwThreadId);
+        private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelProc lpfn, IntPtr hMod, uint dwThreadId);
 
         [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         private static extern bool UnhookWindowsHookEx(IntPtr hhk);
@@ -206,7 +206,7 @@ namespace Cat
             return result;
         }
 
-        internal static IntPtr SetWindowsHookExWrapper(int idHook, LowLevelKeyboardProc lpfn, IntPtr hMod, uint dwThreadId)
+        internal static IntPtr SetWindowsHookExWrapper(int idHook, LowLevelProc lpfn, IntPtr hMod, uint dwThreadId)
         {
             Logging.Log($">PINVOKE< Setting Windows Hook, idHook: {idHook}, Thread ID: {dwThreadId}...");
             IntPtr result = SetWindowsHookEx(idHook, lpfn, hMod, dwThreadId);

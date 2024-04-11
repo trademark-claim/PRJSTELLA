@@ -50,6 +50,17 @@ namespace Cat
         internal const int WH_KEYBOARD_LL = 13;
         internal const int WM_KEYDOWN = 0x0100;
         internal const int WM_KEYUP = 0x0101;
+
+        internal const int WH_MOUSE_LL = 14;
+        internal enum MouseMessages
+        {
+            WM_MOUSEMOVE = 0x0200,
+            WM_LBUTTONDOWN = 0x0201,
+            WM_LBUTTONUP = 0x0202,
+            WM_RBUTTONDOWN = 0x0204,
+            WM_RBUTTONUP = 0x0205,
+        }
+
         internal const int VK_LMENU = 0xA4;
         internal const int VK_RMENU = 0xA5;
         internal const int VK_RSHIFT = 0xA1;
@@ -110,7 +121,7 @@ namespace Cat
         internal const uint INPUT_KEYBOARD = 1;
 
         internal static IntPtr _keyboardHookID = IntPtr.Zero;
-        internal static LowLevelKeyboardProc _keyboardProc;
+        internal static LowLevelProc _keyboardProc;
 
         #endregion VKs and Styles
         /// <summary>Maps virtual key codes to character pairs (lowercase, uppercase).</summary>
@@ -258,8 +269,7 @@ namespace Cat
         internal const uint SPIF_SENDCHANGE = 0x02;
 
         #region Delegates
-
-        internal delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
+        internal delegate IntPtr LowLevelProc(int nCode, IntPtr wParam, IntPtr lParam);
 
         [GeneratedRegex("[^a-zA-Z0-9]")]
         internal static partial Regex GUIDRegex();

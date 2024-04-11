@@ -5,7 +5,7 @@
 // Author: Nexus
 // -----------------------------------------------------------------------
 
-
+using CLR = System.Drawing.Color;
 using IniParser;
 using IniParser.Model;
 using SharpCompress.Archives;
@@ -137,7 +137,7 @@ namespace Cat
                 {
                     using (Graphics g = Graphics.FromImage(stitchedBitmap))
                     {
-                        g.Clear(Color.Transparent);
+                        g.Clear(CLR.Transparent);
                         foreach (var screen in Screen.AllScreens)
                         {
                             Logging.Log($"Capturing screen: {screen.DeviceName}");
@@ -590,6 +590,24 @@ namespace Cat
         /// </summary>
         public static class BackendHelping
         {
+
+            public static bool IsPointWithinOtherPointForSmoothing(double pointX, double pointY, double centerX, double centerY)
+            {
+                double dx = pointX - centerX;
+                double dy = pointY - centerY;
+                double distanceSquared = dx * dx + dy * dy;
+
+                return distanceSquared <= 1;
+            }
+
+            public static bool IsPointWithinOtherPointForSmoothing(Point a, Point center, double radius)
+            {
+                double dx = a.X - center.X;
+                double dy = a.Y - center.Y;
+                double distanceSquared = dx * dx + dy * dy;
+
+                return distanceSquared <= radius * radius;
+            }
             /// <summary>
             /// Rearranges the characters of a word, leaving the first and last characters in place.
             /// </summary>

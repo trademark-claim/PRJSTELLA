@@ -41,6 +41,7 @@ global using Command = Cat.Objects.Command;
 global using Canvas = System.Windows.Controls.Canvas;
 global using Application = System.Windows.Application;
 global using MessageBox = System.Windows.MessageBox;
+global using Color = System.Windows.Media.Color;
 using NAudio.Wave;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -300,7 +301,7 @@ namespace Cat
         /// the current process's main module. It logs the process of hook initialization and setting.
         /// </remarks>
         [LoggingAspects.Logging]
-        private static IntPtr SetKeyboardHook(LowLevelKeyboardProc proc)
+        private static IntPtr SetKeyboardHook(LowLevelProc proc)
         {
             Logging.Log("Initing Keyboard hook...");
             using (Process curProcess = Process.GetCurrentProcess())

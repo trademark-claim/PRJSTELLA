@@ -76,14 +76,12 @@ namespace Cat
         [StructLayout(LayoutKind.Sequential)]
         internal struct MOUSEINPUT
         {
-            public int dx;
-            public int dy;
+            public POINT pt;
             public uint mouseData;
             public uint dwFlags;
             public uint time;
             public IntPtr dwExtraInfo;
         }
-
 
         /// <summary>
         /// Contains information about a simulated keyboard event.
