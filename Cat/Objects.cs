@@ -1,11 +1,15 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Globalization;
+using System.IO;
+using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Interop;
+using System.Windows.Controls.Ribbon;
+using System.Windows.Forms;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+
 
 namespace Cat
 {
@@ -130,7 +134,7 @@ namespace Cat
             private delegate object? UniversalDelegate();
 
             private static UniversalDelegate delegation = null;//(args) => { _ = "Lorum Ipsum"; return null; };
-            
+
             /// <summary>
             /// Needs to reflect what arrays we have
             /// </summary>
@@ -176,7 +180,8 @@ namespace Cat
             private static void ProgressionKeydown(object sender, System.Windows.Input.KeyEventArgs e)
             {
                 if (e.Key == Key.Right)
-                    if (canvas != null) {
+                    if (canvas != null)
+                    {
                         if (++num > CurrentStory.Length - 1)
                         {
                             num = 0;
@@ -195,7 +200,7 @@ namespace Cat
                         return;
                     }
                 if (e.Key == Key.Left)
-                    if (canvas != null) 
+                    if (canvas != null)
                     {
                         num--;
                         if (num >= 0)
@@ -255,7 +260,8 @@ namespace Cat
                 public string Text
                 {
                     get => textBlock.Text;
-                    set {
+                    set
+                    {
                         textBlock.Text = value;
                         UpdateLayout();
                     }
@@ -349,7 +355,7 @@ namespace Cat
                     rectangle.Height = textHeight + (Control * 2) + 20;
                     SetLeft<double>(textBlock, TextPadding.Left + Control);
                     SetTop<double>(textBlock, TextPadding.Top + Control);
-                    SetLeft<double>(tail, rectangle.Width - 10); 
+                    SetLeft<double>(tail, rectangle.Width - 10);
                     SetTop<double>(tail, rectangle.Height);
                     double left = LowerRightCornerFreeze.X - rectangle.Width;
                     double top = LowerRightCornerFreeze.Y - rectangle.Height;
@@ -418,5 +424,218 @@ namespace Cat
         }
 
         internal readonly record struct Command(string Call, string Raw, object[][]? Parameters = null);
+
+
+
+        internal class LogEditor : Window // Code the GUI here
+        {
+            private LogListBox logListBox;
+            private Canvas canvas; // Content Container
+            internal static LogEditor inst = null;
+            private menuBar menu;
+            internal int currentExceptionIndex = -1;
+
+            [LoggingAspects.Logging]
+            internal LogEditor() // Runs upon object creation
+            {
+                Topmost = true;
+
+                var screen = Catowo.GetScreen();
+                Width = screen.Bounds.Width;
+                Height = screen.Bounds.Height;
+                this.Background = Brushes.Purple; // Assuming PURPLE is a SolidColorBrush
+                inst?.Close();
+                inst = this;
+
+                InitializeComponents();
+                LoadLogs();
+            }
+
+            [LoggingAspects.Logging]
+            private void InitializeComponents()
+            {
+                canvas = new Canvas();
+                Content = canvas;
+
+                logListBox = new LogListBox();
+                Canvas.SetTop(logListBox, 0); // Position the ListBox below the menuBar
+                canvas.Children.Add(logListBox);
+                Canvas.SetLeft(logListBox, 0);
+                menu = new menuBar();
+                canvas.Children.Add(menu);
+
+
+
+            }
+
+            [LoggingAspects.Logging]
+            [LoggingAspects.AsyncExceptionSwallower]
+            private async Task LoadLogs()
+            {
+                await Logging.FinalFlush();
+                string[] content = File.ReadAllLines(LogPath);
+                foreach (string line in content)
+                {
+                    logListBox.AddItem(line);
+                }
+                return;
+            }
+
+
+
+
+            private class menuBar : Menu
+            {
+                [LoggingAspects.Logging]
+                [LoggingAspects.ConsumeException]
+                public menuBar()
+                {
+                    var screen = Catowo.GetScreen();
+
+                    Height = Catowo.GetScreen().Bounds.Height; // Set the height for your menu bar
+                    Width = 200;
+                    SetLeft<double>(this, screen.Bounds.Width - 200);
+
+
+                    MenuItem sortByException = new MenuItem { Header = "Sort by Exception" };
+                    sortByException.Click += (s, e) => SortByException();
+
+                    MenuItem sortByDate = new MenuItem { Header = "Sort by Date" };
+                    sortByDate.Click += (s, e) => SortLogs(Criteria.DATE);
+
+                    MenuItem sortBySeverity = new MenuItem { Header = "Sort by Severity" };
+                    sortBySeverity.Click += (s, e) => SortLogs(Criteria.SEVERITY);
+
+                    MenuItem jumpToNextException = new MenuItem { Header = "Jump to Next Exception" };
+                    jumpToNextException.Click += (s, e) => JumpToNextException();
+                    
+
+                    // Add menu items
+                    Items.Add(sortByException);
+                    Items.Add(sortByDate);
+                    Items.Add(sortBySeverity);
+                    Items.Add(jumpToNextException);
+                }
+
+                [LoggingAspects.Logging]
+                [LoggingAspects.ConsumeException]
+                private void SortByException()
+                {
+                    var sortedLogs = LogEditor.inst.logListBox.Items.Cast<string>()
+                        .OrderBy(line => line.Contains("Exception") || line.Contains("Error"))
+                        .ToList();
+                    if (sortedLogs.Where(line => line.Contains("Exception") || line.Contains("Error")).Count() == 0)
+                    {
+                        System.Windows.MessageBox.Show("Nothing to sort fucker :3");
+                    }
+
+                    UpdateLogListBox(sortedLogs);
+                }
+
+                [LoggingAspects.Logging]
+                [LoggingAspects.ConsumeException]
+                private void SortLogs(Criteria criteria)
+                {
+                    var logs = LogEditor.inst.logListBox.Items.Cast<string>().ToList();
+
+                    switch (criteria)
+                    {
+                        case Criteria.EXCEPTION:
+                            logs = logs.OrderBy(line => !line.Contains("Exception")).ToList();
+                            break;
+                        case Criteria.DATE:
+                            // Assuming the date is at the start of the log entry in a specific format
+                            logs = logs.OrderBy(line => Helpers.BackendHelping.ExtractStringGroups(line, "[", "]", out string[]? results)).ToList();
+                            logs.RemoveAll(x => string.IsNullOrWhiteSpace(x));
+
+                            break;
+                        case Criteria.SEVERITY:
+                            // Example: sort by severity assuming severity levels are INFO, WARN, ERROR
+                            logs = logs.OrderBy(line =>
+                                line.Contains("ERROR") ? 1 :
+                                line.Contains("WARN") ? 2 :
+                                line.Contains("INFO") ? 3 : 4
+                            ).ToList();
+                            break;
+                            // Implement other cases based on the enum values
+                    }
+
+                    // Update the logListBox with the sorted logs
+                    LogEditor.inst.logListBox.Items.Clear();
+                    foreach (var log in logs)
+                    {
+                        LogEditor.inst.logListBox.Items.Add(log);
+                    }
+                    UpdateLogListBox(logs);
+
+
+                }
+                internal void UpdateLogListBox(IEnumerable<string> logs)
+                {
+                    // Clear the current items in the list box
+                    LogEditor.inst.logListBox.Items.Clear();
+
+                    // Add the new log entries to the list box
+                    foreach (var log in logs)
+                    {
+                        LogEditor.inst.logListBox.Items.Add(log);
+                    }
+                }
+
+                private void JumpToNextException()
+                {
+                    var logs = LogEditor.inst.logListBox.Items.Cast<string>().ToList();
+                    var nextExceptionIndex = logs.FindIndex(LogEditor.inst.currentExceptionIndex + 1, line => line.Contains("Exception") || line.Contains("Error"));
+
+                    if (nextExceptionIndex != -1)
+                    {
+                        // Update the current index
+                        LogEditor.inst.currentExceptionIndex = nextExceptionIndex;
+                        // Scroll to the next exception in the ListBox
+                        LogEditor.inst.logListBox.ScrollIntoView(logs[nextExceptionIndex]);
+                    }
+                    else
+                    {
+                        System.Windows.MessageBox.Show("No more exceptions found.");
+                        // Reset the index if you want to cycle through exceptions
+                        LogEditor.inst.currentExceptionIndex = -1;
+                    }
+                }
+
+
+                internal enum Criteria : byte
+                {
+                    EXCEPTION,
+                    SEVERITY,
+                    DATE,
+
+
+                }
+
+                private class LoggingListBox : Catowo.Interface.LogListBox
+                {
+                    public LoggingListBox()
+                    {
+                        ScrollViewer.SetVerticalScrollBarVisibility(this, ScrollBarVisibility.Auto);
+                        Height = LogEditor.inst.Height;
+                        var screen = Catowo.GetScreen();
+                        Width = screen.Bounds.Width - 200;
+                    }
+
+                    public void ScrollIntoView(string item)
+                    {
+                        var itemContainer = (ListBoxItem)this.ItemContainerGenerator.ContainerFromItem(item);
+                        if (itemContainer != null)
+                        {
+                            this.ScrollIntoView(item);
+                        }
+                    }
+
+
+
+                }
+            }
+
+        }
     }
 }

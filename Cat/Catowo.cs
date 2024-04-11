@@ -1135,6 +1135,9 @@ namespace Cat
                     { "list cursor presets", 34 },
                     { "lcps", 34 },
 
+                    {"Open Log Editor", 35 },
+                    {"ole", 35},
+
                     { "elevate perms", 36 },
                     { "ep", 36 }
                 };
@@ -1464,6 +1467,15 @@ namespace Cat
                             { "desc", "Lists all presets, or optionally all cursors changed in a preset" },
                             { "params", "[preset{string}]" },
                             { "function", (Func<bool>)Cat.Commands.ListCursorPreset },
+                            { "shortcut", ""}
+                        }
+                    },
+                    {
+                        35, new Dictionary<string, object>
+                        {
+                            { "desc", "Opens the log editing GUI" },
+                            { "params", "" },
+                            { "function", (Func<bool>)Cat.Commands.OpenLogEditor},
                             { "shortcut", ""}
                         }
                     },
