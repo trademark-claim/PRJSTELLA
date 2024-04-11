@@ -17,6 +17,8 @@ namespace Cat
         internal static async void Start()
         {
             await CheckInternalData();
+            if (UserData.LaunchAsAdmin)
+                Helpers.BackendHelping.RestartWithAdminRightsIfNeeded();
             Logging.Log("Running first Cat Window...");
             new Catowo().Show();
         }
@@ -26,7 +28,7 @@ namespace Cat
         /// </summary>
         [LoggingAspects.Logging]
         [LoggingAspects.AsyncExceptionSwallower]
-        private static async Task CheckInternalData()
+        private static async Task<bool> CheckInternalData()
         {
             Logging.Log("Checking if directories exist...");
             string[] dirs = [
@@ -54,7 +56,7 @@ namespace Cat
 
             await LoadExternalBinaries();
             LoadInitialFiles();
-            return;
+            return true;
         }
 
         /// <summary>

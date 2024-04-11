@@ -2,6 +2,9 @@ using NAudio.Wave;
 
 namespace Cat
 {
+    /// <summary>
+    /// Holds all commands
+    /// </summary>
     internal static partial class Commands
     {
         internal static Interface @interface;

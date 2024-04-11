@@ -39,6 +39,8 @@ global using Key = System.Windows.Input.Key;
 global using Interface = Cat.Catowo.Interface;
 global using Command = Cat.Objects.Command;
 global using Canvas = System.Windows.Controls.Canvas;
+global using Application = System.Windows.Application;
+global using MessageBox = System.Windows.MessageBox;
 using NAudio.Wave;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -104,7 +106,11 @@ namespace Cat
                 /// Flag indicating the current cursor state, where true denotes the default cursor
                 /// and false denotes a custom or modified cursor state.
                 /// </summary>
-                isCursor = true;
+                isCursor = true,
+                /// <summary>
+                /// Flag indicating whether the C key is down or nah
+                /// </summary>
+                Cd = false;
 
         #region Markers
 
@@ -347,9 +353,31 @@ namespace Cat
                     LShifted = true;
                     return CallNextHookExWrapper(_keyboardHookID, nCode, wParam, lParam);
                 }
+                if (!Cd && vkCode == VK_C)
+                {
+                    Cd = true;
+                    return CallNextHookExWrapper(_keyboardHookID, nCode, wParam, lParam);
+                }
                 if (Qd)
                 {
-                    if (RShifted && LShifted)
+                    if (Cd)
+                    {
+                        switch (vkCode)
+                        {
+                            case VK_0:
+                                BaselineInputs.Cursor.Reset();
+                                break;
+                            case >= VK_1 and <= VK_9:
+                                string item = vkCodeToCharMap[vkCode].Item1.ToString();
+                                Logging.Log(item);
+                                BaselineInputs.Cursor.LoadPresetByIndex(int.Parse(item));
+                                break;
+                            case VK_E:
+                                Objects.CursorEffects.Toggle();
+                                break;
+                        }
+                    }
+                    else if (RShifted && LShifted)
                     {
                         switch (vkCode)
                         {
@@ -384,7 +412,6 @@ namespace Cat
                             case VK_I:
                                 ToggleInterface();
                                 break;
-
                             default:
                                 break;
                         }
@@ -472,6 +499,10 @@ namespace Cat
                     case VK_LSHIFT:
                         LShifted = false;
                         break;
+
+                    case VK_C:
+                        Cd = false;
+                        break;
                 }
             }
             return CallNextHookExWrapper(_keyboardHookID, nCode, wParam, lParam);
@@ -548,7 +579,7 @@ namespace Cat
             Background = System.Windows.Media.Brushes.Transparent;
             Topmost = true;
             ShowActivated = false;
-            ShowInTaskbar = true; // When making new code, set this to true so you can close the crashed app
+            ShowInTaskbar = false; // When making new code, set this to true so you can close the crashed app
             Left = 0;
             Top = 0;
             _screen_ = Array.FindIndex(System.Windows.Forms.Screen.AllScreens, screen => screen.Primary);
@@ -1097,6 +1128,15 @@ namespace Cat
 
                     { "add cursor to preset", 32 },
                     { "actp", 32 },
+
+                    { "remove cursor from preset", 33 },
+                    { "rcfp", 33 },
+
+                    { "list cursor presets", 34 },
+                    { "lcps", 34 },
+
+                    { "elevate perms", 36 },
+                    { "ep", 36 }
                 };
 
                 /// <summary>
@@ -1386,7 +1426,7 @@ namespace Cat
                         30, new Dictionary<string, object>
                         {
                             { "desc", "Loads a specified cursor preset" },
-                            { "params", "listname{string}" },
+                            { "params", "listname{string}, [persistent{bool}]" },
                             { "function", (Func<bool>)Cat.Commands.LoadCursorPreset },
                             { "shortcut", ""}
                         }
@@ -1409,10 +1449,35 @@ namespace Cat
                             { "shortcut", ""}
                         }
                     },
+                    {
+                        33, new Dictionary<string, object>
+                        {
+                            { "desc", "Removes a cursor from a preset" },
+                            { "params", "preset{string}, cursorid{string}" },
+                            { "function", (Func<bool>)Cat.Commands.RemoveCursorFromPreset },
+                            { "shortcut", ""}
+                        }
+                    },
+                    {
+                        34, new Dictionary<string, object>
+                        {
+                            { "desc", "Lists all presets, or optionally all cursors changed in a preset" },
+                            { "params", "[preset{string}]" },
+                            { "function", (Func<bool>)Cat.Commands.ListCursorPreset },
+                            { "shortcut", ""}
+                        }
+                    },
+                    {
+                        36, new Dictionary<string, object>
+                        {
+                            { "desc", "Restarts the application asking for elevation (admin)" },
+                            { "params", "" },
+                            { "function", (Func<bool>)Cat.Commands.KillMyselfAndGetGodPowers},
+                            { "shortcut", ""}
+                        }
+                    }
                 };
 
-
-                [LoggingAspects.Logging]
 
                 /// <summary>
                 /// Navigates to the previous command in the history queue and displays it in the input text box.
@@ -1421,6 +1486,7 @@ namespace Cat
                 /// If there is a previously executed command available, it retrieves and sets it as the current text of the input box.
                 /// If no previous command is available or if retrieving the previous command fails, no action is taken.
                 /// </remarks>
+                [LoggingAspects.Logging]
                 internal static void HistoryUp()
                 {
                     string? previousraw = History.GetNext();
@@ -1656,9 +1722,9 @@ namespace Cat
                                         case "string":
                                             isValid = true;
                                             if (all - (i + 1) < flex)
-                                                flexparams.Add(inputs[i]);
+                                                flexparams.Add(inputs[i].Trim().ToLower());
                                             else
-                                                fixparams.Add(inputs[i]);
+                                                fixparams.Add(inputs[i].Trim().ToLower());
                                             break;
                                     }
                                     if (isValid) break;

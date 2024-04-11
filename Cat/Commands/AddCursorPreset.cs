@@ -29,7 +29,7 @@ namespace Cat
             Directory.CreateDirectory(dir);
             string file = dir + "\\preset.CLF";
             Logging.Log("Creating preset file");
-            File.Create(file);
+            File.Create(file).Dispose();
             Logging.Log("Created preset file");
             Interface.AddLog($"Preset {entryN} created");
             return true;

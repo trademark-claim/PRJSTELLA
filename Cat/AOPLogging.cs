@@ -199,30 +199,44 @@ namespace Cat
             /// </remarks>
             private static object ProcessTaskWithResult(object task, Type resultType, MethodBase method)
             {
-                // Process Task<T> to handle its result or exception.
-                var taskCompletionSource = (TaskCompletionSource<object>)Activator.CreateInstance(typeof(TaskCompletionSource<>).MakeGenericType(resultType));
+                var tcsType = typeof(TaskCompletionSource<>).MakeGenericType(resultType != typeof(void) ? resultType : typeof(object));
+                var taskCompletionSource = Activator.CreateInstance(tcsType);
 
                 ((Task)task).ContinueWith(t =>
                 {
                     if (t.IsFaulted && t.Exception != null)
                     {
                         HandleException(t.Exception, method, typeof(Task<>).MakeGenericType(resultType));
-                        taskCompletionSource.TrySetException(t.Exception.InnerExceptions);
+                        var trySetExceptionMethod = tcsType.GetMethod("TrySetException", new[] { typeof(Exception) });
+                        trySetExceptionMethod.Invoke(taskCompletionSource, new object[] { t.Exception.InnerException });
                     }
                     else if (t.IsCanceled)
                     {
-                        taskCompletionSource.TrySetCanceled();
+                        var trySetCanceledMethod = tcsType.GetMethod("TrySetCanceled", Type.EmptyTypes);
+                        trySetCanceledMethod.Invoke(taskCompletionSource, null);
                     }
                     else
                     {
-                        var resultProp = t.GetType().GetProperty("Result");
-                        var result = resultProp.GetValue(t);
-                        taskCompletionSource.TrySetResult(result);
+                        if (resultType == typeof(void))
+                        {
+                            var trySetResultMethod = tcsType.GetMethod("TrySetResult");
+                            trySetResultMethod.Invoke(taskCompletionSource, new object[] { null });
+                        }
+                        else
+                        {
+                            var resultProp = t.GetType().GetProperty("Result");
+                            var result = resultProp.GetValue(t);
+                            var trySetResultMethod = tcsType.GetMethod("TrySetResult", new[] { resultType });
+                            trySetResultMethod.Invoke(taskCompletionSource, new[] { result });
+                        }
                     }
                 }, TaskScheduler.Current);
 
-                return taskCompletionSource.Task;
+                return tcsType.GetProperty("Task").GetValue(taskCompletionSource);
             }
+
+
+
 
             /// <summary>
             /// Handles exceptions caught from the execution of a task by logging the error and determining the appropriate return value.

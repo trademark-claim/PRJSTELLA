@@ -214,7 +214,7 @@ namespace Cat
         /// <summary>
         /// Slashed circle
         /// </summary>
-        internal const uint OCR_NO = 32648;
+        internal const uint OCR_UNAVAILABLE = 32648;
 
         /// <summary>
         /// Four-pointed arrow pointing north, south, east, and west
@@ -288,6 +288,11 @@ namespace Cat
             /// </summary>
             internal static bool AllowRegistryEdits = false;
 
+            /// <summary>
+            /// If true, immedietely checks if the app has admin perms, and if not asks for them.
+            /// </summary>
+            internal static bool LaunchAsAdmin = false;
+
             /// <summary>Default screen brightness setting.</summary>
             internal static float Brightness = 0.7f;
 
@@ -340,6 +345,9 @@ namespace Cat
                         break;
                     case nameof(AllowRegistryEdits) :
                         AllowRegistryEdits = bool.Parse(value);
+                        break;
+                    case nameof(LaunchAsAdmin):
+                        LaunchAsAdmin = bool.Parse(value);
                         break;
                     default:
                         Logging.Log($"Unknown key in INI file: {key}");

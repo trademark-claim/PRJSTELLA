@@ -20,7 +20,6 @@ using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
-using static Cat.Catowo;
 
 namespace Cat
 {
@@ -649,6 +648,55 @@ namespace Cat
                 results = matches.ToArray();
                 return true;
             }
+
+            [LoggingAspects.Logging]
+            public static bool CheckIfAdmin()
+            {
+                using (var identity = System.Security.Principal.WindowsIdentity.GetCurrent())
+                {
+                    var principal = new System.Security.Principal.WindowsPrincipal(identity);
+                    return principal.IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
+                }
+            }
+
+
+            /// <summary>
+            /// Checks if the current process has administrative privileges and, if not,
+            /// attempts to restart the program with elevated privileges.
+            /// </summary>
+            [LoggingAspects.Logging]
+            public static bool? RestartWithAdminRightsIfNeeded()
+            {
+                if (CheckIfAdmin())
+                {
+                    Logging.Log("The application is already running with administrative privileges.");
+                    return null;
+                }
+                else
+                {
+                    try
+                    {
+                        var exePath = Assembly.GetExecutingAssembly().Location.Replace(".dll", ".exe");
+                        var processInfo = new ProcessStartInfo
+                        {
+                            UseShellExecute = true,
+                            WorkingDirectory = System.Environment.CurrentDirectory,
+                            FileName = exePath,
+                            Verb = "runas"
+                        };
+
+                        Process.Start(processInfo);
+                        App.ShuttingDown();
+                    }
+                    catch (Exception ex)
+                    {
+                        Logging.Log($"Error restarting application with administrative rights.");
+                        Logging.Log(ex);
+                        return false;
+                    }
+                }
+                return true;
+            }
         }
 
         /// <summary>
@@ -701,7 +749,8 @@ namespace Cat
                 { "FontSize", (typeof(float), (1.0f, 50.0f)) },
                 { "TimeAll", (typeof(bool), false) },
                 { "LoggingDetails", (typeof(bool), false) },
-                { "AllowRegistryEdits", (typeof(bool), false) }
+                { "AllowRegistryEdits", (typeof(bool), false) },
+                { "LaunchAsAdmin", (typeof(bool), false) }
             };
              
             internal static readonly Dictionary<string, List<(string, object)>> initalsettings = new()
@@ -716,7 +765,8 @@ namespace Cat
                 {
                     "Misc", new() {
                         ("Startup", true),
-                        ("AllowRegistryEdits", false)
+                        ("AllowRegistryEdits", false),
+                        ("LaunchAsAdmin", false)
                     }
                 },
                 {

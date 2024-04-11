@@ -8,6 +8,7 @@
 
 using NAudio.CoreAudioApi;
 using System.IO;
+using System.Runtime.InteropServices;
 
 namespace Cat
 {
@@ -40,7 +41,39 @@ namespace Cat
         /// </summary>
         internal static class Cursor
         {
+            internal static readonly HashSet<(string, string)> validEntries =
+            [
+                ("OCR_APPSTARTING", "The cursor indicating that an application is starting or loading."),
+                ("OCR_NORMAL", "The normal cursor, usually a pointer for selection."),
+                ("OCR_CROSS", "A crosshair cursor, often used for precise alignment or selection."),
+                ("OCR_HAND", "A hand cursor, typically used to indicate a clickable link or object."),
+                ("OCR_HELP", "A help cursor, usually a question mark or pointer with a question mark, indicating help or more information is available."),
+                ("OCR_IBEAM", "An I-beam cursor, used to indicate that text can be edited or selected."),
+                ("OCR_UNAVAILABLE", "A cursor indicating that an action cannot be taken, often shown as a circle with a line through it."),
+                ("OCR_SIZEALL", "A sizing cursor, indicating that an object can be resized in any direction."),
+                ("OCR_SIZENESW", "A diagonal sizing cursor, indicating resizing from the northeast to southwest or vice versa."),
+                ("OCR_SIZENS", "A vertical sizing cursor, indicating resizing in the north-south direction."),
+                ("OCR_SIZENWSE", "A diagonal sizing cursor, indicating resizing from the northwest to southeast or vice versa."),
+                ("OCR_SIZEWE", "A horizontal sizing cursor, indicating resizing in the west-east direction."),
+                ("OCR_UP", "An up arrow cursor, often used to indicate an upward action or movement."),
+                ("OCR_WAIT", "A wait cursor, typically shown as an hourglass or spinning circle, indicating a process is ongoing and the user must wait.")
+            ];
+
             internal static CursorType CurrentCursor { get; private set; }
+
+            [LoggingAspects.Logging]
+            [LoggingAspects.ConsumeException]
+            internal static void LoadPresetByIndex(int num)
+            {
+                var dirs = Directory.EnumerateDirectories(CursorsFilePath).ToArray().Select(x => x.Replace(CursorsFilePath, "")).ToArray();
+                --num;
+                if (num < dirs.Count())
+                {
+                    Commands.commandstruct = new("", "", [[dirs[num],], [false,]]);
+                    Commands.LoadCursorPreset();
+                }
+                Logging.Log("");
+            }
 
             /// <summary>
             /// Changes the cursor to a specified file.
@@ -49,8 +82,9 @@ namespace Cat
             /// <returns>True if the cursor was successfully changed; otherwise, false.</returns>
             [LoggingAspects.ConsumeException]
             [LoggingAspects.Logging]
-            internal static bool ChangeCursor(string filename, uint id = OCR_NORMAL)
+            internal static bool ChangeCursor(string filename, uint id = OCR_NORMAL, bool persistent = false)
             {
+                bool allg = true;
                 Logging.Log("Changing cursor to: " + filename);
                 bool isValid = ValidateFile(filename);
                 if (!isValid)
@@ -64,11 +98,63 @@ namespace Cat
                 if (cursorHandle != IntPtr.Zero)
                 {
                     SetSystemCursorWrapper(cursorHandle, id);
-                    return true;
+                    if (persistent && Helpers.BackendHelping.CheckIfAdmin())
+                    {
+                        string cursorRegistryKey = GetCursorRegistryKeyName(id);
+                        if (!string.IsNullOrEmpty(cursorRegistryKey))
+                        {
+                            allg = SetPersistentCursor(filename, cursorRegistryKey);
+                        }
+                    }
+                    return allg;
                 }
                 else
                 {
                     throw new InvalidOperationException($"Failed to load cursor from file.");
+                }
+            }
+
+            [LoggingAspects.Logging]
+            [LoggingAspects.ConsumeException]
+            private static bool SetPersistentCursor(string cursorPath, string cursorRegistryKey)
+            {
+                var cursorsRegistryPath = @"Control Panel\Cursors";
+                using (var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(cursorsRegistryPath, true))
+                {
+                    if (key != null)
+                    {
+                        key.SetValue(cursorRegistryKey, cursorPath);
+                        SystemParametersInfoWrapper(SPI_SETCURSORS, 0, IntPtr.Zero, SPIF_UPDATEINIFILE | SPIF_SENDCHANGE);
+                    }
+                    else
+                        return false;
+                }
+                return true;
+            }
+
+            /// <summary>
+            /// Gets the registry key name for a given system cursor ID.
+            /// </summary>
+            /// <param name="id">The system cursor ID.</param>
+            /// <returns>The registry key name corresponding to the system cursor ID.</returns>
+            private static string GetCursorRegistryKeyName(uint id)
+            {
+                switch (id)
+                {
+                    case OCR_NORMAL: return "Arrow"; // Standard arrow cursor
+                    case OCR_IBEAM: return "IBeam"; // Text select cursor
+                    case OCR_WAIT: return "Wait"; // Hourglass or spinning circle cursor
+                    case OCR_CROSS: return "Crosshair"; // Crosshair cursor
+                    case OCR_UP: return "UpArrow"; // Up arrow cursor
+                    case OCR_SIZENWSE: return "SizeNWSE"; // Diagonal resize cursor (/)
+                    case OCR_SIZENESW: return "SizeNESW"; // Diagonal resize cursor (\)
+                    case OCR_SIZEWE: return "SizeWE"; // Horizontal resize cursor
+                    case OCR_SIZENS: return "SizeNS"; // Vertical resize cursor
+                    case OCR_SIZEALL: return "SizeAll"; // Move cursor
+                    case OCR_UNAVAILABLE: return "No"; // Unavailable cursor (circle with a slash)
+                    case OCR_HAND: return "Hand"; // Hand cursor
+                                                  // Default case for unidentified or custom cursors.
+                    default: return null; // Returns null if the ID doesn't match known values
                 }
             }
 
@@ -93,7 +179,7 @@ namespace Cat
             internal static void Reset()
             {
                 Logging.Log("Resetting system cursors...");
-                if (!SystemParametersInfoWrapper(SPI_SETCURSORS, 0, IntPtr.Zero, SPIF_UPDATEINIFILE | SPIF_SENDCHANGE))
+                if (!SystemParametersInfoWrapper(SPI_SETCURSORS, 0, IntPtr.Zero, SPIF_UPDATEINIFILE | SPIF_SENDCHANGE) && Marshal.GetLastWin32Error() != 0)
                 {
                     throw new InvalidOperationException("Failed to restore default system cursors.");
                 }
@@ -232,11 +318,11 @@ namespace Cat
         /// </summary>
         /// <param name="smooth">Indicates whether the movement should be smooth.</param>
         [LoggingAspects.Logging]
-        [LoggingAspects.AsyncExceptionSwallower]
+        [LoggingAspects.ConsumeException]
         internal static async void CauseMouseToHaveSpasticAttack(bool smooth = false)
         {
             Logging.Log($"Causing mouse to have a spastic attack, smoothing: {smooth}");
-            for (int i = 0; i < (smooth ? 1000 : 100); i++)
+            for (int i = 0; i < (smooth ? 20 : 1000); i++)
             {
                 if (smooth)
                 {

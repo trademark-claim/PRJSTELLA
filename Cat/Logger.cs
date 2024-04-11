@@ -147,7 +147,7 @@ namespace Cat
             if (UserData.FullLogging)
             {
                 string currentTime = DateTime.Now.ToString("HH:mm:ss:fff");
-                string formattedMessage = $"[{currentTime}] {message}{System.Environment.NewLine}";
+                string formattedMessage = $"[{currentTime}] {message}"; //+ System.Environment.NewLine
                 if (nodatetime)
                     formattedMessage = $"{message}{System.Environment.NewLine}";
                 lock (logLock)

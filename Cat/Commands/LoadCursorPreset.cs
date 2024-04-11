@@ -12,7 +12,7 @@ namespace Cat
         [LoggingAspects.Logging]
         internal static bool LoadCursorPreset()
         {
-            var entryN = commandstruct.Value.Parameters[0][0];
+            string entryN = commandstruct.Value.Parameters[0][0] as string;
             if (entryN == null)
             {
                 Logging.Log("Expected string but parsing failed and returned either a null command struct or a null entry, please submit a bug report.");
@@ -33,6 +33,23 @@ namespace Cat
                 Logging.Log($"Cursor Preset file ({file}) not found! This shouldn't happen unless someone manually removed it.");
                 Interface.AddTextLog("Preset file not found, try re-creating this preset! (Remove the currently existing one though).", RED);
                 return false;
+            }
+            bool persistant = false;
+            if (commandstruct.Value.Parameters[1].Length > 0)
+            {
+                persistant = commandstruct.Value.Parameters[1][0] as bool? ?? false;
+                if (persistant == true && !UserData.AllowRegistryEdits)
+                {
+                    Interface.AddLog("For persistant cursor changes (cursors remain custom through computer restarts), please change the AllowRegistryEdits to true!");
+                    Interface.AddLog("Loading preset without persistence.");
+                    Logging.Log("Requested registry edit without permissions.");
+                    persistant = false;
+                }
+                else if (persistant == true && !Helpers.BackendHelping.CheckIfAdmin())
+                {
+                    Interface.AddLog("This program requires elevation to change registry! Either set LaunchAsAdmin to true and restart or run 'elevate perms'");
+                    persistant = false;
+                }
             }
             string[] content = File.ReadAllLines(file);
             Logging.Log(content);
@@ -61,8 +78,8 @@ namespace Cat
                     case "OCR_IBEAM":
                         id = OCR_IBEAM;
                         break;
-                    case "OCR_NO":
-                        id = OCR_NO;
+                    case "OCR_UNAVAILABLE":
+                        id = OCR_UNAVAILABLE;
                         break;
                     case "OCR_SIZEALL":
                         id = OCR_SIZEALL;
@@ -99,7 +116,7 @@ namespace Cat
                         Interface.AddTextLog($"Cursor path assigned to {cursorname} returned non-existence, skipping.", HOTPINK);
                         continue;
                     }
-                    if (!BaselineInputs.Cursor.ChangeCursor(path, id))
+                    if (!BaselineInputs.Cursor.ChangeCursor(path, id, persistant))
                     {
                         Interface.AddTextLog($"Something went wrong loading the cursor for {cursorname}! Check logs for details.\nSkipping cursor for {cursorname}...", HOTPINK);
                         continue;

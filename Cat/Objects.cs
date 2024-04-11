@@ -1,9 +1,11 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 
 namespace Cat
 {
@@ -358,6 +360,61 @@ namespace Cat
                 }
             }
 
+        }
+
+        internal static class CursorEffects
+        {
+            private static bool isOn = false;
+            private static DispatcherTimer timer;
+            private static Window allencompassing;
+
+            internal static void Toggle()
+            {
+                if (!isOn) Run();
+                else if (isOn) Stop();
+                isOn = !isOn;
+            }
+
+            private static void Run()
+            {
+                if (isOn) return;
+                int left = Screen.AllScreens.Min(screen => screen.Bounds.Left);
+                int top = Screen.AllScreens.Min(screen => screen.Bounds.Top);
+                int right = Screen.AllScreens.Max(screen => screen.Bounds.Right);
+                int bottom = Screen.AllScreens.Max(screen => screen.Bounds.Bottom);
+                int width = right - left;
+                int height = bottom - top;
+
+                allencompassing = new Window
+                {
+                    WindowStartupLocation = WindowStartupLocation.Manual,
+                    Left = left,
+                    Top = top,
+                    Width = width,
+                    Height = height,
+                    Background = Brushes.Transparent
+                };
+                allencompassing.Show();
+                allencompassing.Loaded += (sender, e) =>
+                {
+                    var hwnd = new WindowInteropHelper(allencompassing).Handle;
+                    var originalStyle = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
+                    SetWindowLongWrapper(hwnd, GWL_EXSTYLE, originalStyle | WS_EX_TRANSPARENT | WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE);
+                    var editedstyle = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
+                    Logging.Log($"Set Win Style of Handle {hwnd} from {originalStyle:X} ({originalStyle:B}) [{originalStyle}] to {editedstyle:X} ({editedstyle:B}) [{editedstyle}]");
+                };
+                timer = new() { Interval = TimeSpan.FromSeconds(0.5) };
+                timer.Tick += (s, e) =>
+                {
+                    GetCursorPosWrapper(out POINT mouseposition);
+                };
+                isOn = true;
+            }
+
+            private static void Stop()
+            {
+                if (!isOn) return;
+            }
         }
 
         internal readonly record struct Command(string Call, string Raw, object[][]? Parameters = null);

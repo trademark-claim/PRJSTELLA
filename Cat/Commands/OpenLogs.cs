@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace Cat
 {
     internal static partial class Commands
@@ -5,7 +7,8 @@ namespace Cat
         [LoggingAspects.ConsumeException]
         internal static bool OpenLogs()
         {
-            FYI();
+            Process.Start("explorer.exe", LogFolder);
+            Interface.AddLog("Opened Log Folder");
             return true;
         }
     }
