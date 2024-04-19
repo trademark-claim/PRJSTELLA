@@ -1,13 +1,22 @@
-﻿using System.Collections.ObjectModel;
+﻿#define A
+//#define B
+//#define C
+
+using Microsoft.VisualBasic.Logging;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Speech.Recognition;
+using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Ribbon;
+using System.Windows.Data;
 using System.Windows.Forms;
+using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
@@ -58,37 +67,45 @@ namespace Cat
         /// </remarks>
         internal static class OverlayRect
         {
-            /// <summary>
-            /// The rectangle itself, only created once.
-            /// </summary>
-            private static readonly Rectangle Rectangle = new Rectangle { Width = Catowo.GetScreen().Bounds.Width, Height = Catowo.GetScreen().Bounds.Height, Fill = new SolidColorBrush(Colors.Gray), Opacity = UserData.Opacity };
+            private static Rectangle MakeOverlay()
+                => new Rectangle { Width = Catowo.GetScreen().Bounds.Width, Height = Catowo.GetScreen().Bounds.Height, Fill = new SolidColorBrush(Colors.Gray), Opacity = UserData.Opacity };
+
 
             /// <summary>
             /// Adds <see cref="Rectangle"/> to <paramref name="c"/>
             /// </summary>
             /// <param name="c">The canvas to add to</param>
-            internal static void AddToCanvas(Canvas c)
+            internal static Rectangle AddToCanvas(Canvas c)
             {
-                c.Children.Add(Rectangle);
-                UpdateRect();
+                var r = MakeOverlay();
+                c.Children.Add(r);
+                return r;
             }
 
-            /// <summary>
-            /// Updates the rectangle to the user's data and for screen flexibility
-            /// </summary>
-            private static void UpdateRect()
+            internal static Rectangle AddToCanvas(System.Drawing.Rectangle rect, Canvas c)
             {
-                Rectangle.Opacity = UserData.Opacity;
-                Rectangle.Width = Catowo.GetScreen().Bounds.Width;
-                Rectangle.Height = Catowo.GetScreen().Bounds.Height;
+                Rectangle Rectangle = MakeOverlay();
+                Rectangle.Width = rect.Width;
+                Rectangle.Height = rect.Height;
+                c.Children.Add(Rectangle);
+                return Rectangle;
+            }
+
+            internal static Rectangle AddToCanvas(Rect rect, Canvas c)
+            {
+                Rectangle Rectangle = MakeOverlay();
+                Rectangle.Width = rect.Width;
+                Rectangle.Height = rect.Height;
+                c.Children.Add(Rectangle);
+                return Rectangle;
             }
 
             /// <summary>
             /// Does the opposite of <see cref="AddToCanvas(Canvas)"/>
             /// </summary>
             /// <param name="c">The canvas in which to remove from</param>
-            internal static void RemoveFromCanvas(Canvas c)
-                => c.Children.Remove(Rectangle);
+            internal static void RemoveFromCanvas(Canvas c, Rectangle rect)
+                => c.Children.Remove(rect);
         }
 
         /// <summary>
@@ -132,6 +149,11 @@ namespace Cat
             private static Canvas? canvas;
 
             /// <summary>
+            /// The overlay rectangle
+            /// </summary>
+            private static Rectangle overlay;
+
+            /// <summary>
             /// However lonely you feel, you're never alone. There are literally millions of bugs, mites and bacteria living in your house. Goodnight.
             /// </summary>
             /// <param name="parameters"></param>
@@ -158,7 +180,7 @@ namespace Cat
             internal static void RunClara(Mode mode, Canvas canvas)
             {
                 ClaraHerself.canvas = canvas;
-                OverlayRect.AddToCanvas(canvas);
+                overlay = OverlayRect.AddToCanvas(canvas);
                 Catowo.inst.MakeNormalWindow();
                 switch (mode)
                 {
@@ -169,7 +191,7 @@ namespace Cat
                 // The first message
                 bubble = new();
                 Point location = new(Catowo.inst.Width - 30, Catowo.inst.Height - 30);
-                Logging.LogP("Location", location);
+                Logging.Log("Location", location);
                 bubble.LowerRightCornerFreeze = location;
                 bubble.Text = CurrentStory[num];
                 canvas.Children.Add(bubble);
@@ -192,7 +214,7 @@ namespace Cat
                             num = 0;
                             Catowo.inst.MakeFunnyWindow();
                             Catowo.inst.PreviewKeyDown -= ProgressionKeydown;
-                            OverlayRect.RemoveFromCanvas(canvas);
+                            OverlayRect.RemoveFromCanvas(canvas, overlay);
                             if (bubble != null)
                             {
                                 canvas.Children.Remove(bubble);
@@ -219,7 +241,7 @@ namespace Cat
                         num = 0;
                         Catowo.inst.MakeFunnyWindow();
                         Catowo.inst.PreviewKeyDown -= ProgressionKeydown;
-                        OverlayRect.RemoveFromCanvas(canvas);
+                        OverlayRect.RemoveFromCanvas(canvas, overlay);
                         if (bubble != null)
                         {
                             canvas.Children.Remove(bubble);
@@ -467,6 +489,12 @@ namespace Cat
             private static void Stop()
             {
                 if (!isOn) return;
+            }
+
+            internal static void MoveTop()
+            {
+                if (allencompassing != null)
+                    allencompassing.Topmost = true;
             }
 
             private static class Particles
@@ -728,10 +756,11 @@ namespace Cat
         internal class LogEditor : Window // Code the GUI here
         {
             private LoggingListBox logListBox;
-            private Canvas canvas; // Content Container
+            private Grid mainGrid; // Content Container
             internal static LogEditor inst = null;
-            private menuBar menu;
+            private MenuBox menu;
             internal int currentExceptionIndex = -1;
+            private SWC.ListBox files = new();
 
             [LoggingAspects.Logging]
             internal LogEditor() // Runs upon object creation
@@ -741,10 +770,9 @@ namespace Cat
                 var screen = Catowo.GetScreen();
                 Width = screen.Bounds.Width;
                 Height = screen.Bounds.Height;
-                this.Background = Brushes.Purple; // Assuming PURPLE is a SolidColorBrush
+                this.Background = Brushes.Purple; 
                 inst?.Close();
                 inst = this;
-
                 InitializeComponents();
                 LoadLogs();
             }
@@ -752,185 +780,408 @@ namespace Cat
             [LoggingAspects.Logging]
             private void InitializeComponents()
             {
-                canvas = new Canvas();
-                Content = canvas;
+                mainGrid = new Grid();
+                Content = mainGrid;
+                mainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(200) }); 
+                mainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                mainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(200) });
 
                 logListBox = new LoggingListBox();
-                Canvas.SetTop(logListBox, 0);
-                canvas.Children.Add(logListBox);
-                Canvas.SetLeft(logListBox, 0);
-                menu = new menuBar();
-                canvas.Children.Add(menu);
+                mainGrid.Children.Add(logListBox);
+
+                menu = new MenuBox(logListBox);
+                mainGrid.Children.Add(menu);
+
+                files.SelectionChanged += (s, e) => { if (files.SelectedItem is string str && str.StartsWith('L') && str.EndsWith(".LOG")) logListBox.LoadFile(LogFolder + "//" + str); menu.InitializeMenu(); };
+                mainGrid.Children.Add(files);
+
+                Grid.SetColumn(files, 0);
+                Grid.SetColumn(logListBox, 1);
+                Grid.SetColumn(menu, 2);
+
+                foreach (var file in Directory.EnumerateFiles(LogFolder))
+                    files.Items.Add(file.Replace(LogFolder, ""));
             }
 
             [LoggingAspects.Logging]
-            [LoggingAspects.AsyncExceptionSwallower]
+            [LoggingAspects.ConsumeException]
             private async Task LoadLogs()
             {
-                await Logging.FinalFlush();
-                string[] content = File.ReadAllLines(LogPath);
-                foreach (string line in content)
-                {
-                    logListBox.AddItem(line);
-                }
+                await Logging.FullFlush();
+                var files = Directory.EnumerateFiles(LogFolder).ToArray();
+                if (files.Length == 0) return;
+                logListBox.LoadFile(files[0]);
                 return;
             }
+           
 
 
 
-
-            private class menuBar : Menu
+            private class MenuBox : SWC.ListBox
             {
-                [LoggingAspects.Logging]
-                [LoggingAspects.ConsumeException]
-                public menuBar()
+                private static int searchamount = 0;
+                private const int FirstSearch = 8;
+                internal static MenuBox minst;
+
+                private static readonly List<(string, Action)> a_buttons = new List<(string, Action)>()
                 {
-                    var screen = Catowo.GetScreen();
+                    ("Sort By", null),
+                    ("Severity", (Action)(() =>
+                    {
+                        var epic = new List<List<string>>()
+                        {
+                            (new()), // Fatals
+                            (new()), // Exceptions
+                            (new()), // Other
+                            (new()), // The rest
+                        };
+                        bool isErrorLog = false;
+                        foreach(string log in inst.logListBox.Items)
+                        {
+                            if (log.Contains("FATAL ERROR"))
+                                epic[0].Add(log);
+                            else if (log.Contains(">>>ERROR"))
+                            {
+                                epic[1].Add(log);
+                                isErrorLog = true;
+                            }
+                            else if (log.Contains(">>>END OF ERROR") && isErrorLog)
+                            {
+                                epic[1].Add(log);
+                                isErrorLog = false;
+                            }
+                            else if (log.Contains("ERROR") && !isErrorLog)
+                                epic[2].Add(log);
+                            else if (isErrorLog)
+                                epic[1].Add(log);
+                            else epic[3].Add(log);
+                        }
+                        inst.logListBox.Items.Clear();
+                        if (epic[0].Count > 0)
+                            epic[0].Add("\n");
+                        if (epic[1].Count > 0)
+                            epic[1].Add("\n");
+                        if (epic[2].Count > 0)
+                            epic[2].Add("\n");
+                        foreach (List<string> item in epic)
+                            foreach (string log in item)
+                                inst.logListBox.Items.Add(log);
+                        epic = null;
+                    })),
+                    ("Date", (() => 
+                    {
+                        var logs = LogEditor.inst.logListBox.Items.Cast<string>().ToList();
+                        logs = logs.OrderBy(line => Helpers.BackendHelping.ExtractStringGroups(line, "[", "]", out string[]? results)).ToList();
+                        logs.RemoveAll(x => string.IsNullOrWhiteSpace(x));
+                        LogEditor.inst.logListBox.Items.Clear();
+                        foreach (var log in logs)
+                        {
+                            LogEditor.inst.logListBox.Items.Add(log);
+                        }
+                    })),
+                    ("Execution Time", () => { MessageBox.Show("This feature is still in development!"); }),
+                    ("Alphabetical", () => { var logs = inst.logListBox.Items.Cast<string>().OrderBy(item => { int index = item.IndexOf(']') + 1; while (index < item.Length && !char.IsLetterOrDigit(item[index])) { index++; } return index < item.Length ? item.Substring(index) : ""; }).ToList(); inst.logListBox.Items.Clear(); foreach (string item in logs) inst.logListBox.Items.Add(item); }),
+                    ("Set Filter To", null),
+                    ("Errors", () => 
+                    {
+                        var epic = new List<List<string>>()
+                        {
+                            (new()), // Fatals
+                            (new()), // Exceptions
+                            (new()), // Other
+                        };
+                        bool isErrorLog = false;
+                        foreach(string log in inst.logListBox.Items)
+                        {
+                            if (log.Contains("FATAL ERROR"))
+                                epic[0].Add(log);
+                            else if (log.Contains(">>>ERROR"))
+                            {
+                                epic[1].Add(log);
+                                isErrorLog = true;
+                            }
+                            else if (log.Contains(">>>END OF ERROR") && isErrorLog)
+                            {
+                                epic[1].Add(log);
+                                isErrorLog = false;
+                            }
+                            else if (log.Contains("ERROR") && !isErrorLog)
+                                epic[2].Add(log);
+                            else if (isErrorLog)
+                                epic[1].Add(log);
+                        }
+                        inst.logListBox.Items.Clear();
+                        if (epic[0].Count > 0)
+                            epic[0].Add("\n");
+                        if (epic[1].Count > 0)
+                            epic[1].Add("\n");
+                        if (epic[2].Count > 0)
+                            epic[2].Add("\n");
+                        foreach (List<string> item in epic)
+                            foreach (string log in item)
+                                inst.logListBox.Items.Add(log);
+                        epic = null;
+                    }),
+                    ("Function E&E", () => 
+                    {
+                        var logs = inst.logListBox.Items.Cast<string>().ToList().Where(x => x.Contains("method", StringComparison.InvariantCultureIgnoreCase) && (x.Contains("entering", StringComparison.InvariantCultureIgnoreCase) || x.Contains("exiting", StringComparison.InvariantCultureIgnoreCase)));
+                        inst.logListBox.Items.Clear();
+                        foreach (var item in logs)
+                            inst.logListBox.Items.Add(item);
+                    }),
+                    ("Search", (Action)(() => 
+                    {
+                        var x = new OverlayInputBox("What phrase would you like to filter by:", LogEditor.inst);
+                        x.ShowDialog();
+                        var logs = inst.logListBox.Items.Cast<string>().ToList().Where(x => x.Contains(OverlayInputBox.Input, StringComparison.InvariantCultureIgnoreCase));
+                        inst.logListBox.Items.Clear();
+                        foreach (var item in logs)
+                            inst.logListBox.Items.Add(item);
+                        ++searchamount;
+                        minst.buttons.Insert(searchamount + FirstSearch, ($"Search {searchamount}", (Action)(() =>
+                        {
+                            minst.CompoundingSearch();
+                        })));
+                        minst.InitializeMenu();
+                    })),
+                    ("Misc", null),
+                    ("Search", () => { MessageBox.Show("This feature is still in development!"); }),
+                    ("Nest", () => { MessageBox.Show("This feature is still in development!"); }),
+                    ("Reset", () => { inst.logListBox.Items.Clear(); foreach (var item in inst.logListBox.baselines) inst.logListBox.Items.Add(item); })
+                };
 
-                    Height = Catowo.GetScreen().Bounds.Height; // Set the height for your menu bar
-                    Width = 200;
-                    SetLeft<double>(this, screen.Bounds.Width - 200);
+                private readonly List<(string, Action)> buttons = new List<(string, Action)>();
 
+                private LoggingListBox logListBox;
 
-                    MenuItem sortByException = new MenuItem { Header = "Sort by Exception" };
-                    sortByException.Click += (s, e) => SortByException();
-
-                    MenuItem sortByDate = new MenuItem { Header = "Sort by Date" };
-                    sortByDate.Click += (s, e) => SortLogs(Criteria.DATE);
-
-                    MenuItem sortBySeverity = new MenuItem { Header = "Sort by Severity" };
-                    sortBySeverity.Click += (s, e) => SortLogs(Criteria.SEVERITY);
-
-                    MenuItem jumpToNextException = new MenuItem { Header = "Jump to Next Exception" };
-                    jumpToNextException.Click += (s, e) => JumpToNextException();
-                    
-
-                    // Add menu items
-                    Items.Add(sortByException);
-                    Items.Add(sortByDate);
-                    Items.Add(sortBySeverity);
-                    Items.Add(jumpToNextException);
+                internal MenuBox(LoggingListBox logListBox)
+                {
+                    minst = this;
+                    this.logListBox = logListBox;
+                    buttons.Clear();
+                    foreach (var item in a_buttons)
+                        buttons.Add(item);
+                    InitializeMenu();
                 }
 
-                [LoggingAspects.Logging]
-                [LoggingAspects.ConsumeException]
-                private void SortByException()
+                private void CompoundingSearch()
                 {
-                    var sortedLogs = LogEditor.inst.logListBox.Items.Cast<string>()
-                        .OrderBy(line => line.Contains("Exception") || line.Contains("Error"))
-                        .ToList();
-                    if (sortedLogs.Where(line => line.Contains("Exception") || line.Contains("Error")).Count() == 0)
+                    var x = new OverlayInputBox("What phrase would you like to add another filter for:", LogEditor.inst);
+                    x.ShowDialog();
+                    if (string.IsNullOrWhiteSpace(OverlayInputBox.Input))
+                        return;
+                    var current = inst.logListBox.Items.Cast<string>().ToList();
+                    var logs = inst.logListBox.baselines.Where(x => x.Contains(OverlayInputBox.Input, StringComparison.InvariantCultureIgnoreCase) || current.Contains(x));
+                    inst.logListBox.Items.Clear();
+                    foreach (var item in logs)
+                        inst.logListBox.Items.Add(item);
+                    ++searchamount;
+                    minst.buttons.Insert(searchamount + FirstSearch, ($"Search {searchamount}", (Action)(() =>
                     {
-                        System.Windows.MessageBox.Show("Nothing to sort fucker :3");
-                    }
-
-                    UpdateLogListBox(sortedLogs);
+                        CompoundingSearch();
+                    })));
+                    InitializeMenu();
                 }
 
-                [LoggingAspects.Logging]
-                [LoggingAspects.ConsumeException]
-                private void SortLogs(Criteria criteria)
+                internal void InitializeMenu()
                 {
-                    var logs = LogEditor.inst.logListBox.Items.Cast<string>().ToList();
-
-                    switch (criteria)
-                    {
-                        case Criteria.EXCEPTION:
-                            logs = logs.OrderBy(line => !line.Contains("Exception")).ToList();
-                            break;
-                        case Criteria.DATE:
-                            // Assuming the date is at the start of the log entry in a specific format
-                            logs = logs.OrderBy(line => Helpers.BackendHelping.ExtractStringGroups(line, "[", "]", out string[]? results)).ToList();
-                            logs.RemoveAll(x => string.IsNullOrWhiteSpace(x));
-
-                            break;
-                        case Criteria.SEVERITY:
-                            // Example: sort by severity assuming severity levels are INFO, WARN, ERROR
-                            logs = logs.OrderBy(line =>
-                                line.Contains("ERROR") ? 1 :
-                                line.Contains("WARN") ? 2 :
-                                line.Contains("INFO") ? 3 : 4
-                            ).ToList();
-                            break;
-                            // Implement other cases based on the enum values
-                    }
-
-                    // Update the logListBox with the sorted logs
-                    LogEditor.inst.logListBox.Items.Clear();
-                    foreach (var log in logs)
-                    {
-                        LogEditor.inst.logListBox.Items.Add(log);
-                    }
-                    UpdateLogListBox(logs);
-
-
-                }
-                internal void UpdateLogListBox(IEnumerable<string> logs)
-                {
-                    // Clear the current items in the list box
-                    LogEditor.inst.logListBox.Items.Clear();
-
-                    // Add the new log entries to the list box
-                    foreach (var log in logs)
-                    {
-                        LogEditor.inst.logListBox.Items.Add(log);
-                    }
-                }
-
-                private void JumpToNextException()
-                {
-                    var logs = LogEditor.inst.logListBox.Items.Cast<string>().ToList();
-                    var nextExceptionIndex = logs.FindIndex(LogEditor.inst.currentExceptionIndex + 1, line => line.Contains("Exception") || line.Contains("Error"));
-
-                    if (nextExceptionIndex != -1)
-                    {
-                        // Update the current index
-                        LogEditor.inst.currentExceptionIndex = nextExceptionIndex;
-                        // Scroll to the next exception in the ListBox
-                        LogEditor.inst.logListBox.ScrollIntoView(logs[nextExceptionIndex]);
-                    }
-                    else
-                    {
-                        System.Windows.MessageBox.Show("No more exceptions found.");
-                        // Reset the index if you want to cycle through exceptions
-                        LogEditor.inst.currentExceptionIndex = -1;
-                    }
-                }
-
-
-                internal enum Criteria : byte
-                {
-                    EXCEPTION,
-                    SEVERITY,
-                    DATE,
-
-
+                    searchamount = 0;
+                    Items.Clear();
+                    foreach ((string name, Action act) in buttons)
+                        Items.Add(new ExecutableText<Action>(act) { Text = (act == null? "" : "  ") + name });
+                    SelectionChanged += (s, e) => { if (SelectedItem is ExecutableText<Action> act) act.Execute(); UnselectAll(); };
+                    SelectionMode = SWC.SelectionMode.Single;
                 }
             }
 
             private class LoggingListBox : Catowo.Interface.LogListBox
             {
+                internal List<string> baselines = new List<string>();
+
                 public LoggingListBox()
                 {
                     ScrollViewer.SetVerticalScrollBarVisibility(this, ScrollBarVisibility.Auto);
+                    ScrollViewer.SetHorizontalScrollBarVisibility(this, ScrollBarVisibility.Auto);
                     Height = LogEditor.inst.Height;
                     var screen = Catowo.GetScreen();
-                    Width = screen.Bounds.Width - 200;
+                    Width = screen.Bounds.Width - 400;
                 }
 
-                public void ScrollIntoView(string item)
+                internal void LoadFile(string path)
                 {
-                    var itemContainer = (ListBoxItem)this.ItemContainerGenerator.ContainerFromItem(item);
-                    if (itemContainer != null)
+                    Items.Clear();
+                    baselines = File.ReadAllLines(path).ToList();
+                    baselines.RemoveAll(string.IsNullOrWhiteSpace);
+                    foreach (string line in baselines)
                     {
-                        this.ScrollIntoView(item);
+                        AddItem(line);
                     }
                 }
-
-
-
             }
 
         }
+
+        internal class OverlayInputBox : Window
+        {
+            internal static string Input { get; private set; }
+            private nint hwnd;
+            private Rectangle rect;
+
+            internal OverlayInputBox(string question, Window parent)
+            {
+                Screen screen = Helpers.BackendHelping.GetContainingScreen(parent);
+                Helpers.ScreenSizing.GetAdjustedScreenSize(screen, out Rect nb);
+                Width = nb.Width;
+                WindowStyle = WindowStyle.None;
+                AllowsTransparency = true;
+                Background = Brushes.Transparent;
+                Height = nb.Height;
+                Top = nb.Top;
+                ShowInTaskbar = false;
+                ShowActivated = true;
+                //WindowState = WindowState.Maximized;   
+                Left = nb.Left;
+                Loaded += (sender, e) =>
+                {
+                    hwnd = new WindowInteropHelper(this).Handle;
+                    Topmost = true;
+                    int originalStyle = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
+                    SetWindowLongWrapper(hwnd, GWL_EXSTYLE, originalStyle | WS_EX_LAYERED | WS_EX_TOOLWINDOW);
+                };
+                Init(question, nb);
+            }
+
+            private void Init(string question, Rect nb)
+            {
+                double width = nb.Width;
+                double height = nb.Height;
+                Canvas canv = new();
+                Content = canv;
+                rect = OverlayRect.AddToCanvas(nb, canv);
+                double margin = width / 6;
+                TextBox tb = new() { Width = width - (margin * 2), Height = 20 };
+                double aheight = (height / 2) - 10;
+                Canvas.SetTop(tb, aheight);
+                Canvas.SetLeft(tb, margin);
+                PreviewKeyDown += (s, e) =>
+                {
+                    if (e.Key == System.Windows.Input.Key.Enter)
+                    {
+                        Input = tb.Text;
+                        Close();
+                    }
+                };
+                canv.Children.Add(tb);
+                var lbl = new Label() { Content = question, Foreground = new SolidColorBrush(Colors.Silver)};
+                Canvas.SetLeft(lbl, margin);
+                Canvas.SetTop(lbl, aheight - 20);
+                canv.Children.Add(lbl);
+            }
+        }
+
+
+        public class ExecutableText<T> : TextBlock
+        {
+            private Action function;
+
+            public ExecutableText(Action action)
+                => function = action;
+
+            internal void Execute()
+            {
+                function?.Invoke();
+            }
+        }
+
+        public class NullToVisibilityConverter : IValueConverter
+        {
+            public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+            {
+                return value == null ? Visibility.Collapsed : Visibility.Visible;
+            }
+
+            public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        public static class VoiceCommandHandler
+        {
+            private static SpeechRecognitionEngine recognizer;
+            private static bool ready = false;
+            internal static bool WasCalled = false;
+            internal static Dictionary<string, string> Speechrecogmap { get; private set; }
+            
+            [LoggingAspects.Logging]
+            public static void ActivateVoiceCommandHandler()
+            {
+                ready = true;
+                if (Speechrecogmap == null)
+                {
+                    Speechrecogmap = Helpers.JSONManager.ReadFromJsonFile<Dictionary<string, string>>("speechrecogmap.json");
+                }
+                recognizer = new SpeechRecognitionEngine(new System.Globalization.CultureInfo("en-US"));
+                Logging.Log("Engine created");
+                Logging.Log("Loading Grammer...");
+                recognizer.LoadGrammar(new DictationGrammar());
+                Logging.Log("Created Grammer.");
+                recognizer.SpeechRecognized += (s, e) =>
+                {
+                    var result = e.Result;
+                    Logging.Log("Transcription: " + result.Text);
+                    Commands.ProcessVoiceCommand(result.Text);
+                };
+#if A
+                recognizer.SpeechRecognitionRejected += (s, e) =>
+                {
+                    Logging.Log("Speech recognition failed.");
+                    Interface.AddLog("Speech recognition failed.");
+                };
+#endif
+#if B
+                recognizer.RecognizeCompleted += (s, e) =>
+                {
+                    Logging.Log("Recognition completed.");
+                };
+#endif
+#if C
+                recognizer.SpeechDetected += (s, e) =>
+                {
+                    Logging.Log("Speech detected.");
+                };
+#endif
+                Logging.Log("Events attached");
+                recognizer.SetInputToDefaultAudioDevice();
+            }
+
+            [LoggingAspects.Logging]
+            public static Task StartListeningAndProcessingAsync()
+            {
+                if (ready)
+                    return Task.CompletedTask;
+                ActivateVoiceCommandHandler();
+
+                return Task.Run(() =>
+                {
+                    try
+                    {
+                        recognizer.RecognizeAsync(RecognizeMode.Multiple);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logging.LogError(ex);
+                    }
+                });
+            }
+
+            [LoggingAspects.Logging]
+            public static void StopListening()
+            {
+                ready = false;
+                recognizer.RecognizeAsyncStop();
+            }
+        }
+
     }
 }

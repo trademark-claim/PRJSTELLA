@@ -41,6 +41,10 @@ global using Command = Cat.Objects.Command;
 global using Canvas = System.Windows.Controls.Canvas;
 global using Application = System.Windows.Application;
 global using MessageBox = System.Windows.MessageBox;
+global using Binding = System.Windows.Data.Binding;
+global using Button = System.Windows.Controls.Button;
+global using TextBox = System.Windows.Controls.TextBox;
+global using Label = System.Windows.Controls.Label;
 global using Color = System.Windows.Media.Color;
 using NAudio.Wave;
 using System.Diagnostics;
@@ -237,7 +241,7 @@ namespace Cat
                         Left = screen.Bounds.Left;
                         Width = width;
                         Height = height - working;
-                        Logging.LogP("New Screen Params: ", Top, Left, Width, Height);
+                        Logging.Log("New Screen Params: ", Top, Left, Width, Height);
                         _screen_ = value;
                         ToggleInterface();
                     }
@@ -330,7 +334,7 @@ namespace Cat
         /// </remarks>
         [LoggingAspects.Logging]
         private IntPtr KeyboardProc(int nCode, IntPtr wParam, IntPtr lParam)
-        {
+        {  
             int vkCode = Marshal.ReadInt32(lParam);
             bool isKeyDown = nCode >= 0 && wParam == (IntPtr)WM_KEYDOWN;
             bool isKeyUp = nCode >= 0 && wParam == (IntPtr)WM_KEYUP;
@@ -647,7 +651,7 @@ namespace Cat
         [LoggingAspects.Logging]
         [LoggingAspects.ConsumeException]
         [LoggingAspects.UpsetStomach]
-        private bool ToggleInterface()
+        internal bool ToggleInterface()
         {
             if (Interface.inst != null)
             {
@@ -661,6 +665,7 @@ namespace Cat
             {
                 MakeNormalWindow();
                 canvas.Children.Add(new Interface(canvas));
+                Objects.CursorEffects.MoveTop();
                 return true;
             }
         }
@@ -856,14 +861,14 @@ namespace Cat
                 return logListBox.Items.Count - 1;
             }
 
-            [LoggingAspects.ConsumeException]
 
-           /// <summary>
+            /// <summary>
             /// Edits a log message in the interface's log list box at a specified index.
             /// </summary>
             /// <param name="message">The new log message.</param>
             /// <param name="id">The index of the log message to edit.</param>
             /// <param name="fromEnd">Whether the index is counted from the end of the log list.</param>
+            [LoggingAspects.ConsumeException]
             internal static void EditLog(string message, int id, bool fromEnd)
             {
                 Interface? instance = inst;
@@ -887,7 +892,6 @@ namespace Cat
                     logListBox.ScrollIntoView(logListBox.Items[logListBox.Items.Count - 1]);
             }
 
-            [LoggingAspects.ConsumeException]
 
             /// <summary>
             /// Adds a textual log message to the interface's log list box with specified text color.
@@ -895,6 +899,7 @@ namespace Cat
             /// <param name="logMessage">The log message to add.</param>
             /// <param name="color">The color of the text.</param>
             /// <returns>An integer representing the position of the newly added log message in the log list box.</returns>
+            [LoggingAspects.ConsumeException]
             internal static int AddTextLog(string logMessage, SWM.Color color)
             {
                 Interface? instance = inst;
@@ -941,7 +946,7 @@ namespace Cat
             /// </summary>
             internal static class CommandProcessing
             {
-                internal static Interface @interface;
+                internal static Interface @interface { get => Commands.@interface; set => Commands.@interface = value;  }
                 private static Command? commandstruct;
                 private static readonly FixedQueue<string> History = new(10);
                 private static string cmdtext;
@@ -1140,7 +1145,11 @@ namespace Cat
                     {"ole", 35},
 
                     { "elevate perms", 36 },
-                    { "ep", 36 }
+                    { "ep", 36 },
+
+                    { "test error", 37 },
+
+                    { "activate voice", 38 }
                 };
 
                 /// <summary>
@@ -1488,6 +1497,24 @@ namespace Cat
                             { "function", (Func<bool>)Cat.Commands.KillMyselfAndGetGodPowers},
                             { "shortcut", ""}
                         }
+                    },
+                    {
+                        37, new Dictionary<string, object>
+                        {
+                            { "desc", "[DEBUG] Throws an error" },
+                            { "params", "" },
+                            { "function", (Func<bool>)Cat.Commands.ThrowError},
+                            { "shortcut", ""}
+                        }
+                    },
+                    {
+                        38, new Dictionary<string, object>
+                        {
+                            { "desc", "Activates voice recognition" },
+                            { "params", "" },
+                            { "function", (Func<bool>)Cat.Commands.AV},
+                            { "shortcut", ""}
+                        }
                     }
                 };
 
@@ -1543,9 +1570,14 @@ namespace Cat
                 /// Clears the input text box upon completion.
                 /// </remarks>
                 [LoggingAspects.Logging]
-                internal static async void ProcessCommand()
+                internal static async void ProcessCommand(string non_interface_text = null)
                 {
-                    cmdtext = @interface.inputTextBox.Text.Trim().ToLower();
+                    commandstruct = null;
+                    Commands.commandstruct = null;
+                    if (non_interface_text == null)
+                        cmdtext = @interface.inputTextBox.Text.Trim().ToLower();
+                    else
+                        cmdtext = non_interface_text;
                     string call = cmdtext.Split(";")[0].Trim();
                     Logging.Log($"Processing Interface Command, Input: {cmdtext}");
                     if (cmdmap.TryGetValue(call, out int value))
@@ -1639,7 +1671,7 @@ namespace Cat
                         string[] inputs = linputs.ToArray();
                         // Split the metadata into every expected sequence
                         string[] optionals = metadata.Contains('|') ? metadata.Split('|') : [metadata,];
-                        Logging.LogP("Optionals", optionals);
+                        Logging.Log("Optionals", optionals);
                         List<string> couldbes = new(optionals.Length);
                         foreach (string sequence in optionals)
                         {
@@ -1700,7 +1732,7 @@ namespace Cat
                             {
                                 //Logging.Log(i, all - i, flex, fix, "");
                                 string[] types = results[i].Split('/');
-                                Logging.LogP("Types: ", types);
+                                Logging.Log("Types: ", types);
                                 bool isValid = false;
                                 foreach (string type in types)
                                 {
@@ -1749,7 +1781,7 @@ namespace Cat
                                 }
                             }
                             parsedparams = [fixparams.ToArray(), flexparams.ToArray()];
-                            Logging.LogP("Parsed Params object:", parsedparams);
+                            Logging.Log("Parsed Params object:", parsedparams);
                             return true;
                         }
                         else

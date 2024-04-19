@@ -225,6 +225,41 @@ namespace Cat
             Logging.Log($"Mute toggle operation complete.");
         }
 
+        [LoggingAspects.Logging]
+        internal static void IncrVol20()
+        {
+            using (var enumerator = new MMDeviceEnumerator())
+            {
+                var defaultDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+                if (defaultDevice.AudioEndpointVolume.Mute)
+                {
+                    defaultDevice.AudioEndpointVolume.Mute = false;
+                }
+                float currentVolume = defaultDevice.AudioEndpointVolume.MasterVolumeLevelScalar;
+                float newVolume = currentVolume + 0.2f;
+                newVolume = Math.Min(newVolume, 1.0f); 
+                defaultDevice.AudioEndpointVolume.MasterVolumeLevelScalar = newVolume;
+            }
+        }
+
+        [LoggingAspects.Logging]
+        internal static void DecrVol20()
+        {
+            using (var enumerator = new MMDeviceEnumerator())
+            {
+                var defaultDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
+                if (defaultDevice.AudioEndpointVolume.Mute)
+                {
+                    defaultDevice.AudioEndpointVolume.Mute = false; 
+                }
+                float currentVolume = defaultDevice.AudioEndpointVolume.MasterVolumeLevelScalar;
+                float newVolume = currentVolume - 0.2f; 
+                newVolume = Math.Max(newVolume, 0.0f);
+                defaultDevice.AudioEndpointVolume.MasterVolumeLevelScalar = newVolume;
+            }
+
+        }
+
         /// <summary>
         /// Toggles the mute status of the default audio endpoint device based on a given condition.
         /// </summary>

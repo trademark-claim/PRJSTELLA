@@ -20,7 +20,9 @@ namespace Cat
             if (UserData.LaunchAsAdmin)
                 Helpers.BackendHelping.RestartWithAdminRightsIfNeeded();
             Logging.Log("Running first Cat Window...");
-            new Catowo().Show();
+            Catowo owo = new Catowo();
+            owo.Show();
+            owo.ToggleInterface();
         }
 
         /// <summary>
@@ -140,6 +142,23 @@ namespace Cat
                 }
             }
 
+            CheckStartups();
+        }
+
+        [LoggingAspects.Logging]
+        [LoggingAspects.ConsumeException]
+        private static void CheckStartups()
+        {
+            if (UserData.StartWithConsole)
+            {
+                Logging.Log("Opening Console on Startup...");
+                Commands.OpenLogger();
+            }
+            else if (UserData.StartWithVoice) 
+            {
+                Logging.Log("Allowing voice commands through startup...");
+                Commands.AV();
+            }
         }
     }
 }

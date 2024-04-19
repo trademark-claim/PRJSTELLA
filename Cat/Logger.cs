@@ -1,5 +1,7 @@
 ﻿using System.Collections;
+using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Management;
 using System.Net.NetworkInformation;
@@ -8,6 +10,7 @@ using System.Security.Principal;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Forms;
 using System.Windows.Media;
 using System.Windows.Threading;
 
@@ -19,9 +22,7 @@ namespace Cat
     internal static class Logging
     {
         private static LogWindow? inst;
-        private static readonly Queue<string> logQueue = new Queue<string>();
-        private static readonly object logLock = new object();
-        private static System.Threading.Timer logFlushTimer;
+        private static readonly ConcurrentQueue<string> logQueue = new ConcurrentQueue<string>();
         private static readonly SemaphoreSlim fileWriteSemaphore = new SemaphoreSlim(1, 1);
         private static readonly int MaxQueueSize = 500;
 
@@ -39,25 +40,6 @@ namespace Cat
         }
 
         /// <summary>
-        /// Logs an error with detailed information.
-        /// </summary>
-        /// <param name="exc">The exception to log.</param>
-        /// <param name="initial">Indicates if this is the initial error in a potential chain of errors.</param>
-        internal static async void LogError(Exception exc, bool initial = true)
-        {
-            Log($">>>ERROR START<<<\nMessage:\n   {exc.Message}\nSource:\n   {exc.Source}\nMethod Base:\n   {exc.TargetSite?.Module}.{exc.TargetSite?.DeclaringType}.{exc.TargetSite?.Name} ({exc.TargetSite})\nStackTrace:\n   {exc.StackTrace}\nData:\n   {string.Join("   \n- ", exc.Data.Keys.Cast<object>().Zip(exc.Data.Values.Cast<object>()))}\nHLink:\n   {exc.HelpLink}\nHResult:\n   {exc.HResult}\n>>>END OF ERROR<<<");
-            if (exc.InnerException != null)
-            {
-                Log("The above was the cause of the following exception: ");
-                LogError(exc.InnerException, false);
-            }
-            if (initial)
-            {
-                await FinalFlush();
-            }
-        }
-
-        /// <summary>
         /// Hides the live logger window if it's open.
         /// </summary>
         internal static void HideLogger()
@@ -68,145 +50,85 @@ namespace Cat
             Log("Live logger closed.");
         }
 
-        /// <summary>
-        /// Initializes static members of the <see cref="Logging"/> class. Sets up a timer for flushing logs to file periodically.
-        /// </summary>
-        static Logging()
+        internal static async void LogError(Exception exc, bool initial = true)
         {
-            logFlushTimer = new System.Threading.Timer((e) =>
-            {
-                FlushLogToFile();
-            }, null, 10000, 300000);
-        }
+            var logEntry = new StringBuilder();
+            var guid = GUIDRegex().Replace(Guid.NewGuid().ToString(), "");
+            logEntry.AppendLine($">>>ERROR {guid} START<<<");
+            logEntry.AppendLine($"[{DateTime.Now:HH:mm:ss:fff}] Message: {exc.Message}");
+            logEntry.AppendLine($"[{DateTime.Now:HH:mm:ss:fff}] Source: {exc.Source}");
+            logEntry.AppendLine($"[{DateTime.Now:HH:mm:ss:fff}] Method Base: {exc.TargetSite?.Module}.{exc.TargetSite?.DeclaringType}.{exc.TargetSite?.Name} ({exc.TargetSite})");
+            logEntry.AppendLine($"[{DateTime.Now:HH:mm:ss:fff}] StackTrace: {exc.StackTrace}");
+            logEntry.AppendLine($"[{DateTime.Now:HH:mm:ss:fff}] Data: {string.Join(", ", exc.Data.Keys.Cast<object>().Zip(exc.Data.Values.Cast<object>(), (k, v) => $"  -  {k}: {v}")).Replace("\n", "   -   ")}");
+            logEntry.AppendLine($"[{DateTime.Now:HH:mm:ss:fff}] HLink: {exc.HelpLink}");
+            logEntry.AppendLine($"[{DateTime.Now:HH:mm:ss:fff}] HResult: {exc.HResult}");
+            logEntry.AppendLine($"[{DateTime.Now:HH:mm:ss:fff}] >>>END OF ERROR {guid}<<<");
+            Log(logEntry.ToString());
 
-        /// <summary>
-        /// Flushes log messages from the queue to a file synchronously.
-        /// </summary>
-        private static void FlushLogToFile()
-        {
-            lock (logLock)
+            if (exc.InnerException != null)
             {
-                while (logQueue.Count > 0)
-                {
-                    WriteLog(logQueue.Dequeue());
-                }
+                LogError(exc.InnerException, false);
+            }
+
+            if (initial)
+            {
+                await FullFlush();
             }
         }
 
-        /// <summary>
-        /// Writes a log message to the log file asynchronously.
-        /// </summary>
-        /// <param name="text">The log message to be written.</param>
-        /// <returns>A task representing the asynchronous operation.</returns>
-        private static async Task WriteLog(string text)
-        {
-            await fileWriteSemaphore.WaitAsync();
-            try
-            {
-                File.AppendAllText(LogPath, text);
-            }
-            finally
-            {
-                fileWriteSemaphore.Release();
-            }
-        }
-
-        /// <summary>
-        /// Logs a series of messages with special processing.
-        /// </summary>
-        /// <param name="messages">The messages to log.</param>
-        internal static void LogP(params object[] messages)
+        [SuppressMessage("WarningCategory", "CS4014", Justification = "The call is fire-and-forget intentionally.")]
+        internal static async Task Log(params object[] messages)
         {
             foreach (var message in messages)
             {
-                string processed = ProcessMessage(message, 0);
-                Log(processed);
-            }
-            Log(System.Environment.NewLine, true);
-        }
-
-        /// <summary>
-        /// Logs one or more messages to the logging system.
-        /// </summary>
-        /// <param name="message">The message(s) to log.</param>
-        internal static void Log(params object[] message)
-        {
-            foreach (object mess in message)
-                Log(mess?.ToString());
-            Log(System.Environment.NewLine, true);
-        }
-
-
-        /// <summary>
-        /// Logs a single message to the logging system, optionally without prepending the datetime stamp.
-        /// </summary>
-        /// <param name="message">The message to log.</param>
-        /// <param name="nodatetime">If true, does not prepend the datetime stamp to the log message.</param>
-        private static void Log(string message, bool nodatetime = false)
-        {
-            if (UserData.FullLogging)
-            {
-                string currentTime = DateTime.Now.ToString("HH:mm:ss:fff");
-                string formattedMessage = $"[{currentTime}] {message}"; //+ System.Environment.NewLine
-                if (nodatetime)
-                    formattedMessage = $"{message}{System.Environment.NewLine}";
-                lock (logLock)
-                {
-                    logQueue.Enqueue(formattedMessage);
-                    if (logQueue.Count >= MaxQueueSize)
+                string[] str = ProcessMessage(message);
+                foreach (string str2 in str)
+                    if (!string.IsNullOrWhiteSpace(str2))
                     {
-                        FlushLogToFile();
+                        logQueue.Enqueue($"[{DateTime.Now:HH:mm:ss:fff}] {str2}");
+                        LogWindow.AddLog(str2);
                     }
-                }
-                System.Windows.Application.Current.Dispatcher.Invoke(() => inst?.AddLog(message));
+            }
+            if (logQueue.Count >= MaxQueueSize)
+            {
+                await FullFlush();
             }
         }
 
-        /// <summary>
-        /// Processes and formats a message or enumerable collection for logging.
-        /// </summary>
-        /// <param name="message">The message or enumerable collection to process.</param>
-        /// <param name="indentLevel">The indent level for formatting enumerable collections.</param>
-        internal static string ProcessMessage(object message, int indentLevel)
+        internal static string[] ProcessMessage(object message)
         {
-            if (message == null)
-                return string.Empty;
-
             if (message is IEnumerable enumerable && !(message is string))
             {
-                var sb = new StringBuilder("Enum:");
-                sb.AppendLine();
+                var sb = new StringBuilder();
                 foreach (var item in enumerable)
-                    sb.AppendLine(new string(' ', indentLevel * 2) + "- " + ProcessMessage(item, indentLevel + 1));
-                return sb.ToString().TrimEnd();
+                {
+                    string[] pitem = ProcessMessage(item);
+                    foreach (var item2 in pitem)
+                        sb.AppendLine(item2);
+                }
+                return sb.ToString().Split("\n");
             }
-            else
-                return message.ToString();
+            return [message?.ToString() ?? string.Empty, ];
         }
 
-        /// <summary>
-        /// Performs a final flush of log messages to the log file asynchronously. Optionally marks the log with an end statement.
-        /// </summary>
-        /// <param name="end">If true, appends an end log statement.</param>
-        /// <returns>A task representing the asynchronous operation.</returns>
-        internal static async Task FinalFlush(bool end = false)
+        internal static async Task FullFlush(bool end = false)
         {
             await fileWriteSemaphore.WaitAsync();
             try
             {
-                StringBuilder finalLog = new StringBuilder();
-                lock (logLock)
+                if (logQueue.IsEmpty)
+                    return;
+
+                var logs = new StringBuilder();
+                while (logQueue.TryDequeue(out var log))
                 {
-                    while (logQueue.Count > 0)
-                    {
-                        finalLog.Append(logQueue.Dequeue());
-                    }
+                    logs.AppendLine(log);
                 }
                 if (end)
                 {
-                    finalLog.AppendLine("[END LOG Nya~]");
+                    logs.AppendLine("[END LOG]");
                 }
-                File.AppendAllText(LogPath, finalLog.ToString());
+                await File.AppendAllTextAsync(LogPath, logs.ToString());
             }
             finally
             {
@@ -260,14 +182,14 @@ namespace Cat
             /// Adds a log message to the log viewer.
             /// </summary>
             /// <param name="logMessage">The log message to add.</param>
-            public void AddLog(string logMessage)
+            public static void AddLog(string logMessage)
             {
-                inst?.Dispatcher.Invoke(() => _listBox.Items.Add(logMessage));
+                inst?.Dispatcher.Invoke(() => inst?._listBox.Items.Add(logMessage));
 
-                if (_scrollViewer != null)
-                    _scrollViewer.ScrollToEnd();
+                if (inst != null && inst._scrollViewer != null)
+                    inst._scrollViewer.ScrollToEnd();
                 else
-                    _listBox.ScrollIntoView(_listBox.Items[_listBox.Items.Count - 1]);
+                    inst?._listBox.ScrollIntoView(inst._listBox.Items[inst._listBox.Items.Count - 1]);
             }
 
             /// <summary>
@@ -732,9 +654,11 @@ namespace Cat
                 /// <param name="e">An EventArgs object that contains the event data.</param>
                 private void Timer_Tick(object sender, EventArgs e)
                 {
-                    block.Text = animation[num++];
+                    if (block != null)
+                        block.Text = animation[num++];
                     if (num == animation.Length) num = 0;
-                    Catowo.Interface.logListBox.Items.Refresh();
+                    if (block != null)
+                        Catowo.Interface.logListBox.Items.Refresh();
                 }
 
                 /// <summary>
@@ -744,7 +668,8 @@ namespace Cat
                 {
                     timer.Stop();
                     timer.Tick -= Timer_Tick;
-                    Catowo.Interface.logListBox.Items.Remove(block);
+                    if (block != null)
+                        Catowo.Interface.logListBox.Items.Remove(block);
                 }
             }
         }

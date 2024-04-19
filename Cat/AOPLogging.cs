@@ -47,7 +47,7 @@ namespace Cat
                         Timers[key] = stopwatch;
                     }
                     Cat.Logging.Log($"Entering {(instance == null ? "static" : "instance")} method {method.DeclaringType?.FullName?.Replace('+', '.')}.{method.Name}");
-                    Cat.Logging.LogP($"Arguments:", arguments);
+                    Cat.Logging.Log($"Arguments:", arguments);
                 }
             }
 
@@ -69,10 +69,10 @@ namespace Cat
                         if (Timers.TryRemove(key, out var stopwatch))
                         {
                             stopwatch.Stop();
-                            Cat.Logging.Log($"Exiting method {method.DeclaringType?.FullName?.Replace('+', '.')}.{method.Name}. Execution time: {stopwatch.Elapsed.Seconds}s {stopwatch.Elapsed.Milliseconds}ms {stopwatch.Elapsed.Microseconds}µs {stopwatch.Elapsed.Nanoseconds}ns Return Value: {Cat.Logging.ProcessMessage(returnValue, 0)} of type {returnType.FullName}");
+                            Cat.Logging.Log($"Exiting method {method.DeclaringType?.FullName?.Replace('+', '.')}.{method.Name}. Execution time: {stopwatch.Elapsed.Seconds}s {stopwatch.Elapsed.Milliseconds}ms {stopwatch.Elapsed.Microseconds}µs {stopwatch.Elapsed.Nanoseconds}ns Return Value: {string.Join(" - ", Cat.Logging.ProcessMessage(returnValue))} of type {returnType.FullName}");
                         }
                     }
-                    else Cat.Logging.Log($"Exiting method {method.DeclaringType?.FullName?.Replace('+', '.')}.{method.Name}. Return Value: {Cat.Logging.ProcessMessage(returnValue, 0)} of type {returnType.FullName}");
+                    else Cat.Logging.Log($"Exiting method {method.DeclaringType?.FullName?.Replace('+', '.')}.{method.Name}. Return Value: {string.Join(" - ", Cat.Logging.ProcessMessage(returnValue))} of type {returnType.FullName}");
                 }
             }
 
@@ -113,7 +113,7 @@ namespace Cat
                         Catowo.Interface.AddTextLogR($"Error caught while executing {target.Method.DeclaringType?.FullName?.Replace('+', '.')}.{target.Method.Name}", RED);
                     if (method.IsDefined(typeof(UpsetStomach), false))
                     {
-                        Task.Run(async () => await Cat.Logging.FinalFlush()).GetAwaiter().GetResult();
+                        Task.Run(async () => await Cat.Logging.FullFlush()).GetAwaiter().GetResult();
                         throw;
                     }
 
@@ -181,7 +181,7 @@ namespace Cat
                 else
                 {
                     Cat.Logging.Log("[CRITICALLY FATAL ERROR] Asynchronous Exception Swallower attached to a non-async method. Please submit a bug report and attach this log!");
-                    Task.Run(async () => await Cat.Logging.FinalFlush()).GetAwaiter().GetResult();
+                    Task.Run(async () => await Cat.Logging.FullFlush()).GetAwaiter().GetResult();
                     throw new InvalidOperationException("Asynchronous Exception Swallower attached to a non-async method.");
                 }
             }
@@ -261,7 +261,7 @@ namespace Cat
                 // Check if UpsetStomach attribute is present.
                 if (method.IsDefined(typeof(UpsetStomach), false))
                 {
-                    Task.Run(async () => await Cat.Logging.FinalFlush()).GetAwaiter().GetResult();
+                    Task.Run(async () => await Cat.Logging.FullFlush()).GetAwaiter().GetResult();
                     capturedException.Throw();
                 }
 
@@ -277,7 +277,7 @@ namespace Cat
                 else
                 {
                     Cat.Logging.Log("[CRITICALLY FATAL ERROR] Asynchronous Exception Swallower tried to consume unexpected return type... this should never happen... please make a bug report and submit this log.");
-                    Task.Run(async () => await Cat.Logging.FinalFlush()).GetAwaiter().GetResult();
+                    Task.Run(async () => await Cat.Logging.FullFlush()).GetAwaiter().GetResult();
                     throw new InvalidOperationException("Unexpected return type for async method.");
                 }
             }

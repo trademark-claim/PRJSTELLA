@@ -13,7 +13,7 @@ namespace Cat
         internal static async Task<bool> FML()
         {
             Interface.AddLog("Flushing Log queue...");
-            await Logging.FinalFlush();
+            await Logging.FullFlush();
             Interface.AddLog("Logs flushed!");
             return true;
         }

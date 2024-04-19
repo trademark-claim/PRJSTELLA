@@ -20,7 +20,7 @@ namespace Cat
                 Exception exc = e.Exception;
                 Logging.LogError(exc);
                 e.Handled = true;
-                Logging.FinalFlush().GetAwaiter().GetResult();
+                Logging.FullFlush().GetAwaiter().GetResult();
                 throw exc;
             };
             AppDomain.CurrentDomain.UnhandledException += (s, e) =>
@@ -28,7 +28,7 @@ namespace Cat
                 Exception? exc = e.ExceptionObject as Exception;
                 if (exc != null)
                     Logging.Log(exc);
-                Logging.FinalFlush().GetAwaiter().GetResult();
+                Logging.FullFlush().GetAwaiter().GetResult();
                 throw exc;
             };
             TaskScheduler.UnobservedTaskException += (s, e) =>
@@ -36,7 +36,7 @@ namespace Cat
                 var exc = e.Exception;
                 Logging.LogError(exc);
                 e.SetObserved();
-                Logging.FinalFlush().GetAwaiter().GetResult();
+                Logging.FullFlush().GetAwaiter().GetResult();
                 throw exc;
             };
 
@@ -56,7 +56,7 @@ namespace Cat
             this.Exit += (sender, e) => ShuttingDown();
         }
 
-        internal static void ShuttingDown()
+        internal static async void ShuttingDown()
         {
             if (isShuttingDown)
                 return;
@@ -73,7 +73,7 @@ namespace Cat
             Logging.Log($"Average Memory Usage: {averageMemoryUsage} bytes (approx.)");
             Logging.Log(">> >>DETAILED PROCESS INFORMATION<< <<", Logging.CompileDetails(), ">> >>END DPI<< <<");
             Logging.Log($"Writing log to file at {LogPath} and shutting down... Goodbye!");
-            Logging.FinalFlush(true).GetAwaiter().GetResult();
+            await Logging.FullFlush(true);
             App.Current.Shutdown();
         }
     }

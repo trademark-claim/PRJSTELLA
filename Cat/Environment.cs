@@ -5,7 +5,7 @@
 // Author: Nexus
 // -----------------------------------------------------------------------
 
-
+#pragma warning disable CS4014
 using System.Text.RegularExpressions;
 using System.Windows.Input;
 
@@ -116,6 +116,9 @@ namespace Cat
 
         internal const ushort VK_VOLUME_DOWN = 0xAE;
         internal const ushort VK_VOLUME_MUTE = 0xAD;
+        internal const uint VK_MEDIA_NEXT_TRACK = 0xB0;
+        internal const uint VK_MEDIA_PREV_TRACK = 0xB1;
+
         internal const uint KEYEVENTF_EXTENDEDKEY = 0x0001;
         internal const uint KEYEVENTF_KEYUP = 0x0002;
         internal const uint INPUT_KEYBOARD = 1;
@@ -262,6 +265,7 @@ namespace Cat
         /// </summary>
         internal const uint OCR_WAIT = 32514;
 
+        internal const string WAPIT = "EWKVZNMCGAGQ6WPU3FKXL4HQJS2TRXBJ";
 
         /// PINVOKE Flags for cursor changing.
         internal const uint SPI_SETCURSORS = 0x0057;
@@ -293,11 +297,26 @@ namespace Cat
 
             /// <summary>Indicates whether the application should start automatically.</summary>
             internal static bool Startup = true;
+
+            /// <summary>
+            /// If true, the program will start with voice commands activated
+            /// </summary>
+            internal static bool StartWithVoice = false;
+
+            /// <summary>
+            /// If true, the program will start with the interface opened
+            /// </summary>
+            internal static bool StartWithInterface = false;
+
+            /// <summary>
+            /// If true, the program will start with voice commands activated
+            /// </summary>
+            internal static bool StartWithConsole = false;
+
             /// <summary>
             /// Asks the user if they're fine with the program editing the registry.
             /// </summary>
             internal static bool AllowRegistryEdits = false;
-
             /// <summary>
             /// If true, immedietely checks if the app has admin perms, and if not asks for them.
             /// </summary>
@@ -316,6 +335,7 @@ namespace Cat
 
 
             internal static readonly double[] CommandKeys = [];
+
             /// <summary>Updates a user setting value based on a key-value pair.</summary>
             /// <param name="key">The setting key to update.</param>
             /// <param name="value">The new value for the setting.</param>
@@ -358,6 +378,15 @@ namespace Cat
                         break;
                     case nameof(LaunchAsAdmin):
                         LaunchAsAdmin = bool.Parse(value);
+                        break;
+                    case nameof(StartWithConsole):
+                        StartWithConsole = bool.Parse(value);
+                        break;
+                    case nameof(StartWithInterface):
+                        StartWithInterface = bool.Parse(value);
+                        break;
+                    case nameof(StartWithVoice):
+                        StartWithVoice = bool.Parse(value);
                         break;
                     default:
                         Logging.Log($"Unknown key in INI file: {key}");

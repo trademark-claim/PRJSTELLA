@@ -15,11 +15,15 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Net.Http;
 using System.Reflection;
+using Newtonsoft.Json;
+using Formatting = Newtonsoft.Json.Formatting;
 using System.Text.Json;
+using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using System.Xml;
 
 namespace Cat
 {
@@ -27,7 +31,7 @@ namespace Cat
     /// Provides static utility methods and classes for various operations like
     /// screenshotting, screen recording, INI file parsing, and more.
     /// </summary>
-    internal static class Helpers
+    internal static partial class Helpers
     {
         /// <summary>
         /// Contains methods for capturing screenshots of the screen(s).
@@ -189,6 +193,25 @@ namespace Cat
                 double workAreaHeight = screen.WorkingArea.Height / dpiY;
 
                 return (screenWidth, screenHeight, workAreaHeight);
+            }
+
+            /// <summary>
+            /// Calculates the adjusted screen size based on the system's DPI settings.
+            /// </summary>
+            /// <param name="screen">The screen for which to calculate the adjusted size.</param>
+            /// <returns>A tuple containing the adjusted width, height, and working area height of the screen.</returns>
+            /// <remarks>
+            /// This method considers the DPI settings of the system to adjust the screen size for high DPI displays.
+            /// </remarks>
+            [LoggingAspects.Logging]
+            internal static void GetAdjustedScreenSize(Screen screen, out Rect newbounds)
+            {
+                var dpiX = GetSystemDpi("DpiX");
+                var dpiY = GetSystemDpi("Dpi");
+                double screenWidth = screen.Bounds.Width / dpiX;
+                double screenHeight = screen.Bounds.Height / dpiY;
+                newbounds = new() { Width = screenWidth, Height = screenHeight, Location = new(screen.Bounds.Top / dpiY, screen.Bounds.Left / dpiX) };
+                return;
             }
 
             /// <summary>
@@ -588,15 +611,30 @@ namespace Cat
         /// <summary>
         /// Provides miscellaneous backend helper functions.
         /// </summary>
-        public static class BackendHelping
+        public static partial class BackendHelping
         {
+            internal static string ExtractGuid(string log)
+            {
+                var match = ErrorGuidRegex().Match(log);
+                if (match.Success)
+                {
+                    return match.Groups[1].Value; // The first captured group... should... be the GUID.
+                }
+                return ""; // Return an empty string if no match is found.
+            }
+
+            public static Screen GetContainingScreen(System.Windows.Window window)
+            {
+                var windowInteropHelper = new System.Windows.Interop.WindowInteropHelper(window);
+                IntPtr handle = windowInteropHelper.Handle;
+                return Screen.FromHandle(handle);
+            }
 
             public static bool IsPointWithinOtherPointForSmoothing(double pointX, double pointY, double centerX, double centerY)
             {
                 double dx = pointX - centerX;
                 double dy = pointY - centerY;
                 double distanceSquared = dx * dx + dy * dy;
-
                 return distanceSquared <= 1;
             }
 
@@ -715,6 +753,9 @@ namespace Cat
                 }
                 return true;
             }
+
+            [GeneratedRegex(@"ERROR (\S+) START")]
+            private static partial Regex ErrorGuidRegex();
         }
 
         /// <summary>
@@ -768,7 +809,10 @@ namespace Cat
                 { "TimeAll", (typeof(bool), false) },
                 { "LoggingDetails", (typeof(bool), false) },
                 { "AllowRegistryEdits", (typeof(bool), false) },
-                { "LaunchAsAdmin", (typeof(bool), false) }
+                { "LaunchAsAdmin", (typeof(bool), false) },
+                { "StartWithInterface", (typeof(bool), false)},
+                { "StartWithConsole", (typeof(bool), false)},
+                { "StartWithVoice", (typeof(bool), false)},
             };
              
             internal static readonly Dictionary<string, List<(string, object)>> initalsettings = new()
@@ -781,8 +825,15 @@ namespace Cat
                     }
                 },
                 {
-                    "Misc", new() {
+                    "Startup", new() {
                         ("Startup", true),
+                        ("StartWithConsole",  false),
+                        ("StartWithInterface",  false),
+                        ("StartWithVoice",  false),
+                    }
+                },
+                {
+                    "Permissions", new() {
                         ("AllowRegistryEdits", false),
                         ("LaunchAsAdmin", false)
                     }
@@ -921,6 +972,50 @@ namespace Cat
                     data[section].RemoveKey(key);
                     parser.WriteFile(filePath, data);
                 }
+            }
+        }
+
+        internal static class JSONManager
+        {
+            public static void WriteToJsonFile<T>(string filePath, T objectToWrite, bool append = false) where T : new()
+            {
+                var settings = new JsonSerializerSettings
+                {
+                    Formatting = Formatting.Indented,
+                    TypeNameHandling = TypeNameHandling.Auto
+                };
+
+                string json = JsonConvert.SerializeObject(objectToWrite, settings);
+
+                using (StreamWriter file = File.CreateText(filePath))
+                {
+                    JsonSerializer serializer = JsonSerializer.Create(settings);
+                    serializer.Serialize(file, objectToWrite);
+                }
+            }
+
+            // Reads an object from a JSON file.
+            public static T ReadFromJsonFile<T>(string filePath) where T : new()
+            {
+                if (!File.Exists(filePath))
+                    throw new FileNotFoundException("File not found.", filePath);
+
+                using (StreamReader file = File.OpenText(filePath))
+                {
+                    JsonSerializer serializer = new JsonSerializer();
+                    return (T)serializer.Deserialize(file, typeof(T));
+                }
+            }
+
+
+            public static TValue ExtractValueFromJsonFile<TKey, TValue>(string filePath, TKey key)
+            {
+                var dictionary = ReadFromJsonFile<Dictionary<TKey, TValue>>(filePath);
+
+                if (dictionary.TryGetValue(key, out TValue value))
+                    return value;
+
+                throw new KeyNotFoundException($"Key '{key}' not found in the JSON file.");
             }
         }
     }
