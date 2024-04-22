@@ -2,10 +2,11 @@
 {
     internal static partial class Commands
     {
-        internal static bool OpenLogEditor() //Command
+        internal static bool OpenLogEditor()
         {
-
-            new LogEditor().Show();
+            editor?.Close();
+            editor = new LogEditor();
+            editor.Show();
             Interface.AddLog("Opened Log Editor");
             return true;
         }

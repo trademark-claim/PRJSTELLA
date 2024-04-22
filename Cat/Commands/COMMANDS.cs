@@ -1,7 +1,6 @@
 using NAudio.Wave;
-using static Cat.Structs;
 using System.Text.RegularExpressions;
-using System.Drawing.Text;
+
 namespace Cat
 {
     /// <summary>
@@ -10,14 +9,121 @@ namespace Cat
     internal static partial class Commands
     {
         internal static Interface @interface;
+        private static Objects.LogEditor editor;
         private static WaveOut? WavePlayer;
         private static AudioFileReader AFR;
         internal static Command? commandstruct;
         private static bool SilentAudioCleanup = false;
+        private static Objects.ScreenRecorder ScreenRecorder;
         private static System.Windows.Window? Logger = null;
 
+        private const bool NoCall = true;
+
+        private static string command;
+
+        private static readonly Dictionary<string, Dictionary<string, Action>> commandMap = new Dictionary<string, Dictionary<string, Action>>()
+        {
+            {
+                "screenshot", new Dictionary<string, Action>()
+                {
+                    { "primary", () => command = "screenshot ;0" },
+                    { "stitch", () => command = "screenshot ;-2" },
+                    { " ", () => command = "screenshot ;-1" }
+                }
+            },
+            {
+                "shutdown", new Dictionary<string, Action>()
+                {
+                    { " ", () => command = "shutdown" }
+                }
+            },
+            {
+                "kitty", new Dictionary<string, Action>()
+                {
+                    { "show", () => command = "cat" },
+                    { "generate", () => command = "cat" }
+                }
+            },
+            {
+                "cat", new Dictionary<string, Action>()
+                {
+                    { "show", () => command = "cat" },
+                    { "generate", () => command = "cat" }
+                }
+            },
+            {
+                "song", new Dictionary<string, Action>()
+                {
+                    { "skip", () => BaselineInputs.SendKeyboardInput((ushort)VK_MEDIA_NEXT_TRACK) },
+                    { "next", () => BaselineInputs.SendKeyboardInput((ushort)VK_MEDIA_NEXT_TRACK) },
+                    { "previous", () => BaselineInputs.SendKeyboardInput((ushort)VK_MEDIA_PREV_TRACK) },
+                    { "resume", () => BaselineInputs.SendKeyboardInput((ushort)VK_MEDIA_PLAY_PAUSE) },
+                    { "continue", () => BaselineInputs.SendKeyboardInput((ushort)VK_MEDIA_PLAY_PAUSE) },
+                    { "pause", () => BaselineInputs.SendKeyboardInput((ushort)VK_MEDIA_PLAY_PAUSE) },
+                    { "stop", () => BaselineInputs.SendKeyboardInput((ushort)VK_MEDIA_PLAY_PAUSE) }
+                }
+            },
+            {
+                "music", new Dictionary<string, Action>()
+                {
+                    { "skip", () => BaselineInputs.SendKeyboardInput((ushort)VK_MEDIA_NEXT_TRACK) },
+                    { "next", () => BaselineInputs.SendKeyboardInput((ushort)VK_MEDIA_NEXT_TRACK) },
+                    { "previous", () => BaselineInputs.SendKeyboardInput((ushort)VK_MEDIA_PREV_TRACK) },
+                    { "resume", () => BaselineInputs.SendKeyboardInput((ushort)VK_MEDIA_PLAY_PAUSE) },
+                    { "continue", () => BaselineInputs.SendKeyboardInput((ushort)VK_MEDIA_PLAY_PAUSE) },
+                    { "pause", () => BaselineInputs.SendKeyboardInput((ushort)VK_MEDIA_PLAY_PAUSE) },
+                    { "stop", () => BaselineInputs.SendKeyboardInput((ushort)VK_MEDIA_PLAY_PAUSE) }
+                }
+            },
+            {
+                "volume", new Dictionary<string, Action>()
+                {
+                    { "low", () => BaselineInputs.DecrVol20() },
+                    { "decrease", () => BaselineInputs.DecrVol20() },
+                    { "raise", () => BaselineInputs.IncrVol20() },
+                    { "increase", () => BaselineInputs.IncrVol20() }
+                }
+            },
+            {
+                "sound", new Dictionary<string, Action>()
+                {
+                    { "low", () => BaselineInputs.DecrVol20() },
+                    { "decrease", () => BaselineInputs.DecrVol20() },
+                    { "raise", () => BaselineInputs.IncrVol20() },
+                    { "increase", () => BaselineInputs.IncrVol20() },
+                    { "mute", () => BaselineInputs.ToggleMuteSound() },
+                    { "silence", () => BaselineInputs.ToggleMuteSound() },
+                    { "unmute", () => BaselineInputs.ToggleMuteSound() },
+                    { "unsilence", () => BaselineInputs.ToggleMuteSound() }
+                }
+            },
+            {
+                "close", new Dictionary<string, Action>()
+                {
+                    { "interface", () => command = "close" },
+                    { "console", () => command = "close console" },
+                    { "editor", () => command = "close editor" }
+                }
+            },
+            {
+                "open", new Dictionary<string, Action>()
+                {
+                    { "interface", () => Catowo.inst.ToggleInterface() },
+                    { "console", () => command = "show console" },
+                    { "editor", () => command = "ole" }
+                }
+            },
+            {
+                "quote", new Dictionary<string, Action>()
+                {
+                    { "give", () => GenerateQuote() },
+                    { "generate", () => GenerateQuote() }
+                }
+            }
+        };
+
         [LoggingAspects.Logging]
-        internal static void ProcessVoiceCommand(string audio)
+        internal static void ProcessVoiceCommand(string audioi)
         {
             string JSONSubbing(string audiof)
             {
@@ -26,47 +132,31 @@ namespace Cat
                 return Regex.Replace(audiof, pattern, match => Objects.VoiceCommandHandler.Speechrecogmap[match.Value]);
             }
 
-            audio = JSONSubbing(audio.ToLower().Trim());
+            string audio = JSONSubbing(" " + audioi.ToLower().Trim() + " ");
             Logging.Log("Subbed Audio: " + audio);
-            if (!audio.Contains("stella") && !VoiceCommandHandler.WasCalled)
+            if (!audio.Contains("stella") && !VoiceCommandHandler.WasCalled && !NoCall)
                 return;
             audio = audio.Replace("hey stella", "").Replace("stella", "");
             if (audio.Length < 5)
                 VoiceCommandHandler.WasCalled = true;
-            string command = null;
             bool failure = true;
 
-            if (audio.Contains("screenshot"))
+            foreach (var commandEntry in commandMap)
             {
-                if (audio.Contains("primary"))
-                    command = "screenshot ;0";
-                else if (audio.Contains("stitch"))
-                    command = "screenshot ;-2";
-                else command = "screenshot ;-1";
-            }
-            else if (audio.Contains("shutdown"))
-                command = "shutdown";
-            else if ((audio.Contains("show") || audio.Contains("generate")) && (audio.Contains("kitty") || audio.Contains("cat")))
-                command = "cat";
-            else if ((audio.Contains("skip") || audio.Contains("next")) && audio.Contains("song"))
-            {
-                failure = false;
-                BaselineInputs.SendKeyboardInput((ushort)VK_MEDIA_NEXT_TRACK);
-            }
-            else if (audio.Contains("previous") && audio.Contains("song"))
-            {
-                failure = false;
-                BaselineInputs.SendKeyboardInput((ushort)VK_MEDIA_PREV_TRACK);
-            }
-            else if ((audio.Contains("low") || audio.Contains("decrease")) && (audio.Contains("volume") || audio.Contains("sound")))
-            {
-                failure = false;
-                BaselineInputs.DecrVol20();
-            }
-            else if ((audio.Contains("raise") || audio.Contains("increase")) && (audio.Contains("volume") || audio.Contains("sound")))
-            {
-                failure = false;
-                BaselineInputs.IncrVol20();
+                if (audio.Contains(commandEntry.Key))
+                {
+                    foreach (var subCommandEntry in commandEntry.Value)
+                    {
+                        if (audio.Contains(subCommandEntry.Key))
+                        {
+                            subCommandEntry.Value.Invoke();
+                            failure = false;
+                            break;
+                        }
+                    }
+                }
+                if (failure == false)
+                    break;
             }
 
             if (command != null)
@@ -76,5 +166,15 @@ namespace Cat
             VoiceCommandHandler.WasCalled = false;
         }
 
+        [LoggingAspects.Logging]
+        private static void GenerateQuote()
+        {
+            List<string> quotes = Helpers.JSONManager.ExtractValueFromJsonFile<string, List<string>>("misc.json", "quotes");
+            if (quotes != null && quotes.Count > 0)
+            {
+                ClaraHerself.Custom = new[] { quotes[random.Next(quotes.Count)] };
+                ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
+            }
+        }
     }
 }

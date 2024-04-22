@@ -19,8 +19,6 @@
 // </notes>
 //-------------------------------------------------------------------------------------
 
-
-
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -276,8 +274,6 @@ namespace Cat
             public int Count => _queue.Count;
 
             public IEnumerable<T> Items => _queue;
-
         }
-
     }
 }

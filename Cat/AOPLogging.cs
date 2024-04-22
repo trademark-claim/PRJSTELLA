@@ -7,12 +7,10 @@
 // </summary>
 // -----------------------------------------------------------------------
 
-
 using AspectInjector.Broker;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 
 namespace Cat
@@ -23,7 +21,7 @@ namespace Cat
         /// Aspect for logging method entry, exit, and execution time if specified.
         /// </summary>
         [Aspect(Scope.Global)]
-        [AttributeUsage(AttributeTargets.Method | AttributeTargets.Constructor, AllowMultiple=false)]
+        [AttributeUsage(AttributeTargets.Method | AttributeTargets.Constructor, AllowMultiple = false)]
         [Injection(typeof(Logging))]
         public class Logging : Attribute
         {
@@ -234,9 +232,6 @@ namespace Cat
 
                 return tcsType.GetProperty("Task").GetValue(taskCompletionSource);
             }
-
-
-
 
             /// <summary>
             /// Handles exceptions caught from the execution of a task by logging the error and determining the appropriate return value.

@@ -6,8 +6,8 @@
 // -----------------------------------------------------------------------
 
 #pragma warning disable CS4014
+
 using System.Text.RegularExpressions;
-using System.Windows.Input;
 
 namespace Cat
 {
@@ -18,15 +18,19 @@ namespace Cat
     {
         /// <summary>Path to the application's running directory.</summary>
         internal static readonly string RunningPath = AppDomain.CurrentDomain.BaseDirectory;
+
         /// <summary>Path to the custom black cursor file.</summary>
         internal const string BCURPATH = "black1.cur";
+
         /// <summary>Random number generator for various operations.</summary>
         internal static readonly Random random = new();
+
         /// <summary>Path for the current log file, generated dynamically.</summary>
         internal static readonly string LogPath = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\Logs\\L" + GUIDRegex().Replace(Guid.NewGuid().ToString(), "") + ".LOG";
 
         // Paths to various folders used by the application
         internal const string LogFolder = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\Logs\\";
+
         internal const string AudioFolder = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\Audio\\";
         internal const string UserFolder = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\User\\";
         internal const string SSFolder = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\Screenshots\\";
@@ -37,6 +41,8 @@ namespace Cat
         internal const string CursorsFilePath = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\Cursors\\";
         internal const string UserDataFile = UserFolder + "hello_mr_edit_my_raw_data.ini";
         internal const string FFMPEGPath = ExternalProcessesFolder + "ffmpeg.exe";
+
+        internal const long DCID = 1231580969698459688;
 
         #region VKs and Styles
 
@@ -52,6 +58,7 @@ namespace Cat
         internal const int WM_KEYUP = 0x0101;
 
         internal const int WH_MOUSE_LL = 14;
+
         internal enum MouseMessages
         {
             WM_MOUSEMOVE = 0x0200,
@@ -118,15 +125,16 @@ namespace Cat
         internal const ushort VK_VOLUME_MUTE = 0xAD;
         internal const uint VK_MEDIA_NEXT_TRACK = 0xB0;
         internal const uint VK_MEDIA_PREV_TRACK = 0xB1;
+        internal const uint VK_MEDIA_PLAY_PAUSE = 0xB3;
 
         internal const uint KEYEVENTF_EXTENDEDKEY = 0x0001;
         internal const uint KEYEVENTF_KEYUP = 0x0002;
         internal const uint INPUT_KEYBOARD = 1;
 
-        internal static IntPtr _keyboardHookID = IntPtr.Zero;
         internal static LowLevelProc _keyboardProc;
 
         #endregion VKs and Styles
+
         /// <summary>Maps virtual key codes to character pairs (lowercase, uppercase).</summary>
         internal static readonly Dictionary<int, (char, char)> vkCodeToCharMap = new()
         {
@@ -269,29 +277,37 @@ namespace Cat
 
         /// PINVOKE Flags for cursor changing.
         internal const uint SPI_SETCURSORS = 0x0057;
+
         internal const uint SPIF_UPDATEINIFILE = 0x01;
         internal const uint SPIF_SENDCHANGE = 0x02;
 
         #region Delegates
+
         internal delegate IntPtr LowLevelProc(int nCode, IntPtr wParam, IntPtr lParam);
 
         [GeneratedRegex("[^a-zA-Z0-9]")]
         internal static partial Regex GUIDRegex();
 
         #endregion Delegates
+
         /// <summary>Contains user-configurable settings for application behavior.</summary>
         internal static class UserData
         {
             /// <summary>Enables or disables aspect logging.</summary>
             internal static bool AspectLogging = true;
+
             /// <summary>Enables or disables logging of details.</summary>
             internal static bool LoggingDetails = false;
+
             /// <summary>Enables or disables full logging.</summary>
             internal static bool FullLogging = true;
+
             /// <summary>Enables or disables assembly information logging.</summary>
             internal static bool AssemblyInformation = false;
+
             /// <summary>Enables or disables environment variables logging.</summary>
             internal static bool EnvironmentVariables = false;
+
             /// <summary>Enables or disables timing of all methods.</summary>
             internal static bool TimeAll = false;
 
@@ -317,6 +333,7 @@ namespace Cat
             /// Asks the user if they're fine with the program editing the registry.
             /// </summary>
             internal static bool AllowRegistryEdits = false;
+
             /// <summary>
             /// If true, immedietely checks if the app has admin perms, and if not asks for them.
             /// </summary>
@@ -326,68 +343,87 @@ namespace Cat
             internal static float Brightness = 0.7f;
 
             private static float _opacity = 0.7f;
+
             /// <summary>Application window opacity.</summary>
-            internal static float Opacity { get => _opacity; set { _opacity = value; Catowo.Interface.logListBox.UpdateOpacity(); } }
+            internal static float Opacity
+            { get => _opacity; set { _opacity = value; Catowo.Interface.logListBox.UpdateOpacity(); } }
+
             /// <summary>Font size for something (idk)</summary>
             private static float _fontsize = 10;
-            /// <summary>Font size for display elements.</summary>
-            internal static float FontSize { get => _fontsize; set { _fontsize = value; Catowo.Interface.logListBox.UpdateFontSize(); } }
 
+            /// <summary>Font size for display elements.</summary>
+            internal static float FontSize
+            { get => _fontsize; set { _fontsize = value; Catowo.Interface.logListBox.UpdateFontSize(); } }
 
             internal static readonly double[] CommandKeys = [];
 
             /// <summary>Updates a user setting value based on a key-value pair.</summary>
             /// <param name="key">The setting key to update.</param>
             /// <param name="value">The new value for the setting.</param>
-            internal static void UpdateValue(string key, string value) 
+            internal static void UpdateValue(string key, string value)
             {
                 switch (key)
                 {
-                    case nameof(AspectLogging) :
+                    case nameof(AspectLogging):
                         AspectLogging = bool.Parse(value);
                         break;
-                    case nameof(FullLogging) :
+
+                    case nameof(FullLogging):
                         FullLogging = bool.Parse(value);
                         break;
-                    case nameof(AssemblyInformation) :
+
+                    case nameof(AssemblyInformation):
                         AssemblyInformation = bool.Parse(value);
                         break;
-                    case nameof(EnvironmentVariables) :
+
+                    case nameof(EnvironmentVariables):
                         EnvironmentVariables = bool.Parse(value);
                         break;
-                    case nameof(Startup) :
+
+                    case nameof(Startup):
                         Startup = bool.Parse(value);
                         break;
-                    case nameof(Brightness) :
+
+                    case nameof(Brightness):
                         Brightness = float.Parse(value);
                         break;
-                    case nameof(Opacity) :
+
+                    case nameof(Opacity):
                         Opacity = float.Parse(value);
                         break;
-                    case nameof(FontSize) :
+
+                    case nameof(FontSize):
                         FontSize = float.Parse(value);
                         break;
-                    case nameof(LoggingDetails) :
+
+                    case nameof(LoggingDetails):
                         LoggingDetails = bool.Parse(value);
                         break;
-                    case nameof(TimeAll) :
+
+                    case nameof(TimeAll):
                         TimeAll = bool.Parse(value);
                         break;
-                    case nameof(AllowRegistryEdits) :
+
+                    case nameof(AllowRegistryEdits):
                         AllowRegistryEdits = bool.Parse(value);
                         break;
+
                     case nameof(LaunchAsAdmin):
                         LaunchAsAdmin = bool.Parse(value);
                         break;
+
                     case nameof(StartWithConsole):
                         StartWithConsole = bool.Parse(value);
                         break;
+
                     case nameof(StartWithInterface):
                         StartWithInterface = bool.Parse(value);
                         break;
+
                     case nameof(StartWithVoice):
                         StartWithVoice = bool.Parse(value);
                         break;
+
                     default:
                         Logging.Log($"Unknown key in INI file: {key}");
                         break;

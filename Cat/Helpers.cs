@@ -5,25 +5,22 @@
 // Author: Nexus
 // -----------------------------------------------------------------------
 
-using CLR = System.Drawing.Color;
 using IniParser;
 using IniParser.Model;
+using Newtonsoft.Json;
 using SharpCompress.Archives;
-using SharpCompress.Common;
 using System.Diagnostics;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Net.Http;
 using System.Reflection;
-using Newtonsoft.Json;
-using Formatting = Newtonsoft.Json.Formatting;
 using System.Text.Json;
-using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
-using System.Xml;
+using CLR = System.Drawing.Color;
+using Formatting = Newtonsoft.Json.Formatting;
+using JsonSerializer = Newtonsoft.Json.JsonSerializer;
 
 namespace Cat
 {
@@ -54,24 +51,32 @@ namespace Cat
                 {
                     error_message = $"Invalid screen index {screenIndex}";
                     Logging.Log($"Invalid screen index {screenIndex}");
-                    return new Bitmap(1, 1);
+                    return new Bitmap(1, 1);  // Consider whether a small bitmap like this is suitable as a fallback.
                 }
+
                 var screen = Screen.AllScreens[screenIndex];
                 var bounds = screen.Bounds;
+
                 IntPtr desktopDC = GetWindowDCWrapper(GetDesktopWindowWrapper());
                 IntPtr memoryDC = CreateCompatibleDCWrapper(desktopDC);
                 IntPtr bitmap = CreateCompatibleBitmapWrapper(desktopDC, bounds.Width, bounds.Height);
                 IntPtr oldBitmap = SelectObjectWrapper(memoryDC, bitmap);
-                Logging.Log($"desktopDC: {desktopDC}", $"memoryDC: {memoryDC}");
-                BitBltWrapper(memoryDC, 0, 0, bounds.Width, bounds.Height, desktopDC, bounds.X, bounds.Y, PInvoke.CopyPixelOperation.SourceCopy);
-                SelectObjectWrapper(memoryDC, oldBitmap);
-                Bitmap bmp = Image.FromHbitmap(bitmap);
-                DeleteObjectWrapper(bitmap);
-                ReleaseDCWrapper(GetDesktopWindowWrapper(), desktopDC);
-                DeleteDCWrapper(memoryDC);
-                Logging.Log("Exiting helper method Screenshotting.CaptureScreen()");
-                return bmp;
+
+                try
+                {
+                    BitBltWrapper(memoryDC, 0, 0, bounds.Width, bounds.Height, desktopDC, bounds.X, bounds.Y, PInvoke.CopyPixelOperation.SourceCopy);
+                    Bitmap bmp = Image.FromHbitmap(bitmap);
+                    return bmp;
+                }
+                finally
+                {
+                    SelectObjectWrapper(memoryDC, oldBitmap);
+                    DeleteObjectWrapper(bitmap);
+                    ReleaseDCWrapper(GetDesktopWindowWrapper(), desktopDC);
+                    DeleteDCWrapper(memoryDC);
+                }
             }
+
 
             /// <summary>
             /// Captures screenshots of all screens individually.
@@ -155,7 +160,7 @@ namespace Cat
                 catch (Exception ex)
                 {
                     error_message = $"Error stitching screens: {ex.Message}";
-                    Logging.Log(">>>ERROR<<<", "Message: ", ex.Message, "Stacktrace: ", ex.StackTrace, "Inner Exception: ", ex.InnerException, "Data: ", ex.Data, "Source: ", ex.Source, "Help link: ", ex.HelpLink, "HResult: ", ex.HResult, $"TargetSite: {ex.TargetSite?.Module}.{ex.TargetSite?.DeclaringType}.{ex.TargetSite?.Name}");
+                    Logging.LogError(ex);
                     return new Bitmap(1, 1);
                 }
                 finally
@@ -232,114 +237,6 @@ namespace Cat
                     return dpi / 96.0;
                 }
                 return 1.0;
-            }
-        }
-
-        /// <summary>
-        /// Contains methods for starting and stopping screen recording sessions.
-        /// </summary>
-        internal static class ScreenRecording
-        {
-            private static bool _isRecording = false;
-            private static Thread _recordingThread;
-            private static int _frameRate = 30;
-
-            /// <summary>
-            /// Starts recording the specified screen to the given output path using FFMPEG.
-            /// </summary>
-            /// <param name="screenIndex">The index of the screen to record.</param>
-            /// <param name="outputPath">The file path where the recording will be saved.</param>
-            /// <remarks>
-            /// This method begins a new thread for the recording process and utilizes FFMPEG for capturing the screen.
-            /// </remarks>
-            [LoggingAspects.Logging]
-            public static void StartRecording(int screenIndex, string outputPath)
-            {
-                if (_isRecording) return;
-
-                _isRecording = true;
-                _recordingThread = new Thread(() => RecordScreen(screenIndex, outputPath));
-                _recordingThread.Start();
-            }
-
-            /// <summary>
-            /// Stops the ongoing screen recording.
-            /// </summary>
-            /// <remarks>
-            /// This method signals the recording thread to stop and waits for it to finish.
-            /// </remarks>
-            [LoggingAspects.Logging]
-            public static void StopRecording()
-            {
-                _isRecording = false;
-                _recordingThread?.Join();
-            }
-
-            /// <summary>
-            /// Captures the screen at the specified index and writes the video frames to the output path using FFMPEG.
-            /// </summary>
-            /// <param name="screenIndex">The index of the screen to capture.</param>
-            /// <param name="outputPath">The file path to save the recorded video.</param>
-            /// <remarks>
-            /// This method captures the screen in a loop until recording is stopped. It captures screen frames and feeds them to FFMPEG.
-            /// </remarks>
-            [LoggingAspects.Logging]
-            [LoggingAspects.ConsumeException]
-            [LoggingAspects.InterfaceNotice]
-            private static void RecordScreen(int screenIndex, string outputPath)
-            {
-                ProcessStartInfo psi = new ProcessStartInfo
-                {
-                    FileName = FFMPEGPath,
-                    Arguments = $"-y -f rawvideo -pixel_format rgb24 -video_size {Screen.AllScreens[screenIndex].Bounds.Width}x{Screen.AllScreens[screenIndex].Bounds.Height} -framerate {_frameRate} -i - -vf format=yuv420p -c:v libx264 \"{outputPath}\"",
-                    RedirectStandardInput = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-
-                using (Process ffmpeg = Process.Start(psi))
-                {
-                    while (_isRecording)
-                    {
-                        string? errorMessage;
-                        Bitmap frame = Screenshotting.CaptureScreen(screenIndex, out errorMessage);
-                        if (!string.IsNullOrEmpty(errorMessage))
-                        {
-                            Logging.Log($"CaptureScreen error: {errorMessage}");
-                            continue;
-                        }
-
-                        byte[]? imageBytes = BitmapToBytes(frame);
-
-                        ffmpeg.StandardInput.BaseStream.Write(imageBytes, 0, imageBytes.Length);
-                        ffmpeg.StandardInput.BaseStream.Flush();
-
-                        Thread.Sleep(1000 / _frameRate);
-                    }
-
-                    ffmpeg.StandardInput.Close();
-                    ffmpeg.WaitForExit();
-                }
-
-                Logging.Log("Recording stopped.");
-            }
-
-            /// <summary>
-            /// Converts a Bitmap image to a byte array.
-            /// </summary>
-            /// <param name="image">The Bitmap image to convert.</param>
-            /// <returns>A byte array representing the Bitmap image.</returns>
-            /// <remarks>
-            /// This method is used to convert screen frames into a byte array for processing or storage.
-            /// </remarks>
-            [LoggingAspects.Logging]
-            private static byte[]? BitmapToBytes(Bitmap image)
-            {
-                using (MemoryStream stream = new MemoryStream())
-                {
-                    image.Save(stream, ImageFormat.Bmp);
-                    return stream.ToArray();
-                }
             }
         }
 
@@ -646,6 +543,7 @@ namespace Cat
 
                 return distanceSquared <= radius * radius;
             }
+
             /// <summary>
             /// Rearranges the characters of a word, leaving the first and last characters in place.
             /// </summary>
@@ -715,7 +613,6 @@ namespace Cat
                 }
             }
 
-
             /// <summary>
             /// Checks if the current process has administrative privileges and, if not,
             /// attempts to restart the program with elevated privileges.
@@ -763,7 +660,6 @@ namespace Cat
         /// </summary>
         internal static class ProgressTesting
         {
-
             /// <summary>
             /// Initiates a progress test by incrementally logging progress from 0 to 100.
             /// </summary>
@@ -814,10 +710,10 @@ namespace Cat
                 { "StartWithConsole", (typeof(bool), false)},
                 { "StartWithVoice", (typeof(bool), false)},
             };
-             
+
             internal static readonly Dictionary<string, List<(string, object)>> initalsettings = new()
             {
-                { 
+                {
                     "Display", new() {
                         ("Brightness", 0.8f),
                         ("Opacity", 0.7f),
@@ -839,7 +735,7 @@ namespace Cat
                     }
                 },
                 {
-                    "Logging", new() 
+                    "Logging", new()
                     {
                         ("AspectLogging", true),
                         ("FullLogging", true),
@@ -850,7 +746,6 @@ namespace Cat
                     }
                 }
             };
-
 
             /// <summary>
             /// Generates user data by initializing settings based on predefined initial settings.
@@ -864,12 +759,12 @@ namespace Cat
             [LoggingAspects.UpsetStomach]
             internal static void GenerateUserData()
             {
-                IniData data= new();
+                IniData data = new();
                 foreach (string key in initalsettings.Keys)
                 {
                     if (data[key] == null)
                         data.Sections.AddSection(key);
-                    foreach((string innerkey, object value) in initalsettings[key])
+                    foreach ((string innerkey, object value) in initalsettings[key])
                     {
                         data[key][innerkey] = value.ToString();
                     }
@@ -900,7 +795,6 @@ namespace Cat
 
                 return null;
             }
-
 
             /// <summary>
             /// Retrieves the entire structure of an INI file as a nested dictionary.
@@ -1006,7 +900,6 @@ namespace Cat
                     return (T)serializer.Deserialize(file, typeof(T));
                 }
             }
-
 
             public static TValue ExtractValueFromJsonFile<TKey, TValue>(string filePath, TKey key)
             {

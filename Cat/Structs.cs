@@ -14,12 +14,11 @@
 //
 // <notes>
 //     This file is part of the Cat application, designed to facilitate direct
-//     interfacing with low-level system input functionalities. It defines 
-//     essential structures for creating and processing simulated input events, 
+//     interfacing with low-level system input functionalities. It defines
+//     essential structures for creating and processing simulated input events,
 //     enabling automated interactions with the system.
 // </notes>
 //-------------------------------------------------------------------------------------
-
 
 using System.Runtime.InteropServices;
 

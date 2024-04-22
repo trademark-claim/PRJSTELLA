@@ -2,7 +2,6 @@ namespace Cat
 {
     internal static partial class Commands
     {
-
         /// <summary>
         /// Stops the current screen recording session and logs the action.
         /// </summary>
@@ -15,7 +14,7 @@ namespace Cat
         {
             FML();
             Interface.AddLog("Ending screen recording session");
-            Helpers.ScreenRecording.StopRecording();
+            ScreenRecorder.StopRecording();
             Interface.AddLog("Screen recording session ended.");
             return true;
         }

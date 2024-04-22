@@ -1,5 +1,3 @@
-using static Cat.Catowo;
-
 namespace Cat
 {
     internal static partial class Commands
@@ -51,6 +49,5 @@ namespace Cat
                 return true;
             }
         }
-
     }
 }

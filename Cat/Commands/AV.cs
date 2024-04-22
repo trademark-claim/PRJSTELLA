@@ -1,7 +1,4 @@
-﻿using System.Diagnostics;
-using System.IO;
-
-namespace Cat
+﻿namespace Cat
 {
     internal static partial class Commands
     {

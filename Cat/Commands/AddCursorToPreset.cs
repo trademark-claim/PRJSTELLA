@@ -12,8 +12,8 @@ namespace Cat
         [LoggingAspects.Logging]
         internal static bool AddCursorToPreset()
         {
-            string entryN = commandstruct.Value.Parameters[0][0] as string, 
-                entryM = commandstruct.Value.Parameters[0][1] as string, 
+            string entryN = commandstruct.Value.Parameters[0][0] as string,
+                entryM = commandstruct.Value.Parameters[0][1] as string,
                 entryZ = commandstruct.Value.Parameters[0][2] as string;
             if (entryN == null || entryM == null || entryZ == null)
             {
@@ -39,7 +39,7 @@ namespace Cat
                 Catowo.Interface.AddTextLog("Preset file not found, try re-creating this preset! (Remove the currently existing one though).", RED);
                 return false;
             }
-            if (!File.Exists(entryZ)) 
+            if (!File.Exists(entryZ))
             {
                 Logging.Log($"Requested file {entryZ} not found.");
                 Catowo.Interface.AddTextLog($"Requested file {entryZ} not found! Please verify your file and provide a full, absolute file path.", RED);

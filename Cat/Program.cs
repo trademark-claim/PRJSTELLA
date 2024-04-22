@@ -1,5 +1,5 @@
-﻿using IniParser.Model;
-using IniParser;
+﻿using IniParser;
+using IniParser.Model;
 using System.IO;
 
 namespace Cat
@@ -20,6 +20,8 @@ namespace Cat
             if (UserData.LaunchAsAdmin)
                 Helpers.BackendHelping.RestartWithAdminRightsIfNeeded();
             Logging.Log("Running first Cat Window...");
+            DiscordRP.SetActivity(DiscordRP.LoadBaseActivity());
+            DiscordRP.Init();
             Catowo owo = new Catowo();
             owo.Show();
             owo.ToggleInterface();
@@ -154,7 +156,7 @@ namespace Cat
                 Logging.Log("Opening Console on Startup...");
                 Commands.OpenLogger();
             }
-            else if (UserData.StartWithVoice) 
+            else if (UserData.StartWithVoice)
             {
                 Logging.Log("Allowing voice commands through startup...");
                 Commands.AV();

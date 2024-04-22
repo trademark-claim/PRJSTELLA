@@ -1,27 +1,25 @@
 #define ImmedShutdown
 
 /***************************************************************************************
- * 
+ *
  *  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *                        FILE NAME: Catowo.cs
  *  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
- *  
+ *
  *  - File:        Catowo.CS
  *  - Authors:     Nexus
  *  - Created:     Not sure (fix)
  *  - Description: Main file for where all the commmands are defined and their logic is implemented
- *  
+ *
  *  - Updates/Changes:
  *      > [Date] - [Change Description] - [Author if different]
- *  
+ *
  *  - Notes:
  *      > This file will be continuously worked on throughout the project
  *      > Consider splitting each different command into their own file just to make it neater
- *      > 
- *  
+ *      >
+ *
  ***************************************************************************************/
-
-
 
 global using static Cat.BaselineInputs;
 global using static Cat.Environment;
@@ -29,32 +27,34 @@ global using static Cat.Objects;
 global using static Cat.PInvoke;
 global using static Cat.Statics;
 global using static Cat.Structs;
-global using Point = System.Windows.Point;
-global using Size = System.Windows.Size;
-global using Rectangle = System.Windows.Shapes.Rectangle;
-global using Brush = System.Windows.Media.Brush;
-global using Brushes = System.Windows.Media.Brushes;
-global using SWC = System.Windows.Controls;
-global using Key = System.Windows.Input.Key;
 global using Interface = Cat.Catowo.Interface;
 global using Command = Cat.Objects.Command;
-global using Canvas = System.Windows.Controls.Canvas;
 global using Application = System.Windows.Application;
-global using MessageBox = System.Windows.MessageBox;
-global using Binding = System.Windows.Data.Binding;
-global using Button = System.Windows.Controls.Button;
-global using TextBox = System.Windows.Controls.TextBox;
+global using SWC = System.Windows.Controls;
+global using Canvas = System.Windows.Controls.Canvas;
 global using Label = System.Windows.Controls.Label;
+global using TextBox = System.Windows.Controls.TextBox;
+global using Key = System.Windows.Input.Key;
+global using Brush = System.Windows.Media.Brush;
+global using Brushes = System.Windows.Media.Brushes;
 global using Color = System.Windows.Media.Color;
+global using MessageBox = System.Windows.MessageBox;
+global using Point = System.Windows.Point;
+global using Rectangle = System.Windows.Shapes.Rectangle;
+global using Size = System.Windows.Size;
 using NAudio.Wave;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Windows;
+
 using System.Windows.Controls;
+
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
+
 using SWM = System.Windows.Media;
+
 using SWS = System.Windows.Shapes;
 
 namespace Cat
@@ -65,36 +65,45 @@ namespace Cat
         /// Singleton instance of the Catowo application class.
         /// </summary>
         internal static Catowo inst;
+
         /// <summary>
         /// Indicates whether the application is currently shutting down.
         /// Used to handle shutdown logic gracefully.
         /// </summary>
         internal static bool ShuttingDown = false;
+
         /// <summary>
         /// Holds a pointer to the keyboard hook used for global key event handling.
         /// </summary>
         internal static IntPtr keyhook = IntPtr.Zero;
+
         /// <summary>
         /// The main canvas used in the application's user interface.
         /// </summary>
-        private readonly SWC.Canvas canvas = new SWC.Canvas();
+        internal readonly SWC.Canvas canvas = new SWC.Canvas();
+
         /// <summary>
         /// Label used for displaying debug information within the application's UI.
         /// </summary>
         internal readonly SWC.Label DebugLabel = new();
 
+        private static IntPtr _keyboardHookID = IntPtr.Zero;
+
         /// <summary>
         /// Stores the original window style prior to any modifications made by the application.
         /// </summary>
         internal int originalStyle = 0;
+
         /// <summary>
         /// Stores the modified windows style
-        /// </summary>    
+        /// </summary>
         internal int editedstyle = 0;
+
         /// <summary>
         /// Stores the pointer to the window's handler
         /// </summary>
         internal IntPtr hwnd = IntPtr.Zero;
+
         /// <summary>
         /// Flag indicating whether the right shift key is currently pressed.
         /// </summary>
@@ -120,7 +129,7 @@ namespace Cat
         #region Markers
 
         /// <summary>
-        /// Represents a debug marker as a white ellipse centered within its parent container. 
+        /// Represents a debug marker as a white ellipse centered within its parent container.
         /// Used for visual debugging to mark specific positions in the UI.
         /// </summary>
         private readonly SWS.Ellipse DEBUGMARKER = new()
@@ -205,12 +214,15 @@ namespace Cat
                 ToggleVis(SHORTCUTSMARKER, mode.HasFlag(Modes.Shortcuts));
             }
         }
+
         /// <summary>
         /// Stores the index of the primary screen in the array of all connected screens.
         /// The primary screen is determined by iterating through <see cref="System.Windows.Forms.Screen.AllScreens"/>
         /// and identifying the screen marked as primary.
         /// </summary>
         private static int _screen_ = Array.FindIndex(System.Windows.Forms.Screen.AllScreens, screen => screen.Primary);
+
+        internal static int _Screen { get => _screen_; }
 
         /// <summary>
         /// Gets or sets the index of the current screen used by the application within the array of all connected screens.
@@ -334,7 +346,7 @@ namespace Cat
         /// </remarks>
         [LoggingAspects.Logging]
         private IntPtr KeyboardProc(int nCode, IntPtr wParam, IntPtr lParam)
-        {  
+        {
             int vkCode = Marshal.ReadInt32(lParam);
             bool isKeyDown = nCode >= 0 && wParam == (IntPtr)WM_KEYDOWN;
             bool isKeyUp = nCode >= 0 && wParam == (IntPtr)WM_KEYUP;
@@ -372,11 +384,13 @@ namespace Cat
                             case VK_0:
                                 BaselineInputs.Cursor.Reset();
                                 break;
+
                             case >= VK_1 and <= VK_9:
                                 string item = vkCodeToCharMap[vkCode].Item1.ToString();
                                 Logging.Log(item);
                                 BaselineInputs.Cursor.LoadPresetByIndex(int.Parse(item));
                                 break;
+
                             case VK_E:
                                 Objects.CursorEffects.Toggle();
                                 break;
@@ -417,6 +431,7 @@ namespace Cat
                             case VK_I:
                                 ToggleInterface();
                                 break;
+
                             default:
                                 break;
                         }
@@ -605,6 +620,7 @@ namespace Cat
                     Objects.ClaraHerself.RunClara(ClaraHerself.Mode.Introduction, canvas);
             };
         }
+
         /// <summary>
         /// Creates and adds visual elements to the application's main canvas, setting their initial properties and positions.
         /// </summary>
@@ -639,7 +655,6 @@ namespace Cat
         #endregion Catowo Creation and Init
 
         #region Interface
-
 
         /// <summary>
         /// Toggles the visibility and functionality of the application's interface.
@@ -682,7 +697,7 @@ namespace Cat
         }
 
         [LoggingAspects.Logging]
-        internal void MakeFunnyWindow() 
+        internal void MakeFunnyWindow()
         {
             Logging.Log($"Changing WinStyle of HWND {hwnd}");
             int os = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
@@ -694,7 +709,6 @@ namespace Cat
 
         internal class Interface : Canvas
         {
-
             internal SWS.Rectangle Backg { get; }
             internal SWC.TextBox inputTextBox { get; private set; }
 
@@ -719,7 +733,7 @@ namespace Cat
                 //MouseMove += (s, e) => Catowo.inst.ToggleInterface();
             }
 
-           /// <summary>
+            /// <summary>
             /// Initializes the background rectangle for the interface, setting its dimensions and opacity.
             /// </summary>
             /// <returns>A rectangle that serves as the background for the interface.</returns>
@@ -737,10 +751,6 @@ namespace Cat
             [LoggingAspects.Logging]
             [LoggingAspects.ConsumeException]
             [LoggingAspects.UpsetStomach]
-
-           /// <summary>
-            /// Initializes the components of the interface, including the input text box and log list box, and sets their properties and event handlers.
-            /// </summary>
             private void InitializeComponents()
             {
                 Screen screen = GetScreen();
@@ -758,23 +768,25 @@ namespace Cat
                     Foreground = SWM.Brushes.Black,
                 };
 
-                inputTextBox.PreviewKeyDown += (s, e) => {
+                inputTextBox.PreviewKeyDown += (s, e) =>
+                {
                     Logging.Log(((int)e.Key));
                     switch (e.Key)
                     {
                         case Key.Enter:
                             CommandProcessing.ProcessCommand();
                             break;
+
                         case Key.Up:
                             CommandProcessing.HistoryUp();
                             break;
+
                         case Key.Down:
                             CommandProcessing.HistoryDown();
                             break;
                     }
-
                 };
-                
+
 #if TESTCOMMANDS
                 inputTextBox.Text = "dsi";
                 CommandProcessing.ProcessCommand();
@@ -800,7 +812,7 @@ namespace Cat
                 //SetTop<double>(Marker, screenHeight - 10);
             }
 
-           /// <summary>
+            /// <summary>
             /// Asynchronously hides the interface, setting its visibility to collapsed and ensuring the UI updates immediately.
             /// </summary>
             internal async Task Hide()
@@ -821,7 +833,6 @@ namespace Cat
                 Visibility = Visibility.Visible;
                 Logging.Log("Interface Shown");
             }
-
 
             /// <summary>
             /// Adds a log message to the interface's log list box.
@@ -861,7 +872,6 @@ namespace Cat
                 return logListBox.Items.Count - 1;
             }
 
-
             /// <summary>
             /// Edits a log message in the interface's log list box at a specified index.
             /// </summary>
@@ -891,7 +901,6 @@ namespace Cat
                 else
                     logListBox.ScrollIntoView(logListBox.Items[logListBox.Items.Count - 1]);
             }
-
 
             /// <summary>
             /// Adds a textual log message to the interface's log list box with specified text color.
@@ -946,10 +955,11 @@ namespace Cat
             /// </summary>
             internal static class CommandProcessing
             {
-                internal static Interface @interface { get => Commands.@interface; set => Commands.@interface = value;  }
+                internal static Interface @interface { get => Commands.@interface; set => Commands.@interface = value; }
                 private static Command? commandstruct;
                 private static readonly FixedQueue<string> History = new(10);
                 private static string cmdtext;
+
                 internal static Dictionary<string, int> cmdmap { get; } = new()
                 {
                     { "shutdown", 0 },
@@ -1141,15 +1151,18 @@ namespace Cat
                     { "list cursor presets", 34 },
                     { "lcps", 34 },
 
-                    {"Open Log Editor", 35 },
-                    {"ole", 35},
+                    { "open log editor", 35 },
+                    { "ole", 35},
 
                     { "elevate perms", 36 },
                     { "ep", 36 },
 
                     { "test error", 37 },
 
-                    { "activate voice", 38 }
+                    { "activate voice", 38 },
+
+                    { "close log editor", 39 },
+                    { "cle", 39 }
                 };
 
                 /// <summary>
@@ -1515,9 +1528,17 @@ namespace Cat
                             { "function", (Func<bool>)Cat.Commands.AV},
                             { "shortcut", ""}
                         }
+                    },
+                    {
+                        39, new Dictionary<string, object>
+                        {
+                            { "desc", "Closes the log editor" },
+                            { "params", "" },
+                            { "function", (Func<bool>)Cat.Commands.CLE},
+                            { "shortcut", ""}
+                        }
                     }
                 };
-
 
                 /// <summary>
                 /// Navigates to the previous command in the history queue and displays it in the input text box.
@@ -1557,7 +1578,6 @@ namespace Cat
                     }
                     @interface.inputTextBox.Text = nextraw;
                 }
-
 
                 /// <summary>
                 /// Processes the command currently entered in the input text box, executing the associated action.
@@ -1798,7 +1818,6 @@ namespace Cat
             /// </summary>
             internal class LogListBox : SWC.ListBox
             {
-
                 /// <summary>
                 /// Initializes a new instance of the LogListBox class, setting up its visual appearance and configuring virtualization for efficient rendering of log messages.
                 /// </summary>

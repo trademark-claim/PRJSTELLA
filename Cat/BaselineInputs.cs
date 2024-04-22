@@ -1,10 +1,9 @@
 ﻿// -----------------------------------------------------------------------
 // BaselineInputs.cs
-// Contains utility methods for manipulating audio settings, cursor appearance, 
+// Contains utility methods for manipulating audio settings, cursor appearance,
 // keyboard inputs, and mouse movements.
 // Author: Nexus
 // -----------------------------------------------------------------------
-
 
 using NAudio.CoreAudioApi;
 using System.IO;
@@ -13,7 +12,7 @@ using System.Runtime.InteropServices;
 namespace Cat
 {
     /// <summary>
-    /// Provides methods for manipulating system baseline inputs such as audio, cursor, 
+    /// Provides methods for manipulating system baseline inputs such as audio, cursor,
     /// keyboard, and mouse.
     /// </summary>
     internal static class BaselineInputs
@@ -34,7 +33,6 @@ namespace Cat
                 return device.AudioEndpointVolume.Mute;
             }
         }
-
 
         /// <summary>
         /// Handles cursor-related functionalities.
@@ -237,7 +235,7 @@ namespace Cat
                 }
                 float currentVolume = defaultDevice.AudioEndpointVolume.MasterVolumeLevelScalar;
                 float newVolume = currentVolume + 0.2f;
-                newVolume = Math.Min(newVolume, 1.0f); 
+                newVolume = Math.Min(newVolume, 1.0f);
                 defaultDevice.AudioEndpointVolume.MasterVolumeLevelScalar = newVolume;
             }
         }
@@ -250,14 +248,13 @@ namespace Cat
                 var defaultDevice = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia);
                 if (defaultDevice.AudioEndpointVolume.Mute)
                 {
-                    defaultDevice.AudioEndpointVolume.Mute = false; 
+                    defaultDevice.AudioEndpointVolume.Mute = false;
                 }
                 float currentVolume = defaultDevice.AudioEndpointVolume.MasterVolumeLevelScalar;
-                float newVolume = currentVolume - 0.2f; 
+                float newVolume = currentVolume - 0.2f;
                 newVolume = Math.Max(newVolume, 0.0f);
                 defaultDevice.AudioEndpointVolume.MasterVolumeLevelScalar = newVolume;
             }
-
         }
 
         /// <summary>

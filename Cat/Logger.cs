@@ -10,7 +10,6 @@ using System.Security.Principal;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Forms;
 using System.Windows.Media;
 using System.Windows.Threading;
 
@@ -50,7 +49,7 @@ namespace Cat
             Log("Live logger closed.");
         }
 
-        internal static async void LogError(Exception exc, bool initial = true)
+        internal static async void LogError(Exception exc, bool initial = true, bool logshow = false)
         {
             var logEntry = new StringBuilder();
             var guid = GUIDRegex().Replace(Guid.NewGuid().ToString(), "");
@@ -63,7 +62,7 @@ namespace Cat
             logEntry.AppendLine($"[{DateTime.Now:HH:mm:ss:fff}] HLink: {exc.HelpLink}");
             logEntry.AppendLine($"[{DateTime.Now:HH:mm:ss:fff}] HResult: {exc.HResult}");
             logEntry.AppendLine($"[{DateTime.Now:HH:mm:ss:fff}] >>>END OF ERROR {guid}<<<");
-            Log(logEntry.ToString());
+            Log(logshow, logEntry.ToString());
 
             if (exc.InnerException != null)
             {
@@ -95,6 +94,25 @@ namespace Cat
             }
         }
 
+        [SuppressMessage("WarningCategory", "CS4014", Justification = "The call is fire-and-forget intentionally.")]
+        internal static async Task Log(bool ignore_show, params object[] messages)
+        {
+            foreach (var message in messages)
+            {
+                string[] str = ProcessMessage(message);
+                foreach (string str2 in str)
+                    if (!string.IsNullOrWhiteSpace(str2))
+                    {
+                        logQueue.Enqueue($"[{DateTime.Now:HH:mm:ss:fff}] {str2}");
+                        if (!ignore_show) LogWindow.AddLog(str2);
+                    }
+            }
+            if (logQueue.Count >= MaxQueueSize)
+            {
+                await FullFlush();
+            }
+        }
+
         internal static string[] ProcessMessage(object message)
         {
             if (message is IEnumerable enumerable && !(message is string))
@@ -108,7 +126,7 @@ namespace Cat
                 }
                 return sb.ToString().Split("\n");
             }
-            return [message?.ToString() ?? string.Empty, ];
+            return [message?.ToString() ?? string.Empty,];
         }
 
         internal static async Task FullFlush(bool end = false)
@@ -184,12 +202,19 @@ namespace Cat
             /// <param name="logMessage">The log message to add.</param>
             public static void AddLog(string logMessage)
             {
-                inst?.Dispatcher.Invoke(() => inst?._listBox.Items.Add(logMessage));
+                try
+                {
+                    inst?.Dispatcher.Invoke(() => inst?._listBox.Items.Add(logMessage));
 
-                if (inst != null && inst._scrollViewer != null)
-                    inst._scrollViewer.ScrollToEnd();
-                else
-                    inst?._listBox.ScrollIntoView(inst._listBox.Items[inst._listBox.Items.Count - 1]);
+                    if (inst != null && inst._scrollViewer != null)
+                        inst._scrollViewer.ScrollToEnd();
+                    else
+                        inst?._listBox.ScrollIntoView(inst._listBox.Items[inst._listBox.Items.Count - 1]);
+                }
+                catch (Exception ex)
+                {
+                    LogError(ex, true, true);
+                }
             }
 
             /// <summary>
@@ -199,12 +224,18 @@ namespace Cat
             /// <param name="color">The color of the text.</param>
             public void AddTextLog(string logMessage, System.Windows.Media.Color color)
             {
+                try { 
                 inst?.Dispatcher.Invoke(() => _listBox.Items.Add(new TextBlock() { Text = logMessage, Foreground = new SolidColorBrush(color) }));
 
                 if (_scrollViewer != null)
                     _scrollViewer.ScrollToEnd();
                 else
                     _listBox.ScrollIntoView(_listBox.Items[_listBox.Items.Count - 1]);
+                }
+                catch (Exception ex)
+                {
+                    LogError(ex, true, true);
+                }
             }
         }
 
@@ -339,7 +370,6 @@ namespace Cat
 
             return sb.ToString();
         }
-
 
         /// <summary>
         /// Gathers security information about the current user session.
@@ -623,7 +653,6 @@ namespace Cat
                     NewProgress = np;
                 }
             }
-
 
             /// <summary>
             /// Represents an animated loading indicator.

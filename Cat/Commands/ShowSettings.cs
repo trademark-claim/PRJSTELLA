@@ -2,7 +2,6 @@ namespace Cat
 {
     internal static partial class Commands
     {
-
         /// <summary>
         /// Displays the current settings by reading from a configuration file and logging each setting to the interface.
         /// </summary>

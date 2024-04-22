@@ -1,4 +1,4 @@
-using System.Windows.Forms;
+using System.IO;
 
 namespace Cat
 {
@@ -14,7 +14,8 @@ namespace Cat
         internal static bool StartRecording()
         {
             Interface.AddLog("Starting screen recording session");
-            Helpers.ScreenRecording.StartRecording(Catowo.inst.Screen, VideoFolder + "V" + GUIDRegex().Replace(Guid.NewGuid().ToString(), "") + ".mp4");
+            ScreenRecorder = new();
+            ScreenRecorder.StartRecording();
             return true;
         }
     }

@@ -2,7 +2,6 @@ namespace Cat
 {
     internal static partial class Commands
     {
-
         /// <summary>
         /// Placeholder method for taking a snapshot of process metrics.
         /// </summary>
@@ -16,6 +15,5 @@ namespace Cat
             FYI();
             return true;
         }
-
     }
 }

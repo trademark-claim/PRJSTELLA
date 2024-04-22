@@ -2,27 +2,22 @@
 //#define B
 //#define C
 
-using Microsoft.VisualBasic.Logging;
-using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Speech.Recognition;
-using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Ribbon;
 using System.Windows.Data;
-using System.Windows.Forms;
-using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
-using System.Windows.Media.Media3D;
 using System.Windows.Shapes;
 using System.Windows.Threading;
-
+using NAudio.Wave;
+using SharpAvi;
+using SharpAvi.Output;
+using SharpAvi.Codecs;
+using System.Diagnostics;
 
 namespace Cat
 {
@@ -69,7 +64,6 @@ namespace Cat
         {
             private static Rectangle MakeOverlay()
                 => new Rectangle { Width = Catowo.GetScreen().Bounds.Width, Height = Catowo.GetScreen().Bounds.Height, Fill = new SolidColorBrush(Colors.Gray), Opacity = UserData.Opacity };
-
 
             /// <summary>
             /// Adds <see cref="Rectangle"/> to <paramref name="c"/>
@@ -121,6 +115,8 @@ namespace Cat
             /// </summary>
             private static byte num = 0;
 
+            private static CancellationTokenSource fadeCancellationTokenSource = new CancellationTokenSource();
+
             /// <summary>
             /// Holds the introduction text
             /// </summary>
@@ -132,6 +128,8 @@ namespace Cat
                 "This program is in a pre-pre-pre-pre-alpha stage, and there will be bugs and stuff.\nYou can send logs to me (Discord: _dissociation_) (Gmail: brainjuice.work23@gmail.com) with bug reports and feedback and stuff. Enjoy!",
                 "Hmmm.. is there anything else..?\nOh right! Local data is stored at C:\\ProgramData\\Kitty\\Cat\\\nHave fun, I hope you enjoy this app! o/"
             ];
+
+            internal static string[] Custom = ["Uh oh! You shouldn't see this!"];
 
             /// <summary>
             /// Whichever array is currently being spoken
@@ -167,7 +165,8 @@ namespace Cat
             /// </summary>
             internal enum Mode : byte
             {
-                Introduction
+                Introduction,
+                Custom
             }
 
             /// <summary>
@@ -177,15 +176,54 @@ namespace Cat
             /// <param name="canvas">The canvas</param>
             [LoggingAspects.Logging]
             [LoggingAspects.ConsumeException]
-            internal static void RunClara(Mode mode, Canvas canvas)
+            internal static async void RunClara(Mode mode, Canvas canvas)
             {
                 ClaraHerself.canvas = canvas;
-                overlay = OverlayRect.AddToCanvas(canvas);
-                Catowo.inst.MakeNormalWindow();
                 switch (mode)
                 {
                     case Mode.Introduction:
                         CurrentStory = Introduction;
+                        Catowo.inst.MakeNormalWindow();
+                        overlay = OverlayRect.AddToCanvas(canvas);
+                        break;
+
+                    case Mode.Custom:
+                        CurrentStory = Custom;
+                        if (fadeCancellationTokenSource != null && !fadeCancellationTokenSource.IsCancellationRequested)
+                        {
+                            fadeCancellationTokenSource.Cancel();
+                            fadeCancellationTokenSource.Dispose();
+                        }
+                        fadeCancellationTokenSource = new();
+                        var token = fadeCancellationTokenSource.Token;
+
+                        Task.Run(async () =>
+                        {
+                            await Task.Delay(1000, token);
+                            while (true)
+                            {
+                                if (token.IsCancellationRequested)
+                                    return;
+
+                                await Task.Delay(100, token);
+                                Application.Current.Dispatcher.Invoke(() =>
+                                {
+                                    if (bubble != null)
+                                    {
+                                        bubble.Opacity -= 0.015f;
+                                        if (bubble.Opacity < 0.0f)
+                                        {
+                                            bubble.Opacity = 0.0f;
+                                            num = 0;
+                                            Catowo.inst.PreviewKeyDown -= ProgressionKeydown;
+                                            canvas.Children.Remove(bubble);
+                                            bubble = null;
+                                            return;
+                                        }
+                                    }
+                                });
+                            }
+                        }, token);
                         break;
                 }
                 // The first message
@@ -196,7 +234,6 @@ namespace Cat
                 bubble.Text = CurrentStory[num];
                 canvas.Children.Add(bubble);
                 Catowo.inst.PreviewKeyDown += ProgressionKeydown;
-
             }
 
             /// <summary>
@@ -252,7 +289,6 @@ namespace Cat
                 if (e.Key == Key.Down)
                     if (delegation != null)
                         delegation();
-
             }
 
             /// <summary>
@@ -260,22 +296,31 @@ namespace Cat
             /// </summary>
             private class SpeechBubble : Canvas
             {
+                private float _opacity = 0.7f;
+
+                internal new float Opacity
+                { get => _opacity; set { _opacity = value; rectangle.Opacity = value; tail.Opacity = value; } }
+
                 /// <summary>
                 /// The text displayed
                 /// </summary>
                 private readonly TextBlock textBlock;
+
                 /// <summary>
                 /// The bubble part
                 /// </summary>
                 private readonly Rectangle rectangle;
+
                 /// <summary>
                 /// The arrow part that really completes the bubble
                 /// </summary>
                 private readonly Polygon tail;
+
                 /// <summary>
                 /// Controls padding
                 /// </summary>
                 private const float Control = 5.0F;
+
                 /// <summary>
                 /// Fixed position for the lower right corner
                 /// </summary>
@@ -306,7 +351,7 @@ namespace Cat
                 /// <summary>
                 /// Abstraction Property
                 /// </summary>
-                public double BubbleOpacity
+                public float BubbleOpacity
                 {
                     get => Opacity;
                     set => Opacity = value;
@@ -346,6 +391,7 @@ namespace Cat
                         Stroke = Brushes.Black,
                         StrokeThickness = 2,
                         Fill = new SolidColorBrush(Colors.White),
+                        Opacity = 0.7f
                     };
 
                     tail = new Polygon
@@ -353,13 +399,14 @@ namespace Cat
                         Points = new PointCollection(new[] { new Point(0, 0), new Point(15, 0), new Point(7.5, 20) }),
                         Stroke = Brushes.Black,
                         StrokeThickness = 2,
-                        Fill = new SolidColorBrush(Colors.White)
+                        Fill = new SolidColorBrush(Colors.White),
+                        Opacity = 0.7f
                     };
 
                     textBlock = new TextBlock
                     {
                         TextWrapping = TextWrapping.Wrap,
-                        Margin = new Thickness(Control)
+                        Margin = new Thickness(Control),
                     };
 
                     TextPadding = new Thickness(Control);
@@ -392,7 +439,6 @@ namespace Cat
                     Height = rectangle.Height;
                 }
             }
-
         }
 
         internal record class Memento<T>(T Store);
@@ -402,7 +448,9 @@ namespace Cat
             private static bool isOn = false;
             private static DispatcherTimer fadeTimer;
             private static Window allencompassing;
+
             private delegate void CursorTrailDelegate(in Point mousepos);
+
             private static dynamic Memento;
             private static CursorTrailDelegate _method;
             private static Canvas canvas;
@@ -410,6 +458,7 @@ namespace Cat
             private static LowLevelProc _proc = HookCallback;
             private static nint _hookID = nint.Zero;
 
+            [LoggingAspects.Logging]
             internal static void Toggle()
             {
                 if (!isOn) Run();
@@ -451,7 +500,6 @@ namespace Cat
                     Logging.Log($"Set Win Style of Handle {hwnd} from {originalStyle:X} ({originalStyle:B}) [{originalStyle}] to {editedstyle:X} ({editedstyle:B}) [{editedstyle}]");
                 };
                 Particles.LineTrail.Init();
-                isOn = true;
             }
 
             private static IntPtr SetHook(LowLevelProc proc)
@@ -476,9 +524,11 @@ namespace Cat
                             p.Offset(5, 5);
                             _method(p);
                             break;
+
                         case MouseMessages.WM_LBUTTONDOWN:
                             Particles.RectangleClick.Trigger.Activate(canvas, allencompassing.PointFromScreen(new(hookStruct.pt.X, hookStruct.pt.Y)));
                             break;
+
                         case MouseMessages.WM_RBUTTONDOWN:
                             break;
                     }
@@ -486,9 +536,43 @@ namespace Cat
                 return CallNextHookExWrapper(_hookID, nCode, wParam, lParam);
             }
 
+            [LoggingAspects.Logging]
+            internal static void DestroyKeyHook()
+            {
+                Logging.Log("Unhooking key hook...");
+                if (_hookID == IntPtr.Zero)
+                {
+                    Logging.Log("Key hook is default, exiting.");
+                    return;
+                }
+                bool b = UnhookWindowsHookExWrapper(_hookID);
+                Logging.Log($"Unhooking successful: {b}");
+            }
+
+            [LoggingAspects.Logging]
             private static void Stop()
             {
                 if (!isOn) return;
+                DestroyKeyHook();
+                allencompassing.Close();
+                try
+                {
+                    fadeTimer.Stop();
+                }
+                catch
+                {
+                    _ = "Lorum Ipsum";
+                }
+                fadeTimer = null;
+                _method = null;
+                Memento = null;
+                _hookID = IntPtr.Zero;
+                try
+                {
+                    canvas.Children.Clear();
+                    canvas = null;
+                }
+                catch { _ = "Lorum Ipsum"; }
             }
 
             internal static void MoveTop()
@@ -524,7 +608,6 @@ namespace Cat
 
                     internal static void RectangleTick(in Point point)
                     {
-
                         foreach (Effect effect in Memento)
                         {
                             if (effect.Rect.Opacity > 0)
@@ -535,10 +618,10 @@ namespace Cat
 
                         if (effectsQueue.Peek().Rect.Opacity == 0)
                         {
-                            Effect effect = effectsQueue.Dequeue(); 
+                            Effect effect = effectsQueue.Dequeue();
                             Canvas.SetTop(effect.Rect, point.Y - effect.Rect.Height / 2);
                             Canvas.SetLeft(effect.Rect, point.X - effect.Rect.Width / 2);
-                            effect.Rect.Opacity = 1.0; 
+                            effect.Rect.Opacity = 1.0;
                             effectsQueue.Enqueue(effect);
                         }
                     }
@@ -634,7 +717,6 @@ namespace Cat
                         }
                     }
 
-
                     internal static class Trigger
                     {
                         private static readonly List<Effect> effects = new List<Effect>();
@@ -678,11 +760,8 @@ namespace Cat
                             }
                         }
                     }
-
                 }
-
             }
-
         }
 
         internal readonly record struct Command(string Call, string Raw, object[][]? Parameters = null);
@@ -719,7 +798,6 @@ namespace Cat
                 canvas.Children.Add(polyline);
             }
 
-
             // Method to add a point
             public void AddPoint(Point point)
             {
@@ -727,7 +805,7 @@ namespace Cat
                 if (Helpers.BackendHelping.IsPointWithinOtherPointForSmoothing(point, previous, 15))
                 {
                     oncedown = !oncedown;
-                    if(oncedown)
+                    if (oncedown)
                         return;
                 }
 
@@ -750,7 +828,6 @@ namespace Cat
                     polyline.Points.RemoveAt(0);
                 }
             }
-
         }
 
         internal class LogEditor : Window // Code the GUI here
@@ -770,7 +847,7 @@ namespace Cat
                 var screen = Catowo.GetScreen();
                 Width = screen.Bounds.Width;
                 Height = screen.Bounds.Height;
-                this.Background = Brushes.Purple; 
+                this.Background = Brushes.Purple;
                 inst?.Close();
                 inst = this;
                 InitializeComponents();
@@ -782,7 +859,7 @@ namespace Cat
             {
                 mainGrid = new Grid();
                 Content = mainGrid;
-                mainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(200) }); 
+                mainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(200) });
                 mainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
                 mainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(200) });
 
@@ -813,15 +890,11 @@ namespace Cat
                 logListBox.LoadFile(files[0]);
                 return;
             }
-           
-
-
 
             private class MenuBox : SWC.ListBox
             {
-                private static int searchamount = 0;
-                private const int FirstSearch = 8;
                 internal static MenuBox minst;
+                private static bool isSFiltered = false;
 
                 private static readonly List<(string, Action)> a_buttons = new List<(string, Action)>()
                 {
@@ -868,7 +941,7 @@ namespace Cat
                                 inst.logListBox.Items.Add(log);
                         epic = null;
                     })),
-                    ("Date", (() => 
+                    ("Date", (() =>
                     {
                         var logs = LogEditor.inst.logListBox.Items.Cast<string>().ToList();
                         logs = logs.OrderBy(line => Helpers.BackendHelping.ExtractStringGroups(line, "[", "]", out string[]? results)).ToList();
@@ -882,7 +955,7 @@ namespace Cat
                     ("Execution Time", () => { MessageBox.Show("This feature is still in development!"); }),
                     ("Alphabetical", () => { var logs = inst.logListBox.Items.Cast<string>().OrderBy(item => { int index = item.IndexOf(']') + 1; while (index < item.Length && !char.IsLetterOrDigit(item[index])) { index++; } return index < item.Length ? item.Substring(index) : ""; }).ToList(); inst.logListBox.Items.Clear(); foreach (string item in logs) inst.logListBox.Items.Add(item); }),
                     ("Set Filter To", null),
-                    ("Errors", () => 
+                    ("Errors", () =>
                     {
                         var epic = new List<List<string>>()
                         {
@@ -922,27 +995,36 @@ namespace Cat
                                 inst.logListBox.Items.Add(log);
                         epic = null;
                     }),
-                    ("Function E&E", () => 
+                    ("Function E&E", () =>
                     {
                         var logs = inst.logListBox.Items.Cast<string>().ToList().Where(x => x.Contains("method", StringComparison.InvariantCultureIgnoreCase) && (x.Contains("entering", StringComparison.InvariantCultureIgnoreCase) || x.Contains("exiting", StringComparison.InvariantCultureIgnoreCase)));
                         inst.logListBox.Items.Clear();
                         foreach (var item in logs)
                             inst.logListBox.Items.Add(item);
                     }),
-                    ("Search", (Action)(() => 
+                    ("Search", (Action)(() =>
                     {
-                        var x = new OverlayInputBox("What phrase would you like to filter by:", LogEditor.inst);
+                        var x = new OverlayInputBox("What phrase would you like to add a filter for:", LogEditor.inst);
                         x.ShowDialog();
-                        var logs = inst.logListBox.Items.Cast<string>().ToList().Where(x => x.Contains(OverlayInputBox.Input, StringComparison.InvariantCultureIgnoreCase));
+                        if (string.IsNullOrWhiteSpace(OverlayInputBox.Input))
+                            return;
+                        var current = inst.logListBox.Items.Cast<string>().ToList();
+                        var logs = inst.logListBox.baselines.Where(x => x.Contains(OverlayInputBox.Input, StringComparison.InvariantCultureIgnoreCase) || (current.Contains(x) && isSFiltered));
+                        isSFiltered = true;
                         inst.logListBox.Items.Clear();
                         foreach (var item in logs)
                             inst.logListBox.Items.Add(item);
-                        ++searchamount;
-                        minst.buttons.Insert(searchamount + FirstSearch, ($"Search {searchamount}", (Action)(() =>
-                        {
-                            minst.CompoundingSearch();
-                        })));
-                        minst.InitializeMenu();
+                    })),
+                    ("Exclude", (Action)(() =>
+                    {
+                        var x = new OverlayInputBox("What phrase would you like to add an exclusion filter for:", LogEditor.inst);
+                        x.ShowDialog();
+                        if (string.IsNullOrWhiteSpace(OverlayInputBox.Input))
+                            return;
+                        var logs = inst.logListBox.Items.Cast<string>().ToList().Where(x => !(x.Contains(OverlayInputBox.Input, StringComparison.InvariantCultureIgnoreCase)));
+                        inst.logListBox.Items.Clear();
+                        foreach (var item in logs)
+                            inst.logListBox.Items.Add(item);
                     })),
                     ("Misc", null),
                     ("Search", () => { MessageBox.Show("This feature is still in development!"); }),
@@ -964,31 +1046,11 @@ namespace Cat
                     InitializeMenu();
                 }
 
-                private void CompoundingSearch()
-                {
-                    var x = new OverlayInputBox("What phrase would you like to add another filter for:", LogEditor.inst);
-                    x.ShowDialog();
-                    if (string.IsNullOrWhiteSpace(OverlayInputBox.Input))
-                        return;
-                    var current = inst.logListBox.Items.Cast<string>().ToList();
-                    var logs = inst.logListBox.baselines.Where(x => x.Contains(OverlayInputBox.Input, StringComparison.InvariantCultureIgnoreCase) || current.Contains(x));
-                    inst.logListBox.Items.Clear();
-                    foreach (var item in logs)
-                        inst.logListBox.Items.Add(item);
-                    ++searchamount;
-                    minst.buttons.Insert(searchamount + FirstSearch, ($"Search {searchamount}", (Action)(() =>
-                    {
-                        CompoundingSearch();
-                    })));
-                    InitializeMenu();
-                }
-
                 internal void InitializeMenu()
                 {
-                    searchamount = 0;
                     Items.Clear();
                     foreach ((string name, Action act) in buttons)
-                        Items.Add(new ExecutableText<Action>(act) { Text = (act == null? "" : "  ") + name });
+                        Items.Add(new ExecutableText<Action>(act) { Text = (act == null ? "" : "  ") + name });
                     SelectionChanged += (s, e) => { if (SelectedItem is ExecutableText<Action> act) act.Execute(); UnselectAll(); };
                     SelectionMode = SWC.SelectionMode.Single;
                 }
@@ -1018,7 +1080,6 @@ namespace Cat
                     }
                 }
             }
-
         }
 
         internal class OverlayInputBox : Window
@@ -1039,7 +1100,7 @@ namespace Cat
                 Top = nb.Top;
                 ShowInTaskbar = false;
                 ShowActivated = true;
-                //WindowState = WindowState.Maximized;   
+                //WindowState = WindowState.Maximized;
                 Left = nb.Left;
                 Loaded += (sender, e) =>
                 {
@@ -1072,13 +1133,12 @@ namespace Cat
                     }
                 };
                 canv.Children.Add(tb);
-                var lbl = new Label() { Content = question, Foreground = new SolidColorBrush(Colors.Silver)};
+                var lbl = new Label() { Content = question, Foreground = new SolidColorBrush(Colors.Silver) };
                 Canvas.SetLeft(lbl, margin);
                 Canvas.SetTop(lbl, aheight - 20);
                 canv.Children.Add(lbl);
             }
         }
-
 
         public class ExecutableText<T> : TextBlock
         {
@@ -1112,7 +1172,7 @@ namespace Cat
             private static bool ready = false;
             internal static bool WasCalled = false;
             internal static Dictionary<string, string> Speechrecogmap { get; private set; }
-            
+
             [LoggingAspects.Logging]
             public static void ActivateVoiceCommandHandler()
             {
@@ -1183,5 +1243,166 @@ namespace Cat
             }
         }
 
+        public class ScreenRecorder
+        {
+            private AviWriter writer;
+            private IAviVideoStream videoStream;
+            private WaveInEvent audioSource;
+            private IAviAudioStream audioStream;
+            private Thread recordingThread;
+            private bool isRecording;
+            private string outputPath = Environment.VideoFolder;
+            private string name;
+            private string fullname;
+
+            public void StartRecording()
+            {
+                try
+                {
+                    System.Drawing.Rectangle bounds = Catowo.GetScreen().Bounds;
+                    // Initialize AVI writer
+                    name = $"capture_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}";
+                    fullname = System.IO.Path.Combine(outputPath, $"{name}.avi");
+                    writer = new AviWriter(fullname)
+                    {
+                        FramesPerSecond = 30,
+                        EmitIndex1 = true
+                    };
+
+                    // Create video stream
+                    videoStream = writer.AddVideoStream(bounds.Width, bounds.Height, BitsPerPixel.Bpp24);
+
+                    // Create audio stream
+                    audioSource = new WaveInEvent();
+                    audioSource.DeviceNumber = 0;
+                    audioSource.WaveFormat = new WaveFormat(44100, 1);
+
+                    audioStream = writer.AddAudioStream(audioSource.WaveFormat.Channels, audioSource.WaveFormat.SampleRate);
+                    audioSource.DataAvailable += (s, e) =>
+                    {
+                        audioStream.WriteBlock(e.Buffer, 0, e.BytesRecorded);
+                    };
+
+                    audioSource.StartRecording();
+
+                    // Start capture thread
+                    isRecording = true;
+                    recordingThread = new Thread(() => CaptureScreen(Catowo._Screen))
+                    {
+                        IsBackground = true
+                    };
+                    recordingThread.Start();
+                }
+                catch (Exception ex)
+                {
+                    Logging.LogError(ex);
+                    throw;
+                }
+            }
+
+            private void CaptureScreen(int screenIndex)
+            {
+                var frameInterval = TimeSpan.FromSeconds(1.0 / (double)writer.FramesPerSecond);
+
+                while (isRecording)
+                {
+                    var startTime = DateTime.Now;
+
+                    string? errorMessage;
+                    using (var bitmap = Helpers.Screenshotting.CaptureScreen(screenIndex, out errorMessage))
+                    {
+                        if (!string.IsNullOrEmpty(errorMessage))
+                        {
+                            Logging.LogError(new Exception($"Failed to capture screen: {errorMessage}"));
+                            continue;
+                        }
+
+                        var bounds = Screen.AllScreens[screenIndex].Bounds;
+                        var buffer = new byte[bounds.Width * bounds.Height * 4];
+
+                        using (var convertedBitmap = ConvertTo24bpp(bitmap))
+                        {
+                            using (var ms = new MemoryStream())
+                            {
+                                convertedBitmap.Save(ms, System.Drawing.Imaging.ImageFormat.Bmp);
+                                ms.Position = 0;
+                                ms.Read(buffer, 0, buffer.Length);
+                                videoStream.WriteFrame(true, buffer, 0, buffer.Length);
+                            }
+                        }
+
+                    }
+
+                    var timeToSleep = frameInterval - (DateTime.Now - startTime);
+                    if (timeToSleep > TimeSpan.Zero)
+                        Thread.Sleep(timeToSleep);
+                }
+            }
+
+            private Bitmap ConvertTo24bpp(Bitmap input)
+            {
+                var output = new Bitmap(input.Width, input.Height, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+                using (var g = Graphics.FromImage(output))
+                {
+                    g.DrawImage(input, new System.Drawing.Rectangle(0, 0, input.Width, input.Height));
+                }
+                return output;
+            }
+
+
+            public void StopRecording()
+            {
+                isRecording = false;
+                recordingThread.Join();
+                audioSource.StopRecording();
+                audioSource.Dispose();
+                writer.Close();
+                //EncodeVideo(); Dont need this cause it already creates a valid .avi file (though its all green so maybe its not successful)
+            }
+
+            private async Task EncodeVideo()
+            {
+
+                var args = $"ffmpeg -i {fullname} -vcodec libx264 -crf 23 -preset fast -acodec aac -ar 48000 -b:a 192k {System.IO.Path.Combine(outputPath, $"{name}.mp4")}";
+                var process = new Process
+                {
+                    StartInfo = new ProcessStartInfo(FFMPEGPath, args)
+                    {
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    }
+                };
+
+                process.OutputDataReceived += (sender, e) =>
+                {
+                    if (e.Data != null)
+                        Logging.Log(e.Data);
+                };
+
+                process.ErrorDataReceived += (sender, e) =>
+                {
+                    if (e.Data != null)
+                        Logging.Log(e.Data);
+                };
+
+                process.Start();
+
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+
+                await process.WaitForExitAsync();
+
+                if (process.ExitCode == 0)
+                {
+                    Logging.Log("FFmpeg process completed successfully.");
+                }
+                else
+                {
+                    Logging.LogError(new Exception("FFmpeg process failed with exit code " + process.ExitCode));
+                }
+            }
+        }
     }
 }
