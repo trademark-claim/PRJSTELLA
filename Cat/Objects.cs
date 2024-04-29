@@ -169,6 +169,8 @@ namespace Cat
                 Custom
             }
 
+            internal static int fadedelay = 1500;
+
             /// <summary>
             /// Cancer cures smoking.
             /// </summary>
@@ -179,6 +181,14 @@ namespace Cat
             internal static async void RunClara(Mode mode, Canvas canvas)
             {
                 ClaraHerself.canvas = canvas;
+                if (bubble != null && Catowo.inst != null && canvas != null)
+                {
+                    num = 0;
+                    Catowo.inst.PreviewKeyDown -= ProgressionKeydown;
+                    canvas.Children.Remove(bubble);
+                    bubble = null;
+                }
+
                 switch (mode)
                 {
                     case Mode.Introduction:
@@ -189,6 +199,7 @@ namespace Cat
 
                     case Mode.Custom:
                         CurrentStory = Custom;
+                        Logging.Log("Custom Clara Speech: ", CurrentStory);
                         if (fadeCancellationTokenSource != null && !fadeCancellationTokenSource.IsCancellationRequested)
                         {
                             fadeCancellationTokenSource.Cancel();
@@ -199,29 +210,44 @@ namespace Cat
 
                         Task.Run(async () =>
                         {
-                            await Task.Delay(1000, token);
+                            await Task.Delay(fadedelay, token);
                             while (true)
                             {
                                 if (token.IsCancellationRequested)
                                     return;
 
-                                await Task.Delay(100, token);
-                                Application.Current.Dispatcher.Invoke(() =>
+                                await Task.Delay(50, token);
+                                try
                                 {
-                                    if (bubble != null)
-                                    {
-                                        bubble.Opacity -= 0.015f;
-                                        if (bubble.Opacity < 0.0f)
+                                    if (Application.Current != null && Application.Current.Dispatcher != null)
+                                        Application.Current.Dispatcher.Invoke(() =>
                                         {
-                                            bubble.Opacity = 0.0f;
-                                            num = 0;
-                                            Catowo.inst.PreviewKeyDown -= ProgressionKeydown;
-                                            canvas.Children.Remove(bubble);
-                                            bubble = null;
-                                            return;
-                                        }
-                                    }
-                                });
+                                            try
+                                            {
+                                                if (bubble != null && Catowo.inst != null && canvas != null )
+                                                {
+                                                    bubble.Opacity -= 0.015f;
+                                                    if (bubble.Opacity < 0.0f)
+                                                    {
+                                                        bubble.Opacity = 0.0f;
+                                                        num = 0;
+                                                        Catowo.inst.PreviewKeyDown -= ProgressionKeydown;
+                                                        canvas.Children.Remove(bubble);
+                                                        bubble = null;
+                                                        return;
+                                                    }
+                                                }
+                                            }
+                                            catch
+                                            {
+                                                _ = "Lorum Ipsum";
+                                            }
+                                        });
+                                }
+                                catch 
+                                {
+                                    _ = "Lorum Ipsum";
+                                }
                             }
                         }, token);
                         break;
@@ -299,12 +325,12 @@ namespace Cat
                 private float _opacity = 0.7f;
 
                 internal new float Opacity
-                { get => _opacity; set { _opacity = value; rectangle.Opacity = value; tail.Opacity = value; } }
+                { get => _opacity; set { _opacity = value; rectangle.Opacity = value; tail.Opacity = value; textBlock.Opacity = value; } }
 
                 /// <summary>
                 /// The text displayed
                 /// </summary>
-                private readonly TextBlock textBlock;
+                private TextBlock textBlock;
 
                 /// <summary>
                 /// The bubble part
@@ -334,7 +360,11 @@ namespace Cat
                     get => textBlock.Text;
                     set
                     {
-                        textBlock.Text = value;
+                        Children.Remove(textBlock);
+                        textBlock = Helpers.BackendHelping.FormatTextBlock(value);
+                        textBlock.TextWrapping = TextWrapping.Wrap;
+                        textBlock.Margin = new Thickness(Control);
+                        Children.Add(textBlock);
                         UpdateLayout();
                     }
                 }
@@ -405,8 +435,6 @@ namespace Cat
 
                     textBlock = new TextBlock
                     {
-                        TextWrapping = TextWrapping.Wrap,
-                        Margin = new Thickness(Control),
                     };
 
                     TextPadding = new Thickness(Control);

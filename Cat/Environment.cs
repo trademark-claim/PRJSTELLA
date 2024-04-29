@@ -30,7 +30,6 @@ namespace Cat
 
         // Paths to various folders used by the application
         internal const string LogFolder = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\Logs\\";
-
         internal const string AudioFolder = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\Audio\\";
         internal const string UserFolder = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\User\\";
         internal const string SSFolder = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\Screenshots\\";
@@ -41,7 +40,9 @@ namespace Cat
         internal const string CursorsFilePath = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\Cursors\\";
         internal const string UserDataFile = UserFolder + "hello_mr_edit_my_raw_data.ini";
         internal const string FFMPEGPath = ExternalProcessesFolder + "ffmpeg.exe";
-
+        internal const string FlatCPath = ExternalProcessesFolder + "flatc.exe";
+        internal const string StatsFile = NotesFolder + "stats.bin";
+        internal const string SchemaFile = NotesFolder + "schemas.bin";
         internal const long DCID = 1231580969698459688;
 
         #region VKs and Styles
@@ -273,17 +274,21 @@ namespace Cat
         /// </summary>
         internal const uint OCR_WAIT = 32514;
 
-        internal const string WAPIT = "EWKVZNMCGAGQ6WPU3FKXL4HQJS2TRXBJ";
-
-        /// PINVOKE Flags for cursor changing.
+        /// <summary>
+        /// PINVOKE Flag for cursor changing.
+        /// </summary>
         internal const uint SPI_SETCURSORS = 0x0057;
-
+        internal const int SW_MAXIMIZE = 3;
+        internal const int SW_MINIMIZE = 6;
+        internal const uint WM_CLOSE = 0x0010;
         internal const uint SPIF_UPDATEINIFILE = 0x01;
         internal const uint SPIF_SENDCHANGE = 0x02;
 
         #region Delegates
 
         internal delegate IntPtr LowLevelProc(int nCode, IntPtr wParam, IntPtr lParam);
+
+        internal delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 
         [GeneratedRegex("[^a-zA-Z0-9]")]
         internal static partial Regex GUIDRegex();
@@ -293,6 +298,8 @@ namespace Cat
         /// <summary>Contains user-configurable settings for application behavior.</summary>
         internal static class UserData
         {
+            private static string userName = System.Environment.UserName;
+
             /// <summary>Enables or disables aspect logging.</summary>
             internal static bool AspectLogging = true;
 
@@ -339,6 +346,11 @@ namespace Cat
             /// </summary>
             internal static bool LaunchAsAdmin = false;
 
+            /// <summary>
+            /// Allows Stella to query the unofficial urban dictionary api for word definitions
+            /// </summary>
+            internal static bool AllowUrbanDictionaryDefinitionsWhenWordNotFound = false;
+
             /// <summary>Default screen brightness setting.</summary>
             internal static float Brightness = 0.7f;
 
@@ -354,6 +366,11 @@ namespace Cat
             /// <summary>Font size for display elements.</summary>
             internal static float FontSize
             { get => _fontsize; set { _fontsize = value; Catowo.Interface.logListBox.UpdateFontSize(); } }
+
+
+            private static string DiscordExePath = @"C:\Users\<CURRENTUSER>\AppData\Local\Discord\app-1.0.9043\Discord.exe";
+
+            internal static string DiscordPath { get => DiscordExePath.Replace("<CURRENTUSER>", userName); }
 
             internal static readonly double[] CommandKeys = [];
 
@@ -422,6 +439,9 @@ namespace Cat
 
                     case nameof(StartWithVoice):
                         StartWithVoice = bool.Parse(value);
+                        break;
+                    case nameof(AllowUrbanDictionaryDefinitionsWhenWordNotFound):
+                        AllowUrbanDictionaryDefinitionsWhenWordNotFound = bool.Parse(value);
                         break;
 
                     default:

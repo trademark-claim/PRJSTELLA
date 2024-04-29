@@ -15,6 +15,8 @@ namespace Cat
             if (Logger == null)
             {
                 Logger = Logging.ShowLogger();
+                Logger.Focusable = true;
+                Logger.Focus();
                 Interface.AddLog("Live Logging window opened!");
             }
             else

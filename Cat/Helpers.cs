@@ -9,6 +9,8 @@ using IniParser;
 using IniParser.Model;
 using Newtonsoft.Json;
 using SharpCompress.Archives;
+using System.CodeDom.Compiler;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
@@ -16,11 +18,18 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Forms.Design;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
 using System.Windows.Threading;
+using System.Xml.Linq;
 using CLR = System.Drawing.Color;
 using Formatting = Newtonsoft.Json.Formatting;
 using JsonSerializer = Newtonsoft.Json.JsonSerializer;
+//using IEnumerable = System.Collections.Generic.IEnumerable;
 
 namespace Cat
 {
@@ -326,65 +335,78 @@ namespace Cat
             }
         }
 
-        /// <summary>
-        /// Manages the downloading and installation of FFMpeg.
-        /// </summary>
-        public static class FFMpegManager
+        internal class EPManagement
         {
-            private const string DownloadUrl = "https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-2024-03-25-git-ecdc94b97f-essentials_build.7z";
-            private static Logging.ProgressLogging OverallProgress = new Logging.ProgressLogging("Overall FFMPEG Install:", true);
-            private static Logging.ProgressLogging SectionProgress = new Logging.ProgressLogging("Downloading FFMPEG from Gyan.dev:", true);
+            private readonly Logging.ProgressLogging OverallProgress;
+            private Logging.ProgressLogging SectionProgress;
+            private readonly ProcessDetails ffmpeg = new(FFMPEGPath, @"https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-2024-03-25-git-ecdc94b97f-essentials_build.7z", "ffmpeg.exe", "ffmpeg-2024-03-25-git-ecdc94b97f-essentials_build", ".7z", "bin");
+            private readonly ProcessDetails inuse;
 
-            /// <summary>
-            /// Checks if the FFMpeg executable exists in the predefined directory.
-            /// </summary>
-            /// <returns>A boolean value indicating the existence of the FFMpeg executable.</returns>
+            internal static bool FFmpegInstalled { get => CheckIfFileExists(FFMPEGPath); }
+
             [LoggingAspects.Logging]
-            public static bool CheckFFMPEGExistence()
+            [LoggingAspects.ConsumeException]
+            internal EPManagement(Processes process)
             {
-                Logging.Log("Checking if FFMpeg.exe exists in allocated directory.");
-                bool exists = File.Exists(FFMPEGPath);
-                Logging.Log($"FFMpeg existence check returned {exists}");
+                inuse = process switch
+                {
+                    Processes.FFmpeg => ffmpeg,
+                    _ => throw new NotImplementedException(),
+                };
+                OverallProgress = new($"Obtaining {inuse.Filename}...", true);
+                Task.Run(async () => await DownloadAndExtractFile());
+            }
+
+            [LoggingAspects.Logging]
+            private static bool CheckIfFileExists(string path)
+            {
+                Logging.Log($"Checking if {path} exists...");
+                bool exists = File.Exists(path);
+                Logging.Log($"File existence check returned {exists}");
                 return exists;
             }
 
+
             /// <summary>
-            /// Downloads and extracts FFMPEG from a remote server if it does not already exist locally.
+            /// Downloads and extracts a file from a remote server if it does not already exist locally.
             /// </summary>
             /// <remarks>
-            /// This method asynchronously downloads a compressed file containing FFMPEG from a predefined URL,
-            /// extracts it, and places the executable in a designated directory.
+            /// This method asynchronously downloads a compressed file from a predefined URL,
+            /// extracts it, and places the contents in a designated directory.
             /// </remarks>
+            /// <param name="downloadUrl">The URL from which to download the file.</param>
+            /// <param name="fileExtension">The extension of the compressed file (e.g., ".zip", ".7z").</param>
             [LoggingAspects.Logging]
             [LoggingAspects.AsyncExceptionSwallower]
             [LoggingAspects.InterfaceNotice]
-            public static async Task DownloadFFMPEG()
+            private async Task DownloadAndExtractFile()
             {
-                if (!CheckFFMPEGExistence())
+                SectionProgress = new("Downloading...", true);
+                if (!CheckIfFileExists(inuse.Existance))
                 {
-                    Logging.Log("Starting FFMPEG download...");
-                    HttpClient client = new HttpClient();
+                    Logging.Log($"Starting download from {inuse.downloadurl}...");
+                    HttpClient client = new();
 
                     try
                     {
-                        using (var response = await client.GetAsync(DownloadUrl, HttpCompletionOption.ResponseHeadersRead))
+                        using (var response = await client.GetAsync(inuse.downloadurl, HttpCompletionOption.ResponseHeadersRead))
                         {
                             response.EnsureSuccessStatusCode();
                             var totalBytes = response.Content.Headers.ContentLength ?? 0;
-                            Logging.Log("Downloading FFMPEG...");
+                            Logging.Log("Downloading file...");
 
                             using (var streamToReadFrom = await response.Content.ReadAsStreamAsync())
                             {
-                                string tempPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".7z");
-                                Logging.Log($"Temporary Download path: {tempPath}");
+                                string tempPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + inuse.Extension);
+                                Logging.Log($"Temporary download path: {tempPath}");
 
                                 using (var streamToWriteTo = File.Open(tempPath, FileMode.Create))
                                 {
                                     await CopyContentAsync(streamToReadFrom, streamToWriteTo, totalBytes);
                                 }
 
-                                Logging.Log("FFMPEG downloaded, extracting...");
-                                await Extract7zArchiveAsync(tempPath);
+                                Logging.Log("File downloaded, extracting...");
+                                await ExtractArchive(tempPath);
                                 File.Delete(tempPath);
                             }
                         }
@@ -392,14 +414,104 @@ namespace Cat
                     catch (Exception ex)
                     {
                         Logging.LogError(ex);
-                        Logging.Log("Failed to download or extract FFMPEG.");
+                        Logging.Log("Failed to download or extract the file.");
                     }
                 }
                 else
                 {
-                    Logging.Log("FFMpeg.exe already exists, skipping download.");
+                    Logging.Log("File already exists, skipping download.");
                 }
             }
+
+            private async Task ExtractArchive(string filePath)
+            {
+                switch (inuse.Extension)
+                {
+                    case ".7z":
+                        await Extract7zArchiveAsync(filePath);
+                        break;
+                    case ".zip":
+                        await ExtractZipArchive(filePath);
+                        break;
+                    default:
+                        throw new NotSupportedException("Unsupported file extension for extraction.");
+                }
+            }
+
+            /// <summary>
+            /// Extracts the downloaded archive and moves the executable to the correct directory.
+            /// </summary>
+            /// <param name="archivePath">The path to the downloaded archive.</param>
+            /// <remarks>
+            /// After downloading the archive, this method extracts the contents and moves the
+            /// executable to a predefined location for future use.
+            /// </remarks>
+            [LoggingAspects.Logging]
+            [LoggingAspects.AsyncExceptionSwallower]
+            [LoggingAspects.InterfaceNotice]
+            private async Task Extract7zArchiveAsync(string archivePath)
+            {
+                Logging.Log($"Extracting {archivePath} to {ExternalProcessesFolder}");
+                SectionProgress = new Logging.ProgressLogging("Extracting...", true);
+                var loader = new Logging.ProgressLogging.SpinnyThing();
+                try
+                {
+                    if (!Directory.Exists(ExternalProcessesFolder))
+                    {
+                        Directory.CreateDirectory(ExternalProcessesFolder);
+                    }
+
+                    using (var archive = SharpCompress.Archives.SevenZip.SevenZipArchive.Open(archivePath))
+                    {
+                        var totalEntries = archive.Entries.Count;
+                        int entriesExtracted = 0;
+
+                        foreach (var entry in archive.Entries.Where(entry => !entry.IsDirectory))
+                        {
+                            await Task.Run(() => entry.WriteToDirectory(ExternalProcessesFolder, new SharpCompress.Common.ExtractionOptions() { ExtractFullPath = true, Overwrite = true }));
+                            entriesExtracted++;
+                            int percentComplete = (int)(((double)entriesExtracted / totalEntries) * 100);
+                            SectionProgress.InvokeEvent(new((byte)percentComplete));
+                            OverallProgress.InvokeEvent(new((byte)(50 + percentComplete / 2)));
+                        }
+                    }
+                    Interface.AddLog("Locating and Moving executable...");
+                    string extractedFolderPath = Path.Combine(ExternalProcessesFolder, inuse.Archivename);
+                    if (inuse.Nest != null)
+                        extractedFolderPath = Path.Combine(extractedFolderPath, inuse.Nest);
+                    string extractpath = Path.Combine(extractedFolderPath, inuse.Filename);
+
+                    if (File.Exists(extractpath))
+                    {
+                        File.Move(extractpath, inuse.Existance, true);
+                        Logging.Log($"{inuse.Filename} moved to {inuse.Existance}.");
+                        Interface.AddLog("Download Complete");
+                        Directory.Delete(extractedFolderPath, true);
+                    }
+                    else
+                    {
+                        Logging.Log($"ERROR: {inuse.Filename} not found in expected path: {extractpath}");
+                    }
+                    loader.Stop();
+                    Logging.Log("Extraction and file movement completed successfully.");
+                }
+                catch (Exception ex)
+                {
+                    Logging.Log($"Error during extraction or file movement");
+                    Logging.LogError(ex);
+                }
+
+                SectionProgress.InvokeEvent(new(100));
+                OverallProgress.InvokeEvent(new(100));
+            }
+
+            [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
+            [Obsolete("This is a stub")]
+            private async Task ExtractZipArchive(string archivepath)
+            {
+                throw new NotImplementedException();
+            }
+
 
             /// <summary>
             /// Copies content from a source stream to a destination stream, reporting progress.
@@ -414,7 +526,7 @@ namespace Cat
             [LoggingAspects.Logging]
             [LoggingAspects.AsyncExceptionSwallower]
             [LoggingAspects.InterfaceNotice]
-            private static async Task CopyContentAsync(Stream source, Stream destination, long totalBytes)
+            private async Task CopyContentAsync(Stream source, Stream destination, long totalBytes)
             {
                 byte[] buffer = new byte[81920];
                 int bytesRead;
@@ -438,71 +550,12 @@ namespace Cat
                 }
             }
 
-            /// <summary>
-            /// Extracts the downloaded FFMPEG archive and moves the executable to the correct directory.
-            /// </summary>
-            /// <param name="archivePath">The path to the downloaded FFMPEG archive.</param>
-            /// <remarks>
-            /// After downloading the FFMPEG archive, this method extracts the contents and moves the FFMPEG
-            /// executable to a predefined location for future use.
-            /// </remarks>
-            [LoggingAspects.Logging]
-            [LoggingAspects.AsyncExceptionSwallower]
-            [LoggingAspects.InterfaceNotice]
-            private static async Task Extract7zArchiveAsync(string archivePath)
+            internal enum Processes : byte
             {
-                Logging.Log($"Extracting {archivePath} to {ExternalProcessesFolder}");
-                SectionProgress = new Logging.ProgressLogging("Extracting FFMPEG:", true);
-                var loader = new Logging.ProgressLogging.SpinnyThing();
-                try
-                {
-                    if (!Directory.Exists(ExternalProcessesFolder))
-                    {
-                        Directory.CreateDirectory(ExternalProcessesFolder);
-                    }
-
-                    using (var archive = SharpCompress.Archives.SevenZip.SevenZipArchive.Open(archivePath))
-                    {
-                        var totalEntries = archive.Entries.Count();
-                        int entriesExtracted = 0;
-
-                        foreach (var entry in archive.Entries.Where(entry => !entry.IsDirectory))
-                        {
-                            await Task.Run(() => entry.WriteToDirectory(ExternalProcessesFolder, new SharpCompress.Common.ExtractionOptions() { ExtractFullPath = true, Overwrite = true }));
-                            entriesExtracted++;
-                            int percentComplete = (int)(((double)entriesExtracted / totalEntries) * 100);
-                            SectionProgress.InvokeEvent(new((byte)percentComplete));
-                            OverallProgress.InvokeEvent(new((byte)(50 + percentComplete / 2)));
-                        }
-                    }
-                    Interface.AddLog("Locating and Moving executable...");
-                    string extractedFolderPath = Path.Combine(ExternalProcessesFolder, "ffmpeg-2024-03-25-git-ecdc94b97f-essentials_build", "bin");
-                    string extractedFFmpegPath = Path.Combine(extractedFolderPath, "ffmpeg.exe");
-                    string finalPath = Path.Combine(ExternalProcessesFolder, "ffmpeg.exe");
-
-                    if (File.Exists(extractedFFmpegPath))
-                    {
-                        File.Move(extractedFFmpegPath, finalPath, true);
-                        Logging.Log($"ffmpeg.exe moved to {finalPath}.");
-                        Interface.AddLog("FFMPeg " + Helpers.BackendHelping.Glycemia("Complete"));
-                        Directory.Delete(extractedFolderPath, true);
-                    }
-                    else
-                    {
-                        Logging.Log($"ffmpeg.exe not found in expected path: {extractedFFmpegPath}");
-                    }
-                    loader.Stop();
-                    Logging.Log("Extraction and file movement completed successfully.");
-                }
-                catch (Exception ex)
-                {
-                    Logging.Log($"Error during extraction or file movement: {ex.Message}");
-                    Logging.LogError(ex);
-                }
-
-                SectionProgress.InvokeEvent(new(100));
-                OverallProgress.InvokeEvent(new(100));
+                FFmpeg,
             }
+
+            private readonly record struct ProcessDetails(string Existance, string downloadurl, string Filename, string Archivename, string Extension, string Nest);
         }
 
         /// <summary>
@@ -510,14 +563,66 @@ namespace Cat
         /// </summary>
         public static partial class BackendHelping
         {
+            [LoggingAspects.Logging]
+            internal static object[] GetPropertyValues(object obj)
+            {
+                List<object> values = new List<object>();
+                PropertyInfo[] properties = obj.GetType().GetProperties();
+
+                foreach (PropertyInfo property in properties)
+                {
+                    if (property.GetIndexParameters().Length == 0)
+                    {
+                        try
+                        {
+                            values.Add(property.GetValue(obj));
+                        }
+                        catch (Exception ex)
+                        {
+                            Logging.LogError(ex);
+                        }
+                    }
+                }
+                return values.ToArray();
+            }
+            //xx values.RemoveAll(x => x == null || (x is string a && string.IsNullOrWhiteSpace(a)) || (x is System.Collections.IEnumerable enu && enu.Cast<object>().Count() < 1));
+
+
+            [LoggingAspects.Logging]
             internal static string ExtractGuid(string log)
             {
                 var match = ErrorGuidRegex().Match(log);
                 if (match.Success)
                 {
-                    return match.Groups[1].Value; // The first captured group... should... be the GUID.
+                    return match.Groups[1].Value; //!The first captured group... should... be the GUID.
                 }
-                return ""; // Return an empty string if no match is found.
+                return "";
+            }
+
+            [LoggingAspects.Logging]
+            [LoggingAspects.ConsumeException]
+            internal static IntPtr FindWindowWithPartialName(string name)
+            {
+                IntPtr result = IntPtr.Zero;
+                EnumWindowsProc callback = (hWnd, lParam) =>
+                {
+                    string windowText = GetWindowTextWrapper(hWnd);
+                    if (windowText.Contains(name, StringComparison.OrdinalIgnoreCase))
+                    {
+                        result = hWnd;
+                        return false;
+                    }
+                    return true; 
+                };
+                EnumWindowsWrapper(callback, IntPtr.Zero);
+
+                if (result != IntPtr.Zero)
+                {
+                    string finalWindowTitle = GetWindowTextWrapper(result);
+                    Logging.Log($">PINVOKE< Final matched window title: '{finalWindowTitle}'");
+                }
+
+                return result;
             }
 
             public static Screen GetContainingScreen(System.Windows.Window window)
@@ -601,6 +706,59 @@ namespace Cat
                 }
                 results = matches.ToArray();
                 return true;
+            }
+
+            internal static TextBlock FormatTextBlock(string text)
+            {
+                TextBlock textBlock = new TextBlock();
+                text = text.Replace("<tab>", new string(' ', 3)); 
+
+                string[] tokens = text.Split(new[] { "<t>", "</t>", "<i>", "</i>", "<l>", "</l>", "<s>", "</s>", "<st>", "</st>", "<q>", "</q>" }, StringSplitOptions.None);
+                bool isBoldUnderlined = false, isItalic = false, isSilver = false, isLargerBold = false, isUnderlined = false, silverital = false;
+
+                foreach (var token in tokens)
+                {
+                    switch (token)
+                    {
+                        case "<t>": isBoldUnderlined = true; break;
+                        case "</t>": isBoldUnderlined = false; break;
+                        case "<i>": isItalic = true; break;
+                        case "</i>": isItalic = false; break;
+                        case "<l>": isSilver = true; break;
+                        case "</l>": isSilver = false; break;
+                        case "<s>": isLargerBold = true; break;
+                        case "</s>": isLargerBold = false; break;
+                        case "<st>": isUnderlined = true; break;
+                        case "</st>": isUnderlined = false; break;
+                        case "<q>": silverital = true; break;
+                        case "</q>": silverital = false; break;
+                        default:
+                            var run = new Run(token);
+                            if (isBoldUnderlined)
+                            {
+                                run.FontWeight = FontWeights.Bold;
+                                run.TextDecorations = TextDecorations.Underline;
+                                run.FontSize = textBlock.FontSize + 4;
+                            }
+                            if (isItalic) run.FontStyle = FontStyles.Italic;
+                            if (isSilver) run.Foreground = new SolidColorBrush(Colors.Silver);
+                            if (silverital)
+                            {
+                                run.Foreground = new SolidColorBrush(Colors.Silver);
+                                run.FontStyle = FontStyles.Italic;
+                            }
+                            if (isLargerBold)
+                            {
+                                run.FontWeight = FontWeights.Bold;
+                                run.FontSize = textBlock.FontSize + 2;
+                            }
+                            if (isUnderlined) run.TextDecorations = TextDecorations.Underline;
+                            textBlock.Inlines.Add(run);
+                            break;
+                    }
+                }
+
+                return textBlock;
             }
 
             [LoggingAspects.Logging]
@@ -709,6 +867,7 @@ namespace Cat
                 { "StartWithInterface", (typeof(bool), false)},
                 { "StartWithConsole", (typeof(bool), false)},
                 { "StartWithVoice", (typeof(bool), false)},
+                { "AllowUrbanDictionaryDefinitionsWhenWordNotFound", (typeof(bool), false)},
             };
 
             internal static readonly Dictionary<string, List<(string, object)>> initalsettings = new()
@@ -731,7 +890,8 @@ namespace Cat
                 {
                     "Permissions", new() {
                         ("AllowRegistryEdits", false),
-                        ("LaunchAsAdmin", false)
+                        ("LaunchAsAdmin", false),
+                        ("AllowUrbanDictionaryDefinitionsWhenWordNotFound", false),
                     }
                 },
                 {
@@ -909,6 +1069,726 @@ namespace Cat
                     return value;
 
                 throw new KeyNotFoundException($"Key '{key}' not found in the JSON file.");
+            }
+        }
+
+        internal static class HTMLStuff
+        {
+            [LoggingAspects.Logging]
+            private static async Task<(bool, dynamic? d)> GetDictAPIDefinition(string word)
+            {
+                string url = $"https://api.dictionaryapi.dev/api/v2/entries/en/{word}";
+                Nullable<bool> d = null;
+                using (HttpClient client = new HttpClient())
+                using (HttpResponseMessage res = await client.GetAsync(url))
+                using (HttpContent content = res.Content)
+                {
+                    string data = await content.ReadAsStringAsync();
+                    if (data == null || data.Contains("No Definitions Found"))
+                    {
+                        return (false, d);
+                    }
+                    else return (true, JsonConvert.DeserializeObject<List<Dictionary<string, dynamic>>>(data)[0]);
+                }
+            }
+
+            [LoggingAspects.Logging]
+            private static async Task<(bool, dynamic? d)> GetUAPIDefinition(string word)
+            {
+                string url = $"https://unofficialurbandictionaryapi.com/api/search?term={word}&strict=false&matchCase=false&limit=3&page=1&multiPage=false&";
+                Nullable<bool> d = null;
+                using (HttpClient client = new HttpClient())
+                using (HttpResponseMessage res = await client.GetAsync(url))
+                using (HttpContent content = res.Content)
+                {
+                    string data = await content.ReadAsStringAsync();
+                    if (data == null || data.Contains("No Definitions Found"))
+                    {
+                        return (false, d);
+                    }
+                    else return (true, JsonConvert.DeserializeObject<Dictionary<string, dynamic>>(data));
+                }
+            }
+
+            [LoggingAspects.Logging]
+            [LoggingAspects.AsyncExceptionSwallower]
+            internal static async Task<(bool?, Dictionary<string, dynamic>?)> DefineWord(string word)
+            {
+                (bool state, dynamic? d) = await GetDictAPIDefinition(word);
+                if ((state == false || d == null))
+                    if (!UserData.AllowUrbanDictionaryDefinitionsWhenWordNotFound)
+                        return (false, null);
+                    else
+                    {
+                        (state, d) = await GetUAPIDefinition(word);
+                        if (state == false || d == null)
+                            return (false, null);
+                        else return (null, d);
+                    }
+                return (true, d);
+            }
+
+            [Obsolete("Use Dynamic Dictionary Instead", true)]
+            internal class DAPIDefinitionFULL
+            {
+                internal string word { get; set; }
+                internal string phonetic { get; set; }
+                internal List<PhoneticEntry> phonetics { get; set; }
+
+                [JsonProperty(PropertyName="meanings")]
+                internal List<Meaning> meanings { get; set; }
+                internal License license { get; set; }
+                internal List<string> sourceUrls { get; set; }
+
+                internal class PhoneticEntry
+                {
+                    internal string text { get; set; }
+                    internal string audio { get; set; }
+                    internal string sourceUrl { get; set; }
+                    internal License license { get; set; }
+                }
+
+                internal class Meaning
+                {
+                    internal string partOfSpeech { get; set; }
+                    internal List<Definition> definitions { get; set; }
+                    internal List<string> synonyms { get; set; }
+                    internal List<string> antonyms { get; set; }
+                }
+
+                internal class Definition
+                {
+                    internal string definition { get; set; }
+                    internal List<string> synonyms { get; set; }
+                    internal List<string> antonyms { get; set; }
+                }
+
+                internal class License
+                {
+                    internal string name { get; set; }
+                    internal string url { get; set; }
+                }
+            }
+
+            [Obsolete("Use Dynamic Dictionary Instead", true)]
+            internal class UrAPIDefinitionFULL
+            {
+                internal int statusCode { get; private set; }
+                internal string term { get; private set; }
+                internal bool found { get; private set; }
+
+                [JsonProperty("params")]
+                internal Dictionary<string, string> Params { get; private set; }
+                internal string totalPages { get; private set; }
+                internal List<Entry> data { get; private set; }
+
+
+                internal class Entry
+                {
+                    internal string word { get; private set; }
+                    internal string meaning { get; private set; }
+                    internal string example { get; private set; }
+                    internal string contributor { get; private set; }
+                    internal string date { get; private set; }
+                }
+            }
+        }
+
+        internal sealed class BinaryFileHandler : IDisposable
+        {
+            private FileStream fs;
+            private dynamic BinaryAccessStream;
+            private BinaryReader? backup;
+            /// <summary>
+            /// True = reading, false = writing, null = both
+            /// </summary>
+            private readonly bool? reading;
+            private readonly string filename;
+
+            internal enum Types : byte
+            {
+                Read = 0,
+                SevenBitEncodedInt = 1,
+                SevenBitEncodedInt64 = 2,
+                Boolean = 3,
+                Byte = 4,
+                Bytes = 5,
+                Char = 6,
+                Chars = 7,
+                Decimal = 8,
+                Double = 9,
+                [Obsolete("Unsupported from 5.0 or something, use Single or bytes.", true)]
+                Half = 10,
+                Int16 = 11,
+                Int32 = 12,
+                Int64 = 13,
+                SByte = 14,
+                Single = 15,
+                String = 16,
+                UInt16 = 17,
+                UInt32 = 18,
+                UInt64 = 19,
+                
+                ArrayCounter = 99,
+                List = 100,
+                Failed = 255,
+            }
+
+            internal static string ReturnRawBinary(string filepath)
+            {
+                string output = "";
+                ProcessStartInfo processStartInfo = new()
+                {
+                    FileName = "powershell.exe",
+                    RedirectStandardInput = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                using (Process process = new())
+                {
+                    process.StartInfo = processStartInfo;
+                    process.Start();
+
+                    using (StreamWriter sw = process.StandardInput)
+                    {
+                        if (sw.BaseStream.CanWrite)
+                        {
+                            sw.WriteLine("cd " + filepath);
+                            sw.WriteLine("format-hex stats.bin | more");
+                        }
+                    }
+                    output = process.StandardOutput.ReadToEnd();
+                    process.WaitForExit();
+                }
+
+                return output;
+            }
+
+            [LoggingAspects.Logging]
+            private (byte[], List<Types>) SerializeObject(object obj, int schema, bool? skipReflection /*true for skipping property serialisation, null for using the object as its (not put in an array), false for default property usage (classes)*/= false)
+            {
+                object[] inputs = [];
+                System.Collections.IEnumerable enume = null;
+                if (skipReflection == true)
+                    inputs = [obj];
+                else if (skipReflection == null)
+                {
+                    if ((obj is System.Collections.IEnumerable enu))
+                        enume = enu;
+                    else
+                        inputs = Helpers.BackendHelping.GetPropertyValues(obj);
+                }
+                else
+                    inputs = Helpers.BackendHelping.GetPropertyValues(obj);
+                if (enume != null)
+                    enume = inputs;
+                Logging.Log($"Property Values:", skipReflection == null ? enume : inputs);
+                List<Types> typeswritten = [];
+                Logging.Log("Writing to Memory stream...");
+                using (var ms = new MemoryStream())
+                {
+                    using (var w = new BinaryWriter(ms))
+                    {
+                        if (schema != -2)
+                        {
+                            Logging.Log($"Attaching schema {schema} to object");
+                            w.Write(schema);
+                        }
+                        foreach (var item in skipReflection == null? enume : inputs)
+                        {
+                            switch (item)
+                            {
+                                case string str:
+                                    w.Write((byte)Types.String);
+                                    w.Write(str);
+                                    typeswritten.Add(Types.String);
+                                    break;
+                                case bool boo:
+                                    w.Write((byte)Types.Boolean);
+                                    w.Write(boo);
+                                    typeswritten.Add(Types.Boolean);
+                                    break;
+                                case byte bt:
+                                    w.Write((byte)Types.Byte);
+                                    w.Write(bt);
+                                    typeswritten.Add(Types.Byte);
+                                    break;
+                                case byte[] bts:
+                                    w.Write((byte)Types.Bytes);
+                                    w.Write(bts.Length);
+                                    w.Write(bts);
+                                    typeswritten.Add(Types.Bytes);
+                                    break;
+                                case char c:
+                                    w.Write((byte)Types.Char);
+                                    w.Write(c);
+                                    typeswritten.Add(Types.Char);
+                                    break;
+                                case char[] cs:
+                                    w.Write((byte)Types.Chars);
+                                    w.Write(cs.Length);
+                                    w.Write(cs);
+                                    typeswritten.Add(Types.Chars);
+                                    break;
+                                case decimal d:
+                                    w.Write((byte)Types.Decimal);
+                                    w.Write(d);
+                                    typeswritten.Add(Types.Decimal);
+                                    break;
+                                case double dbl:
+                                    w.Write((byte)Types.Double);
+                                    w.Write(dbl);
+                                    typeswritten.Add(Types.Double);
+                                    break;
+                                case short s:
+                                    w.Write((byte)Types.Int16);
+                                    w.Write(s);
+                                    typeswritten.Add(Types.Int16);
+                                    break;
+                                case int i:
+                                    w.Write((byte)Types.Int32);
+                                    w.Write(i);
+                                    typeswritten.Add(Types.Int32);
+                                    break;
+                                case long l:
+                                    w.Write((byte)Types.Int64);
+                                    w.Write(l);
+                                    typeswritten.Add(Types.Int64);
+                                    break;
+                                case sbyte sb:
+                                    w.Write((byte)Types.SByte);
+                                    w.Write(sb);
+                                    typeswritten.Add(Types.SByte);
+                                    break;
+                                case float f:
+                                    w.Write((byte)Types.Single);
+                                    w.Write(f);
+                                    typeswritten.Add(Types.Single);
+                                    break;
+                                case ushort us:
+                                    w.Write((byte)Types.UInt16);
+                                    w.Write(us);
+                                    typeswritten.Add(Types.UInt16);
+                                    break;
+                                case uint ui:
+                                    w.Write((byte)Types.UInt32);
+                                    w.Write(ui);
+                                    typeswritten.Add(Types.UInt32);
+                                    break;
+                                case ulong ul:
+                                    w.Write((byte)Types.UInt64);
+                                    w.Write(ul);
+                                    typeswritten.Add(Types.UInt64);
+                                    break;
+                                case Tuple<byte, ulong, long> T_item when T_item.Item2 == 0xF123ABCF:
+                                    switch (T_item.Item1)
+                                    {
+                                        case 32 when T_item.Item3 <= int.MaxValue:
+                                            w.Write((byte)Types.SevenBitEncodedInt);
+                                            w.Write7BitEncodedInt((int)T_item.Item3);
+                                            typeswritten.Add(Types.SevenBitEncodedInt);
+                                            break;
+                                        case 64:
+                                            w.Write((byte)Types.SevenBitEncodedInt64);
+                                            w.Write7BitEncodedInt64(T_item.Item3);
+                                            typeswritten.Add(Types.SevenBitEncodedInt64);
+                                            break;
+                                        default:
+                                            throw new ArgumentException($"Expected 32 or 64 marker but got {T_item.Item1}");
+                                    }
+                                    break;
+                                case System.Collections.IEnumerable enu when item is not string && item is not byte[] && item is not char[]:
+                                    List<object> items = enu.Cast<object>().ToList();
+                                    w.Write((byte)Types.List);
+                                    w.Write(items.Count);
+                                    typeswritten.Add(Types.List);
+                                    foreach (var subItem in items)
+                                    {
+                                        (var a, var b) = SerializeObject(subItem, -2, true);
+                                        w.Write(a);
+                                        typeswritten.AddRange(b);
+                                    }
+                                    break;
+
+                                default:
+                                    throw new ArgumentException($"Unsupported type {item.GetType()}");
+                            }
+                        }
+                        w.Flush();
+                    }
+                    Logging.Log("Memory stream write operation complete.");
+                    return (ms.ToArray(), typeswritten);
+                }
+            }
+
+            internal BinaryFileHandler(string filepath, bool? reading)
+            {
+                filename = filepath;
+                FileAccess access = reading == true ? FileAccess.Read : reading == false ? FileAccess.Write : FileAccess.ReadWrite;
+                fs = new(filepath, FileMode.Open, access);
+                if (reading == true)
+                    BinaryAccessStream = new BinaryReader(fs);
+                else
+                    BinaryAccessStream = new BinaryWriter(fs);
+            }
+
+            [LoggingAspects.Logging]
+            [LoggingAspects.ConsumeException]
+            [LoggingAspects.RecordTime]
+            internal List<Types> AddObject(object obj, int schema = -1, bool? skipreflect = false)
+            {
+                Logging.Log("Seeking end..");
+                fs.Seek(0, SeekOrigin.End);
+                Logging.Log($"End: {fs.Position}");
+                if (!fs.CanRead)
+                {
+                    Logging.Log("ERROR: Cannot write to binary file in read mode!");
+                    return [Types.Failed,];
+                }
+                Logging.Log($"Serializing {obj.GetType().FullName}...");
+                (var stream, List<Types> typeswritten) = SerializeObject(obj, schema, skipreflect);
+                BinaryWriter w = (BinaryWriter)BinaryAccessStream;
+                Logging.Log($"Writing stream length {stream.Length}");
+                w.Write(stream.Length);
+                Logging.Log($"Writing stream...");
+                w.Write(stream);
+                Logging.Log("Write complete.");
+                w.Flush();
+                return typeswritten;
+            }
+
+            [LoggingAspects.Logging]
+            [LoggingAspects.ConsumeException]
+            [LoggingAspects.RecordTime]
+            internal List<Types> AddBareObjects(params object[] obj)
+            {
+                Logging.Log("Seeking end..");
+                fs.Seek(0, SeekOrigin.End);
+                Logging.Log($"End: {fs.Position}");
+                if (reading == true)
+                {
+                    Logging.Log("ERROR: Cannot write to binary file in read mode!");
+                    return [Types.Failed,];
+                }
+                List<Types> typeswritten = [];
+                BinaryWriter w = (BinaryWriter)BinaryAccessStream;
+                foreach (var obje in obj)
+                {
+                    Logging.Log($"Serializing {obje.GetType().FullName}...");
+                    (var stream, List<Types> atypeswritten) = SerializeObject(obje, -1, true);
+                    typeswritten.AddRange(atypeswritten);
+                    Logging.Log($"Writing stream length {stream.Length}");
+                    w.Write(stream.Length);
+                    Logging.Log($"Writing stream...");
+                    w.Write(stream);
+                    Logging.Log("Write complete.");
+                }
+                w.Flush();
+                return typeswritten;
+            }
+
+            internal List<object> ExtractObjectAtIndex(int index, bool schema = false)
+            {
+                if (!fs.CanRead)
+                {
+                    Interface.AddLog("Cannot read in write mode!");
+                    Logging.Log("Set Stream to Read mode when trying to read a file!");
+                    return [];
+                }
+                if (index < 0)
+                    return [];
+                int number = 0;
+                BinaryReader r = BinaryAccessStream;
+                fs.Seek(0, SeekOrigin.Begin);
+                int ObjLength = ReadLength(r, fs.Length);
+                if (ObjLength == -1)
+                    return [];
+                while (number != index)
+                {
+                    number++;
+                    fs.Seek(ObjLength, SeekOrigin.Current);
+                    ObjLength = ReadLength(r, fs.Length);
+                    if (ObjLength == -1)
+                        return [];
+                }
+                return schema ? ReadSchemaObject(fs.Position, ObjLength) : ReadObject(fs.Position, ObjLength);
+            }
+
+            private List<object> ReadObject(long position, int length)
+            {
+                List<List<object>> objects = [[]];
+                int currentCollectionIndex = 0;
+                List<int> remainingItems = [int.MaxValue];
+                BinaryReader r = (BinaryReader)BinaryAccessStream;
+
+                try
+                {
+                    fs.Seek(position, SeekOrigin.Begin);
+                    objects[currentCollectionIndex].Add(r.ReadInt32());
+                    long finalPosition = position + length;
+
+                    while (fs.Position < finalPosition)
+                    {
+                        if (fs.Position + 1 > finalPosition)
+                        {
+                            throw new EndOfStreamException("Not enough data available to read the type identifier.");
+                        }
+
+                        byte type = r.ReadByte();
+                        switch (type)
+                        {
+                            case (byte)Types.String:
+                                objects[currentCollectionIndex].Add(r.ReadString());
+                                break;
+                            case (byte)Types.Boolean:
+                                objects[currentCollectionIndex].Add(r.ReadBoolean());
+                                break;
+                            case (byte)Types.Byte:
+                                objects[currentCollectionIndex].Add(r.ReadByte());
+                                break;
+                            case (byte)Types.Bytes:
+                                int bytesLength = ReadLength(r, finalPosition);
+                                objects[currentCollectionIndex].Add(r.ReadBytes(bytesLength));
+                                break;
+                            case (byte)Types.Char:
+                                objects[currentCollectionIndex].Add(r.ReadChar());
+                                break;
+                            case (byte)Types.Chars:
+                                int charsLength = ReadLength(r, finalPosition);
+                                objects[currentCollectionIndex].Add(r.ReadChars(charsLength));
+                                break;
+                            case (byte)Types.Decimal:
+                                objects[currentCollectionIndex].Add(r.ReadDecimal());
+                                break;
+                            case (byte)Types.Double:
+                                objects[currentCollectionIndex].Add(r.ReadDouble());
+                                break;
+                            case (byte)Types.Int16:
+                                objects[currentCollectionIndex].Add(r.ReadInt16());
+                                break;
+                            case (byte)Types.Int32:
+                                objects[currentCollectionIndex].Add(r.ReadInt32());
+                                break;
+                            case (byte)Types.Int64:
+                                objects[currentCollectionIndex].Add(r.ReadInt64());
+                                break;
+                            case (byte)Types.SByte:
+                                objects[currentCollectionIndex].Add(r.ReadSByte());
+                                break;
+                            case (byte)Types.Single:
+                                objects[currentCollectionIndex].Add(r.ReadSingle());
+                                break;
+                            case (byte)Types.UInt16:
+                                objects[currentCollectionIndex].Add(r.ReadUInt16());
+                                break;
+                            case (byte)Types.UInt32:
+                                objects[currentCollectionIndex].Add(r.ReadUInt32());
+                                break;
+                            case (byte)Types.UInt64:
+                                objects[currentCollectionIndex].Add(r.ReadUInt64());
+                                break;
+                            case (byte)Types.SevenBitEncodedInt:
+                                objects[currentCollectionIndex].Add(r.Read7BitEncodedInt());
+                                break;
+                            case (byte)Types.SevenBitEncodedInt64:
+                                objects[currentCollectionIndex].Add(r.Read7BitEncodedInt64());
+                                break;
+                            case (byte)Types.List:
+                                int listCount = ReadLength(r, finalPosition);
+                                remainingItems.Add(listCount);
+                                currentCollectionIndex++;
+                                objects.Add([]);
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException("Unknown type encountered in binary file.");
+                        }
+
+                        if (remainingItems[currentCollectionIndex] > 0)
+                        {
+                            remainingItems[currentCollectionIndex]--;
+                            if (remainingItems[currentCollectionIndex] == 0 && currentCollectionIndex > 0)
+                            {
+                                FinalizeCollection(objects, remainingItems, ref currentCollectionIndex);
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logging.LogError(ex);
+                    throw;
+                }
+
+                return objects[0];
+            }
+
+            private static void FinalizeCollection(List<List<object>> objects, List<int> remainingItems, ref int currentCollectionIndex)
+            {
+                objects[currentCollectionIndex - 1].Add(objects[currentCollectionIndex]);
+                objects.RemoveAt(currentCollectionIndex);
+                remainingItems.RemoveAt(currentCollectionIndex);
+                currentCollectionIndex--;
+            }
+
+            private int ReadLength(BinaryReader r, long finalPosition)
+            {
+                if (fs.Position + 4 > finalPosition)
+                { 
+                    return -1;
+                }
+                return r.ReadInt32();
+            }
+
+            private bool ReadName(BinaryReader r, out string s)
+            {
+                try
+                {
+                    s = r.ReadString();
+                }
+                catch
+                {
+                    s = "";
+                    return false;
+                }
+                return true;
+            }
+
+            internal bool FindObjectIndexByName(string name, out int index)
+            {
+                index = -1;
+                if (!fs.CanRead)
+                {
+                    Interface.AddLog("Cannot read in write mode!");
+                    Logging.Log("Set Stream to Read mode when trying to read a file!");
+                    return false;
+                }
+                fs.Seek(0, SeekOrigin.Begin);
+                BinaryReader r = (BinaryReader)BinaryAccessStream;
+                int i = ReadLength(r, fs.Length);
+                _ = ReadLength(r, fs.Length);
+                long originalposition = fs.Position;
+                while (i != -1)
+                {
+                    try
+                    {
+                        byte type = r.ReadByte();
+                        Logging.Log($"Read byte: {type}");
+                        if (type == (byte)Types.String)
+                        {
+                            bool b = ReadName(r, out string s);
+                            if (!b || s == null)
+                                continue;
+                            Logging.Log($"Comparing {s} and {name}...");
+                            if (s.Contains(name, StringComparison.InvariantCultureIgnoreCase))
+                            {
+                                ++index;
+                                return true;
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        return false;
+                    }
+                    index++;
+                    fs.Seek(originalposition + i, SeekOrigin.Begin);
+                    i = ReadLength(r, fs.Length);
+                    _ = ReadLength(r, fs.Length);
+                    originalposition = fs.Position;
+                }
+                return false;
+            }
+
+            public async void Dispose()
+            {
+                try
+                {
+                    await fs.FlushAsync();
+                }
+                catch { }
+                Dispose(true);
+                GC.SuppressFinalize(this);
+            }
+
+            private void Dispose(bool disposing)
+            {
+                if (disposing)
+                {
+                    backup?.Dispose();
+                    BinaryAccessStream?.Dispose();
+                    fs?.Dispose();
+                }
+            }
+
+
+            internal bool AddSchema(out int index, string name, params (string, Types)[] types) 
+            {
+                index = 0;
+                if (filename != SchemaFile || !fs.CanWrite || !fs.CanRead)
+                {
+                    Interface.AddLog("Need to have read write perms to the schema file");
+                    Logging.Log("Need to have read write perms to the schema file");
+                    return false;
+                }
+                backup = new(fs, System.Text.Encoding.UTF8, true);
+                fs.Seek(0, SeekOrigin.Begin);
+                while (fs.Position < fs.Length)
+                {
+                    int len = ReadLength(backup, fs.Length);
+                    fs.Seek(len, SeekOrigin.Current);
+                    index++;
+                }
+                object[] owo = new object[(types.Length * 2) + 1];
+                owo[0] = name;
+                for (int i = 0; i < types.Length; i++)
+                {
+                    owo[i + 1] = types[i].Item1;
+                    owo[i + 2] = types[i].Item2;
+                }
+                fs.Seek(0, SeekOrigin.End);
+                AddObject(owo, -2, null);
+                return true;
+            }
+
+            internal List<object> ReadSchema(int index)
+            {
+                if (index < 0)
+                {
+                    return [];
+                }
+                return ExtractObjectAtIndex(index, true);
+            }
+
+            internal bool ReadSchema(string name, out List<object> objs)
+            {
+                bool b = FindObjectIndexByName(name, out int index);
+                if (!b || index == -1)
+                {
+                    objs = [];
+                    return false;
+                }
+                objs = ExtractObjectAtIndex(index, true);
+                return true;
+            }
+
+            private List<object> ReadSchemaObject(long positon, int length)
+            {
+                BinaryReader r = BinaryAccessStream;
+                List<object> values = new();
+                fs.Seek(positon, SeekOrigin.Begin);
+                values.Add(r.ReadString());
+                while (fs.Position < length)
+                    values.Add((r.ReadString(), (Types)r.ReadByte()));
+
+                return values;
+            }
+
+            internal static Dictionary<string, dynamic> DeserialiseObject(List<object> data)
+            {
+
             }
         }
     }

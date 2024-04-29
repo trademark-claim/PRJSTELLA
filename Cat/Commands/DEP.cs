@@ -12,8 +12,7 @@ namespace Cat
         [LoggingAspects.AsyncExceptionSwallower]
         internal static async Task<bool> DEP()
         {
-            string entry = commandstruct?.Parameters[0][0] as string;
-            if (entry == null)
+            if (commandstruct?.Parameters[0][0] is not string entry)
             {
                 Logging.Log("Expected string but parsing failed and returned either a null command struct or a null entry, please submit a bug report.");
                 Interface.AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
@@ -21,12 +20,12 @@ namespace Cat
             }
             if (entry == "ffmpeg")
             {
-                await Helpers.FFMpegManager.DownloadFFMPEG();
-                Logging.Log("DEP Execution " + Helpers.BackendHelping.Glycemia("Complete"));
+                _ = new Helpers.EPManagement(Helpers.EPManagement.Processes.FFmpeg);
+                Logging.Log("DEP Execution Complete");
             }
             else
             {
-                Interface.AddLog("Unrecognised Process name.");
+                Interface.AddLog("Unrecognised Process name. (FFMPEG)");
                 return false;
             }
             return true;

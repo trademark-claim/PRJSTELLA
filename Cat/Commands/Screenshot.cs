@@ -15,7 +15,8 @@ namespace Cat
         [LoggingAspects.Logging]
         internal static async Task<bool> Screenshot()
         {
-            await @interface.Hide();
+            if (@interface != null) 
+                await @interface.Hide();
             int? entryN = (int?)(commandstruct?.Parameters[0][0]);
             if (entryN == null)
             {
@@ -106,7 +107,7 @@ namespace Cat
                         return false;
                     }
             }
-            @interface.Show();
+            @interface?.Show();
             return true;
         }
     }

@@ -1,19 +1,20 @@
 ﻿using System.Runtime.InteropServices;
+using System.Text;
 
 namespace Cat
 {
-    internal static class PInvoke
+    internal static partial class PInvoke
     {
-        #region P/Invoke Declarations
+        [LibraryImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool GetCursorPos(out POINT lpPoint);
 
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool GetCursorPos(out POINT lpPoint);
+        [LibraryImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool SetCursorPos(int X, int Y);
 
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool SetCursorPos(int X, int Y);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern uint SendInput(uint nInputs, [MarshalAs(UnmanagedType.LPArray), In] INPUT[] pInputs, int cbSize);
+        [LibraryImport("user32.dll", SetLastError = true)]
+        private static partial uint SendInput(uint nInputs, [MarshalAs(UnmanagedType.LPArray), In] INPUT[] pInputs, int cbSize);
 
         [DllImport("user32.dll", SetLastError = true)]
         private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
@@ -21,64 +22,164 @@ namespace Cat
         [DllImport("user32.dll", SetLastError = true)]
         private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 
-        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
         private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelProc lpfn, IntPtr hMod, uint dwThreadId);
 
-        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        private static extern bool UnhookWindowsHookEx(IntPtr hhk);
+        [LibraryImport("user32.dll", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool UnhookWindowsHookEx(IntPtr hhk);
 
-        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
-        private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+        [LibraryImport("user32.dll", StringMarshalling = StringMarshalling.Utf16, SetLastError = true)]
+        private static partial IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
 
         [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         private static extern IntPtr GetModuleHandle(string lpModuleName);
 
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern short GetAsyncKeyState(int vKey);
+        [LibraryImport("user32.dll", SetLastError = true)]
+        private static partial short GetAsyncKeyState(int vKey);
 
         [DllImport("user32.dll", SetLastError = true)]
-        private static extern int ShowCursor(bool bShow);
-
-        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-        private static extern IntPtr LoadCursorFromFile(string path);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool SetSystemCursor(IntPtr hcur, uint id);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool SystemParametersInfo(uint uiAction, uint uiParam, IntPtr pvParam, uint fWinIni);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern IntPtr GetDesktopWindow();
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern IntPtr GetWindowDC(IntPtr hWnd);
-
-        [DllImport("gdi32.dll", SetLastError = true)]
-        private static extern uint BitBlt(IntPtr hDestDC, int xDest, int yDest, int wDest, int hDest, IntPtr hSrcDC, int xSrc, int ySrc, CopyPixelOperation rop);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool ReleaseDC(IntPtr hWnd, IntPtr hDC);
-
-        [DllImport("gdi32.dll", SetLastError = true)]
-        private static extern IntPtr CreateCompatibleBitmap(IntPtr hDC, int width, int height);
-
-        [DllImport("gdi32.dll", SetLastError = true)]
-        private static extern IntPtr CreateCompatibleDC(IntPtr hDC);
-
-        [DllImport("gdi32.dll", SetLastError = true)]
-        private static extern IntPtr SelectObject(IntPtr hDC, IntPtr hObject);
-
-        [DllImport("gdi32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool DeleteObject(IntPtr hObject);
+        private static extern int ShowCursor([MarshalAs(UnmanagedType.Bool)] bool bShow);
 
-        [DllImport("gdi32.dll", SetLastError = true)]
-        private static extern bool DeleteDC(IntPtr hDC);
 
-        #endregion P/Invoke Declarations
+        [LibraryImport("user32.dll", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+        private static partial IntPtr LoadCursorFromFile(string path);
+
+        [LibraryImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool SetSystemCursor(IntPtr hcur, uint id);
+
+        [LibraryImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool SystemParametersInfo(uint uiAction, uint uiParam, IntPtr pvParam, uint fWinIni);
+
+        [LibraryImport("user32.dll", SetLastError = true)]
+        private static partial IntPtr GetDesktopWindow();
+
+        [LibraryImport("user32.dll", SetLastError = true)]
+        private static partial IntPtr GetWindowDC(IntPtr hWnd);
+
+        [LibraryImport("gdi32.dll", SetLastError = true)]
+        private static partial uint BitBlt(IntPtr hDestDC, int xDest, int yDest, int wDest, int hDest, IntPtr hSrcDC, int xSrc, int ySrc, CopyPixelOperation rop);
+
+        [LibraryImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool ReleaseDC(IntPtr hWnd, IntPtr hDC);
+
+        [LibraryImport("gdi32.dll", SetLastError = true)]
+        private static partial IntPtr CreateCompatibleBitmap(IntPtr hDC, int width, int height);
+
+        [LibraryImport("gdi32.dll", SetLastError = true)]
+        private static partial IntPtr CreateCompatibleDC(IntPtr hDC);
+
+        [LibraryImport("gdi32.dll", SetLastError = true)]
+        private static partial IntPtr SelectObject(IntPtr hDC, IntPtr hObject);
+
+        [LibraryImport("gdi32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool DeleteObject(IntPtr hObject);
+
+        [LibraryImport("gdi32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool DeleteDC(IntPtr hDC);
+
+        [LibraryImport("user32.dll", SetLastError = true)]
+        private static partial IntPtr GetForegroundWindow();
+
+        [LibraryImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+
+        [LibraryImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool EnumWindows(EnumWindowsProc enumProc, IntPtr lParam);
+
+        [DllImport("user32.dll", SetLastError =true)]
+        private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern int GetWindowTextLength(IntPtr hWnd);
+
+        [LibraryImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static partial bool SetForegroundWindow(IntPtr hWnd);
+
 
         #region Internal Methods Wrapping P/Invoke
+
+        internal static bool SetForegroundWindowWrapper(IntPtr hWnd)
+        {
+            Logging.Log(">PINVOKE< Setting foreground window...");
+            bool result = SetForegroundWindow(hWnd);
+            Logging.Log($">PINVOKE< Set froground window to {hWnd}.");
+            LogMarshalError();
+            return result;
+        }
+
+        internal static bool EnumWindowsWrapper(EnumWindowsProc callback, IntPtr lParam)
+        {
+            Logging.Log(">PINVOKE< Starting window enumeration...");
+            bool result = EnumWindows(callback, lParam);
+            Logging.Log(">PINVOKE< Window enumeration completed.");
+            LogMarshalError();
+            return result;
+        }
+
+        internal static int GetWindowTextLengthWrapper(IntPtr hWnd)
+        {
+            Logging.Log($">PINVOKE< Getting text length from window handle: {hWnd}...");
+            int length = GetWindowTextLength(hWnd);
+            Logging.Log($">PINVOKE< Text length: {length}");
+            LogMarshalError();
+            return length;
+        }
+
+        internal static string GetWindowTextWrapper(IntPtr hWnd)
+        {
+            int length = GetWindowTextLength(hWnd);
+            if (length > 0)
+            {
+                StringBuilder sb = new StringBuilder(length + 1);
+                Logging.Log($">PINVOKE< Getting text from window handle: {hWnd}...");
+                GetWindowText(hWnd, sb, sb.Capacity);
+                Logging.Log($">PINVOKE< Retrieved text: {sb}");
+                LogMarshalError();
+                return sb.ToString();
+            }
+            return string.Empty;
+        }
+
+        internal static IntPtr SendMessageWrapper(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam)
+        {
+            Logging.Log(">PINVOKE< Getting Foreground Desktop Window...");
+            IntPtr hWnd2 = SendMessage(hWnd, Msg, wParam, lParam);
+            Logging.Log($">PINVOKE< GetForegroundWindow returned hWnd: {hWnd2}");
+            LogMarshalError();
+            return hWnd2;
+        }
+
+
+        internal static bool ShowWindowWrapper(IntPtr hWnd, int nCmdShow)
+        {
+            Logging.Log($">PINVOKE< Sending {nCmdShow} message to {hWnd}...");
+            bool b = ShowWindow(hWnd, nCmdShow);
+            Logging.Log($">PINVOKE< ShowWindow returned bool: {b}");
+            LogMarshalError();
+            return b;
+        }
+
+        internal static IntPtr GetForegroundWindowWrapper()
+        {
+            Logging.Log(">PINVOKE< Getting Foreground Desktop Window...");
+            IntPtr hWnd = GetForegroundWindow();
+            Logging.Log($">PINVOKE< GetForegroundWindow returned hWnd: {hWnd}");
+            LogMarshalError();
+            return hWnd;
+        }
 
         internal static IntPtr GetDesktopWindowWrapper()
         {

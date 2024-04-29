@@ -42,6 +42,7 @@ global using MessageBox = System.Windows.MessageBox;
 global using Point = System.Windows.Point;
 global using Rectangle = System.Windows.Shapes.Rectangle;
 global using Size = System.Windows.Size;
+global using Image = System.Drawing.Image;
 using NAudio.Wave;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -1162,7 +1163,22 @@ namespace Cat
                     { "activate voice", 38 },
 
                     { "close log editor", 39 },
-                    { "cle", 39 }
+                    { "cle", 39 },
+
+                    { "define", 40 },
+
+                    { "write r6 scores", 41 },
+                    { "wr6s", 41 },
+
+                    { "read object", 42 },
+                    { "ro", 42 },
+
+                    { "read binary", 43 },
+                    { "rb", 43 },
+
+                    { "write schema", 44 },
+
+                    { "read schema", 45 },
                 };
 
                 /// <summary>
@@ -1537,6 +1553,60 @@ namespace Cat
                             { "function", (Func<bool>)Cat.Commands.CLE},
                             { "shortcut", ""}
                         }
+                    },
+                    {
+                        40, new Dictionary<string, object>
+                        {
+                            { "desc", "Defines a word using the DictionaryAPI or the UrbanDictionaryAPI (if allowed)" },
+                            { "params", "word{string}" },
+                            { "function", (Func<bool>)Cat.Commands.Define},
+                            { "shortcut", ""}
+                        }
+                    },
+                    {
+                        41, new Dictionary<string, object>
+                        {
+                            { "desc", "Writes the preset r6 data to stats.bin" },
+                            { "params", "" },
+                            { "function", (Func<bool>)Scores.LoadR6},
+                            { "shortcut", ""}
+                        }
+                    },
+                    {
+                        42, new Dictionary<string, object>
+                        {
+                            { "desc", "[DEBUG] Reads a saved object from stats.bin" },
+                            { "params", "objectname{string}" },
+                            { "function", (Func<bool>)Commands.ReadObject},
+                            { "shortcut", ""}
+                        }
+                    },
+                    {
+                        43, new Dictionary<string, object>
+                        {
+                            { "desc", "[DEBUG] Prints the Raw BinaHex and Translation of a binary file" },
+                            { "params", "filename{string}" },
+                            { "function", (Func<bool>)Commands.PRB},
+                            { "shortcut", ""}
+                        }
+                    },
+                    {
+                        44, new Dictionary<string, object>
+                        {
+                            { "desc", "Writes a sequence of types to a schema" },
+                            { "params", "types_list{string}" },
+                            { "function", (Func<bool>)Commands.WriteSchema},
+                            { "shortcut", ""}
+                        }
+                    },
+                    {
+                        45, new Dictionary<string, object>
+                        {
+                            { "desc", "Reads a schema based off name or index" },
+                            { "params", "index{int} | name{string}" },
+                            { "function", (Func<bool>)Commands.ReadSchema},
+                            { "shortcut", ""}
+                        }
                     }
                 };
 
@@ -1594,7 +1664,7 @@ namespace Cat
                 {
                     commandstruct = null;
                     Commands.commandstruct = null;
-                    if (non_interface_text == null)
+                    if (non_interface_text == null && @interface != null)
                         cmdtext = @interface.inputTextBox.Text.Trim().ToLower();
                     else
                         cmdtext = non_interface_text;
@@ -1650,7 +1720,8 @@ namespace Cat
                         Logging.Log("Command Not Found");
                         Interface.AddLog($"No recognisable command '{call}', please use 'help ;commands' for a list of commands!");
                     }
-                    @interface.inputTextBox.Text = string.Empty;
+                    if (@interface != null)
+                        @interface.inputTextBox.Text = string.Empty;
                     Interface.AddLog("\n");
                 }
 

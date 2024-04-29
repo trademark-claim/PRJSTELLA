@@ -24,7 +24,13 @@ namespace Cat
             DiscordRP.Init();
             Catowo owo = new Catowo();
             owo.Show();
-            owo.ToggleInterface();
+            if (UserData.StartWithInterface)
+                owo.ToggleInterface();
+            if (UserData.StartWithVoice)
+            {
+                Logging.Log("Allowing voice commands through startup...");
+                Commands.AV();
+            }
         }
 
         /// <summary>
@@ -116,6 +122,19 @@ namespace Cat
             }
             Logging.Log("Created " + LogPath + " log file.");
 
+            if (!File.Exists(StatsFile))
+            {
+                Logging.Log("Creating stats file");
+                File.Create(StatsFile).Dispose();
+                Logging.Log("Created stats file");
+            }
+            if (!File.Exists(SchemaFile))
+            {
+                Logging.Log("Creating schema file");
+                File.Create(SchemaFile).Dispose();
+                Logging.Log("Created schema file");
+            }
+
             if (!File.Exists(UserDataFile))
             {
                 Logging.Log("Creating user data file");
@@ -155,11 +174,6 @@ namespace Cat
             {
                 Logging.Log("Opening Console on Startup...");
                 Commands.OpenLogger();
-            }
-            else if (UserData.StartWithVoice)
-            {
-                Logging.Log("Allowing voice commands through startup...");
-                Commands.AV();
             }
         }
     }
