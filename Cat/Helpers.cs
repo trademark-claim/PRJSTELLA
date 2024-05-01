@@ -25,7 +25,9 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Threading;
+using System.Xml;
 using System.Xml.Linq;
+using static Cat.Helpers.BinaryFileHandler;
 using CLR = System.Drawing.Color;
 using Formatting = Newtonsoft.Json.Formatting;
 using JsonSerializer = Newtonsoft.Json.JsonSerializer;
@@ -1256,8 +1258,7 @@ namespace Cat
                     {
                         if (sw.BaseStream.CanWrite)
                         {
-                            sw.WriteLine("cd " + filepath);
-                            sw.WriteLine("format-hex stats.bin | more");
+                            sw.WriteLine($"format-hex \"{filepath}\" | more");
                         }
                     }
                     output = process.StandardOutput.ReadToEnd();
@@ -1270,6 +1271,7 @@ namespace Cat
             [LoggingAspects.Logging]
             private (byte[], List<Types>) SerializeObject(object obj, int schema, bool? skipReflection /*true for skipping property serialisation, null for using the object as its (not put in an array), false for default property usage (classes)*/= false)
             {
+                Logging.Log($"Recursion: {skipReflection}");
                 object[] inputs = [];
                 System.Collections.IEnumerable enume = null;
                 if (skipReflection == true)
@@ -1302,96 +1304,115 @@ namespace Cat
                             switch (item)
                             {
                                 case string str:
+                                    Logging.Log("Writing string");
                                     w.Write((byte)Types.String);
                                     w.Write(str);
                                     typeswritten.Add(Types.String);
                                     break;
                                 case bool boo:
+                                    Logging.Log("Writing bool");
                                     w.Write((byte)Types.Boolean);
                                     w.Write(boo);
                                     typeswritten.Add(Types.Boolean);
                                     break;
                                 case byte bt:
+                                    Logging.Log("Writing byte");
                                     w.Write((byte)Types.Byte);
                                     w.Write(bt);
                                     typeswritten.Add(Types.Byte);
                                     break;
                                 case byte[] bts:
+                                    Logging.Log("Writing byte array");
                                     w.Write((byte)Types.Bytes);
                                     w.Write(bts.Length);
                                     w.Write(bts);
                                     typeswritten.Add(Types.Bytes);
                                     break;
                                 case char c:
+                                    Logging.Log("Writing char");
                                     w.Write((byte)Types.Char);
                                     w.Write(c);
                                     typeswritten.Add(Types.Char);
                                     break;
                                 case char[] cs:
+                                    Logging.Log("Writing char array");
                                     w.Write((byte)Types.Chars);
                                     w.Write(cs.Length);
                                     w.Write(cs);
                                     typeswritten.Add(Types.Chars);
                                     break;
                                 case decimal d:
+                                    Logging.Log("Writing decimal");
                                     w.Write((byte)Types.Decimal);
                                     w.Write(d);
                                     typeswritten.Add(Types.Decimal);
                                     break;
                                 case double dbl:
+                                    Logging.Log("Writing double");
                                     w.Write((byte)Types.Double);
                                     w.Write(dbl);
                                     typeswritten.Add(Types.Double);
                                     break;
                                 case short s:
+                                    Logging.Log("Writing short");
                                     w.Write((byte)Types.Int16);
                                     w.Write(s);
                                     typeswritten.Add(Types.Int16);
                                     break;
                                 case int i:
+                                    Logging.Log("Writing int");
                                     w.Write((byte)Types.Int32);
                                     w.Write(i);
                                     typeswritten.Add(Types.Int32);
                                     break;
                                 case long l:
+                                    Logging.Log("Writing long");
                                     w.Write((byte)Types.Int64);
                                     w.Write(l);
                                     typeswritten.Add(Types.Int64);
                                     break;
                                 case sbyte sb:
+                                    Logging.Log("Writing sbyte");
                                     w.Write((byte)Types.SByte);
                                     w.Write(sb);
                                     typeswritten.Add(Types.SByte);
                                     break;
                                 case float f:
+                                    Logging.Log("Writing float");
                                     w.Write((byte)Types.Single);
                                     w.Write(f);
                                     typeswritten.Add(Types.Single);
                                     break;
                                 case ushort us:
+                                    Logging.Log("Writing ushort");
                                     w.Write((byte)Types.UInt16);
                                     w.Write(us);
                                     typeswritten.Add(Types.UInt16);
                                     break;
                                 case uint ui:
+                                    Logging.Log("Writing uint");
                                     w.Write((byte)Types.UInt32);
                                     w.Write(ui);
                                     typeswritten.Add(Types.UInt32);
                                     break;
                                 case ulong ul:
+                                    Logging.Log("Writing ulong");
                                     w.Write((byte)Types.UInt64);
                                     w.Write(ul);
                                     typeswritten.Add(Types.UInt64);
                                     break;
                                 case Tuple<byte, ulong, long> T_item when T_item.Item2 == 0xF123ABCF:
+                                    Logging.Log($"Processing special tuple with marker {T_item.Item1}");
                                     switch (T_item.Item1)
                                     {
                                         case 32 when T_item.Item3 <= int.MaxValue:
+                                            Logging.Log("Writing 7-bit encoded int");
                                             w.Write((byte)Types.SevenBitEncodedInt);
                                             w.Write7BitEncodedInt((int)T_item.Item3);
                                             typeswritten.Add(Types.SevenBitEncodedInt);
                                             break;
                                         case 64:
+                                            Logging.Log("Writing 7-bit encoded int64");
                                             w.Write((byte)Types.SevenBitEncodedInt64);
                                             w.Write7BitEncodedInt64(T_item.Item3);
                                             typeswritten.Add(Types.SevenBitEncodedInt64);
@@ -1401,25 +1422,28 @@ namespace Cat
                                     }
                                     break;
                                 case System.Collections.IEnumerable enu when item is not string && item is not byte[] && item is not char[]:
+                                    Logging.Log("Writing enumerable");
                                     List<object> items = enu.Cast<object>().ToList();
                                     w.Write((byte)Types.List);
                                     w.Write(items.Count);
                                     typeswritten.Add(Types.List);
                                     foreach (var subItem in items)
                                     {
+                                        Logging.Log($"Serializing item of type {subItem.GetType()}");
                                         (var a, var b) = SerializeObject(subItem, -2, true);
                                         w.Write(a);
                                         typeswritten.AddRange(b);
                                     }
                                     break;
-
                                 default:
+                                    Logging.Log($"Unsupported type {item.GetType()}");
                                     throw new ArgumentException($"Unsupported type {item.GetType()}");
                             }
                         }
                         w.Flush();
                     }
                     Logging.Log("Memory stream write operation complete.");
+                    Logging.Log(ms.ToArray());
                     return (ms.ToArray(), typeswritten);
                 }
             }
@@ -1786,10 +1810,94 @@ namespace Cat
                 return values;
             }
 
-            internal static Dictionary<string, dynamic> DeserialiseObject(List<object> data)
+            [LoggingAspects.Logging]
+            internal Dictionary<string, dynamic> DeserialiseObject(List<object> data)
             {
-                return new() { };
+                Logging.Log("Deserialising: ", data);
+                var d = new Dictionary<string, dynamic>();
+                if (data == null || data.Count < 1)
+                    return d;
+                if (data[0] is not int a)
+                {
+                    Logging.Log("ERROR: Int was not first object, assigning 1-base index numbers instead");
+                    for (int i = 0; i < data.Count; i++)
+                        d.Add((i + 1).ToString(), data[i]);
+                    return d;
+                }
+                List<object> l = ReadSchema(a);
+                if (l == null || l.Count < 1)
+                {
+                    Logging.Log($"ERROR: Failed to find schema at index {a} for object, assigning 1-base index numbers instead");
+                    for (int i = 0; i < data.Count; i++)
+                        d.Add((i + 1).ToString(), data[i]);
+                    return d;
+                }
+                if (l.Count / 2 != data.Count)
+                {
+                    Logging.Log("ERROR: Data length and List length do not match!");
+                }
+                int j = 0;
+                for (int i = 0; i < l.Count; i += 2)
+                {
+                    if (i + 1 > l.Count - 1)
+                    {
+                        Logging.Log("ERROR: Odd amount of values in schema reading, has to be an error as they're sorted in name-type pairs. Skipping (this will probably break the rest of the deserialisation).");
+                        continue;
+                    }
+                    if (j > data.Count - 1)
+                    {
+                        Logging.Log("ERROR: Attempted to access index larger than data array's allocation! This... shouldn't happen. Are you using the right schema?");
+                        break;
+                    }
+                    if (CheckTypeMatch((byte)l[i + 1], data[j]))
+                        d.Add((string)l[i], data[j]);
+                    j++;
+                }
+                return d;
             }
         }
+
+        [LoggingAspects.Logging]
+        internal static bool CheckTypeMatch(byte enumValue, object obj)
+        {
+            if (obj == null) 
+                return false;
+
+            Types typeEnum;
+            try
+            {
+                typeEnum = (Types)enumValue;
+            }
+            catch (Exception)
+            {
+                Logging.Log($"ERROR: Schema type '{enumValue}' unsuccessfully case to to BFH.Types!");
+                return false;
+            }
+
+            Type objectType = obj.GetType();
+            Logging.Log($"Object type: {objectType.FullName}", $"Target Type: {typeEnum}");
+            
+            return typeEnum switch
+            {
+                Types.Boolean => objectType == typeof(bool),
+                Types.Byte => objectType == typeof(byte),
+                Types.Bytes => objectType == typeof(byte[]),
+                Types.Char => objectType == typeof(char),
+                Types.Chars => objectType == typeof(char[]),
+                Types.Decimal => objectType == typeof(decimal),
+                Types.Double => objectType == typeof(double),
+                Types.Int16 => objectType == typeof(short),
+                Types.Int32 => objectType == typeof(int),
+                Types.Int64 => objectType == typeof(long),
+                Types.SByte => objectType == typeof(sbyte),
+                Types.Single => objectType == typeof(float),
+                Types.String => objectType == typeof(string),
+                Types.UInt16 => objectType == typeof(ushort),
+                Types.UInt32 => objectType == typeof(uint),
+                Types.UInt64 => objectType == typeof(ulong),
+                _ => false,
+            };
+        }
+
     }
 }

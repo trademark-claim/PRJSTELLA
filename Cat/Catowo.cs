@@ -673,9 +673,12 @@ namespace Cat
         {
             if (Interface.inst != null)
             {
-                Interface.inst?.Children.Clear();
-                Interface.inst?.parent?.Children.Remove(inst);
-                Interface.inst = null;
+                Interface.inst.ShrinkAndDisappear(() =>
+                {
+                    Interface.inst.Children.Clear();
+                    Interface.inst.parent?.Children.Remove(Interface.inst);
+                    Interface.inst = null;
+                });
                 MakeFunnyWindow();
                 return false;
             }
@@ -683,7 +686,6 @@ namespace Cat
             {
                 MakeNormalWindow();
                 canvas.Children.Add(new Interface(canvas));
-                Interface.inst.AnimateUp();
                 Objects.CursorEffects.MoveTop();
                 Interface.inst.inputTextBox?.Focus();
                 return true;
@@ -727,8 +729,8 @@ namespace Cat
             /// </summary>
             internal Interface(Canvas parent)
             {
-                var screen = GetScreen();
-                SetTop(this, 0 - screen.Bounds.Height);
+                //var screen = GetScreen();
+                //SetTop(this, 0 - screen.Bounds.Height);
                 this.parent = parent;
                 CommandProcessing.@interface = this;
                 inst?.Children.Clear();
@@ -737,6 +739,7 @@ namespace Cat
                 inst = this;
                 Backg = InitBackg();
                 InitializeComponents();
+                AnimateUp();
                 //SetBottom(this, 0);
                 //MouseMove += (s, e) => Catowo.inst.ToggleInterface();
             }
@@ -829,12 +832,7 @@ namespace Cat
 #endif
                 Children.Add(inputTextBox);
                 Children.Add(logListBox);
-                //Catowo.inst.Focus();
                 inputTextBox.Focus();
-
-                //Children.Add(Marker);
-                //SetLeft<double>(Marker, screenWidth - 10);
-                //SetTop<double>(Marker, screenHeight - 10);
             }
 
             /// <summary>
@@ -980,9 +978,10 @@ namespace Cat
             {
                 TranslateTransform trans = new TranslateTransform();
                 RenderTransform = trans;
-                double screenHeight = SystemParameters.FullPrimaryScreenHeight;
+                double screenHeight = Catowo.GetScreen().Bounds.Height;
                 double initialOffset = screenHeight -ActualHeight;
-                double duration = 1.5;
+                double duration = 1.0;
+                trans.Y = -initialOffset;
 
                 Storyboard storyboard = new Storyboard();
 
@@ -996,10 +995,68 @@ namespace Cat
                 Storyboard.SetTarget(bounceUp, this);
                 Storyboard.SetTargetProperty(bounceUp, new PropertyPath("(UIElement.RenderTransform).(TranslateTransform.Y)"));
                 storyboard.Children.Add(bounceUp);
-                bounceUp.BeginTime = TimeSpan.FromSeconds(duration);
                 storyboard.Begin(this, true);
             }
-            
+
+            internal async void ShrinkAndDisappear(Action complete)
+            {
+                var sc = Catowo.GetScreen().Bounds;
+                double initialWidth = sc.Width;
+                double initialHeight = sc.Height;
+                ScaleTransform scale = new(1, 1);
+                TranslateTransform translate = new();
+                TransformGroup transforms = new();
+                transforms.Children.Add(scale);
+                transforms.Children.Add(translate);
+                RenderTransform = transforms;
+
+                double duration = 0.25; 
+
+                Storyboard storyboard = new();
+                DoubleAnimation scaleAnimation = new()
+                {
+                    From = 1,
+                    To = 0,
+                    Duration = TimeSpan.FromSeconds(duration)
+                };
+                Storyboard.SetTarget(scaleAnimation, this);
+                Storyboard.SetTargetProperty(scaleAnimation, new PropertyPath("RenderTransform.Children[0].ScaleX"));
+                storyboard.Children.Add(scaleAnimation);
+
+                DoubleAnimation scaleAnimationY = scaleAnimation.Clone();
+                Storyboard.SetTargetProperty(scaleAnimationY, new PropertyPath("RenderTransform.Children[0].ScaleY"));
+                storyboard.Children.Add(scaleAnimationY);
+
+                DoubleAnimation translateXAnimation = new()
+                {
+                    From = 0,
+                    To = initialWidth / 2,
+                    Duration = TimeSpan.FromSeconds(duration)
+                };
+                Storyboard.SetTarget(translateXAnimation, this);
+                Storyboard.SetTargetProperty(translateXAnimation, new PropertyPath("RenderTransform.Children[1].X"));
+                storyboard.Children.Add(translateXAnimation);
+
+                DoubleAnimation translateYAnimation = new()
+                {
+                    From = 0,
+                    To = initialHeight / 2,
+                    Duration = TimeSpan.FromSeconds(duration)
+                };
+                Storyboard.SetTarget(translateYAnimation, this);
+                Storyboard.SetTargetProperty(translateYAnimation, new PropertyPath("RenderTransform.Children[1].Y"));
+                storyboard.Children.Add(translateYAnimation);
+
+                // Animation begins
+                storyboard.Begin(this, true);
+                await Task.Delay(TimeSpan.FromSeconds(duration + 0.1)); 
+                Logging.Log("Shrink animation complete by async delay.");
+                complete?.Invoke();
+            }
+
+
+
+
             /// <summary>
             /// Provides methods for processing user commands input into the interface, including executing specific actions based on command identifiers and managing command history.
             /// </summary>
@@ -1624,8 +1681,8 @@ namespace Cat
                     {
                         42, new Dictionary<string, object>
                         {
-                            { "desc", "[DEBUG] Reads a saved object from stats.bin" },
-                            { "params", "objectname{string}" },
+                            { "desc", "Reads a saved object from a data file" },
+                            { "params", "filepath {string}, objectname{string}" },
                             { "function", (Func<bool>)Commands.ReadObject},
                             { "shortcut", ""}
                         }
@@ -1642,8 +1699,8 @@ namespace Cat
                     {
                         44, new Dictionary<string, object>
                         {
-                            { "desc", "Writes a sequence of types to a schema" },
-                            { "params", "types_list{string}" },
+                            { "desc", "Writes a sequence of types to a schema in the format 'schema_name name type {type name}' (one or more pairs of 'type name'). E.g:\n   Character string name int kills int deaths\n    ^ Name ^ Type ^ Name ^ Type ^ Name\n E.g:\n   Map string name double size_w double size_h List characternames" },
+                            { "params", "name{string}, types_list{string}" },
                             { "function", (Func<bool>)Commands.WriteSchema},
                             { "shortcut", ""}
                         }

@@ -11,8 +11,8 @@ namespace Cat
         internal static bool WriteSchema()
         {
             bool returned = false;
-            string entry = commandstruct.Value.Parameters[0][0].ToString();
-            if (entry == null)
+            string name = commandstruct.Value.Parameters[0][0].ToString(), entry = commandstruct.Value.Parameters[0][1].ToString();
+            if (entry == null || name == null)
             {
                 Logging.Log("Expected string but parsing failed and returned either a null command struct or a null entry, please submit a bug report.");
                 Interface.AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
@@ -20,9 +20,9 @@ namespace Cat
             }
             string[] parts = new string (entry.Where(c => char.IsLetter(c) || c == ' ').ToArray()).Split(' ');
             List<(string, Helpers.BinaryFileHandler.Types)> segments = new();
-            for (int i = 1; i < parts.Length - 1 ; i++)
+            for (int i = 0; i < parts.Length - 1; i += 2)
             {
-                Helpers.BinaryFileHandler.Types type = parts[i + 1].ToLower() switch
+                Helpers.BinaryFileHandler.Types type = parts[i].ToLower() switch
                 {
                     "sevenbitencodedint" => Helpers.BinaryFileHandler.Types.SevenBitEncodedInt,
                     "sevenbitencodedint64" => Helpers.BinaryFileHandler.Types.SevenBitEncodedInt64,
@@ -57,22 +57,22 @@ namespace Cat
                 };
                 if (type == Helpers.BinaryFileHandler.Types.Failed)
                 {
-                    Interface.AddLog($"Unrecognised type '{parts[i + 1]}'.");
+                    Interface.AddLog($"Unrecognised type '{parts[i]}'.");
                     returned = true;
                 }
                 else
-                    segments.Add((parts[i], type));
+                    segments.Add((parts[i + 1], type));
             }
             if (returned)
             {
-                Interface.AddLog($"Expected types:\n - {string.Join("\n - ", Enum.GetNames(typeof(Helpers.BinaryFileHandler)))}");
+                Interface.AddLog($"Expected types:\n - {string.Join("\n - ", Enum.GetNames(typeof(Helpers.BinaryFileHandler.Types)))}");
                 return false;
             }
             using var bfh = new Helpers.BinaryFileHandler(SchemaFile, null);
-            bool b = bfh.AddSchema(out int index, parts[0], segments.ToArray());
+            bool b = bfh.AddSchema(out int index, name, segments.ToArray());
             if (b)
             {
-                Interface.AddLog($"Successfully added schema {parts[0]} (schema id {index}!");
+                Interface.AddLog($"Successfully added schema {name} (schema id {index})!");
                 return true;
             }
 

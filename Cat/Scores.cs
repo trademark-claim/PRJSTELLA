@@ -40,9 +40,9 @@ namespace Cat
             using (Helpers.BinaryFileHandler bfh = new Helpers.BinaryFileHandler(StatsFile, false))
             {
                 foreach (var op in operators)
-                    bfh.AddObject(op, 1);
+                    bfh.AddObject(op, 0);
                 foreach (var map in maps)
-                    bfh.AddObject(map, 2);
+                    bfh.AddObject(map, 1);
             }
             return true;
         }
