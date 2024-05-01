@@ -1,4 +1,5 @@
 #define ImmedShutdown
+//#define CrashWary
 
 /***************************************************************************************
  *
@@ -57,6 +58,7 @@ using System.Windows.Threading;
 using SWM = System.Windows.Media;
 
 using SWS = System.Windows.Shapes;
+using System.Windows.Media.Animation;
 
 namespace Cat
 {
@@ -600,7 +602,7 @@ namespace Cat
             Background = System.Windows.Media.Brushes.Transparent;
             Topmost = true;
             ShowActivated = false;
-            ShowInTaskbar = false; // When making new code, set this to true so you can close the crashed app
+            ShowInTaskbar = false; /* [OUTDATED BUT MIGHT BE USEFUL INFO]: */ //x When making new code, set this to true t can close the crashed app
             Left = 0;
             Top = 0;
             _screen_ = Array.FindIndex(System.Windows.Forms.Screen.AllScreens, screen => screen.Primary);
@@ -681,7 +683,9 @@ namespace Cat
             {
                 MakeNormalWindow();
                 canvas.Children.Add(new Interface(canvas));
+                Interface.inst.AnimateUp();
                 Objects.CursorEffects.MoveTop();
+                Interface.inst.inputTextBox?.Focus();
                 return true;
             }
         }
@@ -723,6 +727,8 @@ namespace Cat
             /// </summary>
             internal Interface(Canvas parent)
             {
+                var screen = GetScreen();
+                SetTop(this, 0 - screen.Bounds.Height);
                 this.parent = parent;
                 CommandProcessing.@interface = this;
                 inst?.Children.Clear();
@@ -731,6 +737,7 @@ namespace Cat
                 inst = this;
                 Backg = InitBackg();
                 InitializeComponents();
+                //SetBottom(this, 0);
                 //MouseMove += (s, e) => Catowo.inst.ToggleInterface();
             }
 
@@ -743,7 +750,12 @@ namespace Cat
                 var scre = GetScreen();
                 SWS.Rectangle rect = new SWS.Rectangle { Width = scre.Bounds.Width, Height = scre.Bounds.Height, Fill = new SWM.SolidColorBrush(SWM.Colors.Gray), Opacity = UserData.Opacity };
                 Logging.Log($"{Catowo.inst.Screen}, {rect.Width} {rect.Height}");
+#if CrashWary
+                rect.Height = rect.Height - 50;
+                SetTop<double>(rect, 50);
+#else
                 SetTop<double>(rect, 0);
+#endif
                 SetLeft<double>(rect, 0);
                 Children.Add(rect);
                 return rect;
@@ -756,6 +768,9 @@ namespace Cat
             {
                 Screen screen = GetScreen();
                 var (screenWidth, screenHeight, workAreaHeight) = Helpers.ScreenSizing.GetAdjustedScreenSize(screen);
+#if CrashWary
+                screenHeight -= 50;
+#endif
                 double taskbarHeight = screenHeight - workAreaHeight;
                 double padding = 20;
                 double inputTextBoxHeight = 30;
@@ -767,6 +782,7 @@ namespace Cat
                     Margin = new Thickness(0, 0, 0, padding),
                     Background = SWM.Brushes.White,
                     Foreground = SWM.Brushes.Black,
+                    Focusable = true
                 };
 
                 inputTextBox.PreviewKeyDown += (s, e) =>
@@ -796,16 +812,24 @@ namespace Cat
 #endif
 
                 SetLeft<double>(inputTextBox, padding);
+#if CrashWary
+                SetTop<double>(inputTextBox, (screenHeight - taskbarHeight - inputTextBoxHeight - (padding)) + 50);
+#else
                 SetTop<double>(inputTextBox, screenHeight - taskbarHeight - inputTextBoxHeight - (padding));
+#endif
 
                 logListBox.Width = screenWidth - (padding * 2);
                 logListBox.Height = screenHeight - taskbarHeight - inputTextBoxHeight - (padding * 3);
 
                 SetLeft<double>(logListBox, padding);
+#if CrashWary
+                SetTop<double>(logListBox, padding + 50);
+#else
                 SetTop<double>(logListBox, padding);
+#endif
                 Children.Add(inputTextBox);
                 Children.Add(logListBox);
-                Catowo.inst.Focus();
+                //Catowo.inst.Focus();
                 inputTextBox.Focus();
 
                 //Children.Add(Marker);
@@ -832,6 +856,7 @@ namespace Cat
             {
                 Logging.Log("Showing interface...");
                 Visibility = Visibility.Visible;
+                inputTextBox.Focus();
                 Logging.Log("Interface Shown");
             }
 
@@ -951,6 +976,30 @@ namespace Cat
                 return value;
             }
 
+            internal void AnimateUp()
+            {
+                TranslateTransform trans = new TranslateTransform();
+                RenderTransform = trans;
+                double screenHeight = SystemParameters.FullPrimaryScreenHeight;
+                double initialOffset = screenHeight -ActualHeight;
+                double duration = 1.5;
+
+                Storyboard storyboard = new Storyboard();
+
+                DoubleAnimation bounceUp = new DoubleAnimation()
+                {
+                    From = -initialOffset,
+                    To = 0,
+                    Duration = TimeSpan.FromSeconds(duration),
+                    EasingFunction = new BounceEase { EasingMode = EasingMode.EaseOut, Bounces = 10, Bounciness = 2 }
+                };
+                Storyboard.SetTarget(bounceUp, this);
+                Storyboard.SetTargetProperty(bounceUp, new PropertyPath("(UIElement.RenderTransform).(TranslateTransform.Y)"));
+                storyboard.Children.Add(bounceUp);
+                bounceUp.BeginTime = TimeSpan.FromSeconds(duration);
+                storyboard.Begin(this, true);
+            }
+            
             /// <summary>
             /// Provides methods for processing user commands input into the interface, including executing specific actions based on command identifiers and managing command history.
             /// </summary>
@@ -1668,6 +1717,7 @@ namespace Cat
                         cmdtext = @interface.inputTextBox.Text.Trim().ToLower();
                     else
                         cmdtext = non_interface_text;
+                    History.Enqueue(cmdtext);
                     string call = cmdtext.Split(";")[0].Trim();
                     Logging.Log($"Processing Interface Command, Input: {cmdtext}");
                     if (cmdmap.TryGetValue(call, out int value))
@@ -1689,7 +1739,6 @@ namespace Cat
                         {
                             commandstruct = commandstruct2;
                             Commands.commandstruct = commandstruct;
-                            History.Enqueue(commandstruct.Value.Raw);
                         }
 
                         if (!parsestate)
@@ -1763,7 +1812,7 @@ namespace Cat
                         // Split the metadata into every expected sequence
                         string[] optionals = metadata.Contains('|') ? metadata.Split('|') : [metadata,];
                         Logging.Log("Optionals", optionals);
-                        List<string> couldbes = new(optionals.Length);
+                        //List<string> couldbes = new(optionals.Length);
                         foreach (string sequence in optionals)
                         {
                             bool? status = ParseSequence(inputs, sequence, out error_message, out object[][]? parsedparams);
@@ -1821,6 +1870,8 @@ namespace Cat
                             List<object> flexparams = new(flex), fixparams = new(fix);
                             for (int i = 0; i < results.Length; i++)
                             {
+                                if (i > inputs.Length - 1)
+                                    break;
                                 //Logging.Log(i, all - i, flex, fix, "");
                                 string[] types = results[i].Split('/');
                                 Logging.Log("Types: ", types);
@@ -1943,6 +1994,6 @@ namespace Cat
             }
         }
 
-        #endregion Interface
+#endregion Interface
     }
 }

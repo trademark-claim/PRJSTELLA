@@ -1,3 +1,4 @@
+using Microsoft.VisualBasic;
 using System.IO;
 
 namespace Cat
@@ -138,6 +139,7 @@ namespace Cat
                     Logging.Log($"Cursor for {cursorname} successfully changed!");
                 }
             }
+            Interface.AddLog($"{entryN} cursor preset loaded!");
             return true;
         }
     }

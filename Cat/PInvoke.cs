@@ -42,17 +42,17 @@ namespace Cat
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern int ShowCursor([MarshalAs(UnmanagedType.Bool)] bool bShow);
 
-
-        [LibraryImport("user32.dll", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
-        private static partial IntPtr LoadCursorFromFile(string path);
+        
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        private static extern IntPtr LoadCursorFromFile(string path);
 
         [LibraryImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static partial bool SetSystemCursor(IntPtr hcur, uint id);
 
-        [LibraryImport("user32.dll", SetLastError = true)]
+        [DllImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        private static partial bool SystemParametersInfo(uint uiAction, uint uiParam, IntPtr pvParam, uint fWinIni);
+        private static extern bool SystemParametersInfo(uint uiAction, uint uiParam, IntPtr pvParam, uint fWinIni);
 
         [LibraryImport("user32.dll", SetLastError = true)]
         private static partial IntPtr GetDesktopWindow();

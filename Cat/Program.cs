@@ -20,16 +20,16 @@ namespace Cat
             if (UserData.LaunchAsAdmin)
                 Helpers.BackendHelping.RestartWithAdminRightsIfNeeded();
             Logging.Log("Running first Cat Window...");
-            DiscordRP.SetActivity(DiscordRP.LoadBaseActivity());
-            DiscordRP.Init();
+            //DiscordRP.SetActivity(DiscordRP.LoadBaseActivity());
+            //DiscordRP.Init();
             Catowo owo = new Catowo();
             owo.Show();
             if (UserData.StartWithInterface)
                 owo.ToggleInterface();
             if (UserData.StartWithVoice)
             {
-                Logging.Log("Allowing voice commands through startup...");
-                Commands.AV();
+                Logging.Log("[Disabled] Allowing voice commands through startup...");
+                //Commands.AV();
             }
         }
 

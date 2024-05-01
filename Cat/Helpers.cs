@@ -1788,7 +1788,7 @@ namespace Cat
 
             internal static Dictionary<string, dynamic> DeserialiseObject(List<object> data)
             {
-
+                return new() { };
             }
         }
     }
