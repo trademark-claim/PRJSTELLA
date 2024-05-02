@@ -11,6 +11,7 @@ using Newtonsoft.Json;
 using SharpCompress.Archives;
 using System.CodeDom.Compiler;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
@@ -1207,6 +1208,48 @@ namespace Cat
             private readonly bool? reading;
             private readonly string filename;
 
+            [LoggingAspects.Logging]
+            internal static bool CheckTypeMatch(byte enumValue, object obj)
+            {
+                if (obj == null)
+                    return false;
+
+                Types typeEnum;
+                try
+                {
+                    typeEnum = (Types)enumValue;
+                }
+                catch (Exception)
+                {
+                    Logging.Log($"ERROR: Schema type '{enumValue}' unsuccessfully case to to BFH.Types!");
+                    return false;
+                }
+
+                Type objectType = obj.GetType();
+                Logging.Log($"Object type: {objectType.FullName}", $"Target Type: {typeEnum}");
+
+                return typeEnum switch
+                {
+                    Types.Boolean => objectType == typeof(bool),
+                    Types.Byte => objectType == typeof(byte),
+                    Types.Bytes => objectType == typeof(byte[]),
+                    Types.Char => objectType == typeof(char),
+                    Types.Chars => objectType == typeof(char[]),
+                    Types.Decimal => objectType == typeof(decimal),
+                    Types.Double => objectType == typeof(double),
+                    Types.Int16 => objectType == typeof(short),
+                    Types.Int32 => objectType == typeof(int),
+                    Types.Int64 => objectType == typeof(long),
+                    Types.SByte => objectType == typeof(sbyte),
+                    Types.Single => objectType == typeof(float),
+                    Types.String => objectType == typeof(string),
+                    Types.UInt16 => objectType == typeof(ushort),
+                    Types.UInt32 => objectType == typeof(uint),
+                    Types.UInt64 => objectType == typeof(ulong),
+                    _ => false,
+                };
+            }
+
             internal enum Types : byte
             {
                 Read = 0,
@@ -1252,7 +1295,16 @@ namespace Cat
                 using (Process process = new())
                 {
                     process.StartInfo = processStartInfo;
-                    process.Start();
+                    try
+                    {
+                        process.Start();
+                    }
+                    catch (Exception ex)
+                    {
+                        Interface.AddLog("Error when starting Powershell. Check your anti-virus");
+                        Logging.Log(ex);
+                        return "";
+                    }
 
                     using (StreamWriter sw = process.StandardInput)
                     {
@@ -1287,7 +1339,11 @@ namespace Cat
                     inputs = Helpers.BackendHelping.GetPropertyValues(obj);
                 if (enume != null)
                     enume = inputs;
-                Logging.Log($"Property Values:", skipReflection == null ? enume : inputs);
+                Logging.Log("Inputs", inputs);
+                if (enume != null)
+                    Logging.Log("Enume", enume);
+
+
                 List<Types> typeswritten = [];
                 Logging.Log("Writing to Memory stream...");
                 using (var ms = new MemoryStream())
@@ -1748,7 +1804,7 @@ namespace Cat
             }
 
 
-            internal bool AddSchema(out int index, string name, params (string, Types)[] types) 
+            internal bool AddSchema(out int index, string name, params (Types, string)[] types) 
             {
                 index = 0;
                 if (filename != SchemaFile || !fs.CanWrite || !fs.CanRead)
@@ -1772,6 +1828,7 @@ namespace Cat
                     owo[i + 1] = types[i].Item1;
                     owo[i + 2] = types[i].Item2;
                 }
+                Logging.Log("OwO stuff: ", owo);
                 fs.Seek(0, SeekOrigin.End);
                 AddObject(owo, -2, null);
                 return true;
@@ -1857,47 +1914,9 @@ namespace Cat
             }
         }
 
-        [LoggingAspects.Logging]
-        internal static bool CheckTypeMatch(byte enumValue, object obj)
+        internal class ProcessManager : Window
         {
-            if (obj == null) 
-                return false;
-
-            Types typeEnum;
-            try
-            {
-                typeEnum = (Types)enumValue;
-            }
-            catch (Exception)
-            {
-                Logging.Log($"ERROR: Schema type '{enumValue}' unsuccessfully case to to BFH.Types!");
-                return false;
-            }
-
-            Type objectType = obj.GetType();
-            Logging.Log($"Object type: {objectType.FullName}", $"Target Type: {typeEnum}");
-            
-            return typeEnum switch
-            {
-                Types.Boolean => objectType == typeof(bool),
-                Types.Byte => objectType == typeof(byte),
-                Types.Bytes => objectType == typeof(byte[]),
-                Types.Char => objectType == typeof(char),
-                Types.Chars => objectType == typeof(char[]),
-                Types.Decimal => objectType == typeof(decimal),
-                Types.Double => objectType == typeof(double),
-                Types.Int16 => objectType == typeof(short),
-                Types.Int32 => objectType == typeof(int),
-                Types.Int64 => objectType == typeof(long),
-                Types.SByte => objectType == typeof(sbyte),
-                Types.Single => objectType == typeof(float),
-                Types.String => objectType == typeof(string),
-                Types.UInt16 => objectType == typeof(ushort),
-                Types.UInt32 => objectType == typeof(uint),
-                Types.UInt64 => objectType == typeof(ulong),
-                _ => false,
-            };
+            public ProcessManager() { }
         }
-
     }
 }

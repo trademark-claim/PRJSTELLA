@@ -1009,6 +1009,7 @@ namespace Cat
                 transforms.Children.Add(scale);
                 transforms.Children.Add(translate);
                 RenderTransform = transforms;
+                RenderTransformOrigin = new(0.5, 0.5);
 
                 double duration = 0.25; 
 

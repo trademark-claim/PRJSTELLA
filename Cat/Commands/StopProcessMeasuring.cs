@@ -5,8 +5,11 @@ namespace Cat
         [LoggingAspects.ConsumeException]
         internal static bool StopProcessMeasuring()
         {
-            FYI();
-            return true;
+            int? entry = commandstruct.Value.Parameters[0][0] as int?;
+            if (entry == null)
+            {
+                
+            }
         }
     }
 }
