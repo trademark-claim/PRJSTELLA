@@ -18,6 +18,7 @@ using SharpAvi;
 using SharpAvi.Output;
 using SharpAvi.Codecs;
 using System.Diagnostics;
+using System.Collections.ObjectModel;
 
 namespace Cat
 {
@@ -1430,6 +1431,45 @@ namespace Cat
                 {
                     Logging.LogError(new Exception("FFmpeg process failed with exit code " + process.ExitCode));
                 }
+            }
+        }
+
+        internal class MetricGraph : Canvas
+        {
+            private List<(double, double)> Data = new();
+            private double _xStart;
+            private double _xIncrement;
+            private double _yStart;
+            private double _yIncrement;
+            private double _currentX;
+            private double _width;
+            private double _height;
+            private double _scaling_x;
+            private double _scaling_y;
+
+            public MetricGraph(double width, double height, double xStart, double xIncrement, double yStart, double yIncrement)
+            {
+                _width = width;
+                _height = height;
+                _xStart = xStart;
+                _xIncrement = xIncrement;
+                _yStart = yStart;
+                _yIncrement = yIncrement;
+                _currentX = _xStart;
+                Init();
+            }
+
+            private void Init()
+            {
+                InitBoarder();
+            }
+
+            private void InitBoarder()
+                => Children.Add(new Rectangle() { Fill = Brushes.Transparent, Width = _width + 10, Height = _height + 10, Stroke = Brushes.Black, StrokeThickness = 3});
+        
+            private void InitGrid()
+            {
+
             }
         }
     }

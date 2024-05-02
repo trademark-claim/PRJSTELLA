@@ -19,7 +19,7 @@ namespace Cat
                 return false;
             }
             string[] parts = new string (entry.Where(c => char.IsLetter(c) || c == ' ').ToArray()).Split(' ');
-            List<(string, Helpers.BinaryFileHandler.Types)> segments = new();
+            List<(Helpers.BinaryFileHandler.Types, string) > segments = new();
             for (int i = 0; i < parts.Length - 1; i += 2)
             {
                 Helpers.BinaryFileHandler.Types type = parts[i].ToLower() switch
@@ -61,7 +61,7 @@ namespace Cat
                     returned = true;
                 }
                 else
-                    segments.Add((parts[i + 1], type));
+                    segments.Add((type, parts[i + 1]));
             }
             if (returned)
             {
