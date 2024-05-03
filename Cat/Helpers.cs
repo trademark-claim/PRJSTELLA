@@ -2018,8 +2018,8 @@ namespace Cat
             {
                 var plot = new Objects.MetricGraph(400, 400, 0, 4, 0, 4);
                 List<(double, double)> simpoints = [(1, 1), (1.5, 3.7), (2.3, 7), (3, 1.4)];
-                foreach (var item in simpoints)
-                    plot.AddPoint(item.Item1, item.Item2);
+                //foreach (var item in simpoints)
+                    //plot.AddPoint(item.Item1, item.Item2);
                 canvas.Children.Add(plot);
             }
         }

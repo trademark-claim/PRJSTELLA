@@ -102,9 +102,9 @@ namespace Cat
             internal static void RemoveFromCanvas(Canvas c, Rectangle rect)
                 => c.Children.Remove(rect);
         }
-
+       
         /// <summary>
-        /// Static class for dealing with direct Clara interactions, such as speech bubbles and images / animations (if we can get it)
+QQtce        /// Static class for dealing with direct Clara interactions, such as speech bubbles and images / animations (if we can get it)
         /// </summary>
         /// <remarks>
         /// Need to have back progression (using left arrow)
@@ -495,6 +495,7 @@ namespace Cat
                 isOn = !isOn;
             }
 
+            [LoggingAspects.Logging]
             private static void Run()
             {
                 if (isOn) return;
@@ -622,6 +623,7 @@ namespace Cat
 
                     private static Queue<Effect> effectsQueue = new();
 
+                    [LoggingAspects.Logging]
                     internal static void SetUpRectangles()
                     {
                         Memento = new List<Effect>(200);

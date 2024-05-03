@@ -59,6 +59,7 @@ using SWM = System.Windows.Media;
 
 using SWS = System.Windows.Shapes;
 using System.Windows.Media.Animation;
+using System.Windows.Forms;
 
 namespace Cat
 {
@@ -255,7 +256,7 @@ namespace Cat
                         Top = screen.Bounds.Top;
                         Left = screen.Bounds.Left;
                         Width = width;
-                        Height = height - working;
+                        Height = height;
                         Logging.Log("New Screen Params: ", Top, Left, Width, Height);
                         _screen_ = value;
                         ToggleInterface();
@@ -351,8 +352,8 @@ namespace Cat
         private IntPtr KeyboardProc(int nCode, IntPtr wParam, IntPtr lParam)
         {
             int vkCode = Marshal.ReadInt32(lParam);
-            bool isKeyDown = nCode >= 0 && wParam == (IntPtr)WM_KEYDOWN;
-            bool isKeyUp = nCode >= 0 && wParam == (IntPtr)WM_KEYUP;
+            bool isKeyDown = nCode >= 0 && wParam == WM_KEYDOWN;
+            bool isKeyUp = nCode >= 0 && wParam == WM_KEYUP;
             string log = $"Key{(isKeyDown ? "KeyDown" : "KeyUp")}: {(Keys)vkCode} ({vkCode})" + (RShifted ? " (rshifted) " : "") + (LShifted ? " (Lshifted) " : "") + (Qd ? " (q) " : "");
             Logging.Log(log);
             if (isKeyDown)
@@ -680,7 +681,7 @@ namespace Cat
                     Interface.inst = null;
                 });
                 MakeFunnyWindow();
-                return false;
+                return true;
             }
             else
             {
@@ -751,7 +752,8 @@ namespace Cat
             private SWS.Rectangle InitBackg()
             {
                 var scre = GetScreen();
-                SWS.Rectangle rect = new SWS.Rectangle { Width = scre.Bounds.Width, Height = scre.Bounds.Height, Fill = new SWM.SolidColorBrush(SWM.Colors.Gray), Opacity = UserData.Opacity };
+                var (screenWidth, screenHeight, _) = Helpers.ScreenSizing.GetAdjustedScreenSize(scre);
+                SWS.Rectangle rect = new SWS.Rectangle { Width = screenWidth, Height = screenHeight, Fill = new SWM.SolidColorBrush(SWM.Colors.Gray), Opacity = UserData.Opacity };
                 Logging.Log($"{Catowo.inst.Screen}, {rect.Width} {rect.Height}");
 #if CrashWary
                 rect.Height = rect.Height - 50;
@@ -1286,6 +1288,9 @@ namespace Cat
                     { "write schema", 44 },
 
                     { "read schema", 45 },
+
+                    { "toggle cursor effects", 46 },
+                    { "tce", 46 }
                 };
 
                 /// <summary>
@@ -1712,6 +1717,20 @@ namespace Cat
                             { "desc", "Reads a schema based off name or index" },
                             { "params", "index{int} | name{string}" },
                             { "function", (Func<bool>)Commands.ReadSchema},
+                            { "shortcut", ""}
+                        }
+                    },
+                    {
+                        46, new Dictionary<string, object>
+                        {
+                            { "desc", "Toggles Cursor effects!" },
+                            { "params", "" },
+                            { "function", (Func<bool>)(() => 
+                            {
+                                Objects.CursorEffects.Toggle();
+                                Catowo.inst.ToggleInterface();
+                                return true;
+                            }) },
                             { "shortcut", ""}
                         }
                     }
