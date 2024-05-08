@@ -1997,31 +1997,5 @@ namespace Cat
                 }
             }
         }
-
-        internal class ProcessManager : Window
-        {
-            private readonly Canvas canvas = new();
-            private readonly int ApplicationID;
-
-            public ProcessManager(int AppID) 
-            {
-                ApplicationID = AppID;
-                WindowStyle = WindowStyle.None;
-                AllowsTransparency = true;
-                Opacity = 0.8f;
-                Background = Brushes.Black;
-                Content = canvas;
-                InitialiseBase();
-            }
-
-            private void InitialiseBase()
-            {
-                var plot = new Objects.MetricGraph(400, 400, 0, 4, 0, 4);
-                List<(double, double)> simpoints = [(1, 1), (1.5, 3.7), (2.3, 7), (3, 1.4)];
-                //foreach (var item in simpoints)
-                    //plot.AddPoint(item.Item1, item.Item2);
-                canvas.Children.Add(plot);
-            }
-        }
     }
 }

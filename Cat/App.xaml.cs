@@ -7,11 +7,13 @@ namespace Cat
     /// <summary>
     /// Interaction logic for App.xaml
     /// </summary>
-    public partial class App : System.Windows.Application
+    public partial class App : Application
     {
-        private static DateTime starttime = DateTime.Now;
+        private readonly static DateTime starttime = DateTime.Now;
         private static long maxMemory = 0;
         private static bool isShuttingDown = false;
+
+        internal static bool IsShuttingDown => isShuttingDown;
 
         protected override void OnStartup(StartupEventArgs e)
         {

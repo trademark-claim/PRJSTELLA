@@ -2,7 +2,7 @@ namespace Cat
 {
     internal static partial class Commands
     {
-        private static List<Helpers.ProcessManager> pms = [];
+        internal static List<Objects.ProcessManager> PMs { get; } = [];
 
         [LoggingAspects.Logging]
         [LoggingAspects.ConsumeException]
@@ -10,7 +10,8 @@ namespace Cat
         {
             var ps = new Helpers.ProcessSelector();
             ps.ShowDialog();
-            new Helpers.ProcessManager(ps.SelectedProcessId).Show();
+            new Objects.ProcessManager(ps.SelectedProcessId).Show();
+            Catowo.inst.ToggleInterface();
             return true;
         }
     }

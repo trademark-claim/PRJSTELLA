@@ -10,7 +10,7 @@ namespace Cat
     internal static class Program
     {
         /// <summary>
-        /// Temporary solution for showing the tutorial / introductory dialogue.
+        /// solution for showing the tutorial / introductory dialogue.
         /// </summary>
         internal static bool hadUserData = true;
 

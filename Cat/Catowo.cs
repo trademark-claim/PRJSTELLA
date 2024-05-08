@@ -44,6 +44,7 @@ global using Point = System.Windows.Point;
 global using Rectangle = System.Windows.Shapes.Rectangle;
 global using Size = System.Windows.Size;
 global using Image = System.Drawing.Image;
+global using ListBox = System.Windows.Controls.ListBox;
 using NAudio.Wave;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -785,7 +786,7 @@ namespace Cat
                     Width = screenWidth - (padding * 2),
                     Height = inputTextBoxHeight,
                     Margin = new Thickness(0, 0, 0, padding),
-                    Background = SWM.Brushes.White,
+                    Background = WABrush,
                     Foreground = SWM.Brushes.Black,
                     Focusable = true
                 };
@@ -1276,18 +1277,11 @@ namespace Cat
 
                     { "define", 40 },
 
-                    { "write r6 scores", 41 },
-                    { "wr6s", 41 },
-
                     { "read object", 42 },
                     { "ro", 42 },
 
                     { "read binary", 43 },
                     { "rb", 43 },
-
-                    { "write schema", 44 },
-
-                    { "read schema", 45 },
 
                     { "toggle cursor effects", 46 },
                     { "tce", 46 }
@@ -1409,7 +1403,7 @@ namespace Cat
                         11, new Dictionary<string, object>
                         {
                             { "desc", "Starts measuring a processes's information until stopped.\nE.g: start measuring process ;devenv" },
-                            { "params", "process{string/int}" },
+                            { "params", "" },
                             { "function", (Func<bool>)Cat.Commands.StartProcessMeasuring },
                             { "shortcut", "Shifts Q X"}
                         }
@@ -1676,15 +1670,6 @@ namespace Cat
                         }
                     },
                     {
-                        41, new Dictionary<string, object>
-                        {
-                            { "desc", "Writes the preset r6 data to stats.bin" },
-                            { "params", "" },
-                            { "function", (Func<bool>)Scores.LoadR6},
-                            { "shortcut", ""}
-                        }
-                    },
-                    {
                         42, new Dictionary<string, object>
                         {
                             { "desc", "Reads a saved object from a data file" },
@@ -1703,29 +1688,11 @@ namespace Cat
                         }
                     },
                     {
-                        44, new Dictionary<string, object>
-                        {
-                            { "desc", "Writes a sequence of types to a schema in the format 'schema_name name type {type name}' (one or more pairs of 'type name'). E.g:\n   Character string name int kills int deaths\n    ^ Name ^ Type ^ Name ^ Type ^ Name\n E.g:\n   Map string name double size_w double size_h List characternames" },
-                            { "params", "name{string}, types_list{string}" },
-                            { "function", (Func<bool>)Commands.WriteSchema},
-                            { "shortcut", ""}
-                        }
-                    },
-                    {
-                        45, new Dictionary<string, object>
-                        {
-                            { "desc", "Reads a schema based off name or index" },
-                            { "params", "index{int} | name{string}" },
-                            { "function", (Func<bool>)Commands.ReadSchema},
-                            { "shortcut", ""}
-                        }
-                    },
-                    {
                         46, new Dictionary<string, object>
                         {
                             { "desc", "Toggles Cursor effects!" },
                             { "params", "" },
-                            { "function", (Func<bool>)(() => 
+                            { "function", (Func<bool>)(() =>
                             {
                                 Objects.CursorEffects.Toggle();
                                 Catowo.inst.ToggleInterface();
@@ -2036,6 +2003,23 @@ namespace Cat
                     {
                         _scrollViewer = GetScrollViewer(logListBox);
                     };
+
+                    KeyDown += (s, e) =>
+                    {
+                        switch (e.Key)
+                        {
+                            case Key.C:
+                                string? text = SelectedItems?.Cast<string>()?.Order().Select(x => x + "\n")?.ToString();
+                                text ??= "";
+                                System.Windows.Clipboard.SetText(text);
+                                UnselectAll();
+                                break;
+                            case Key.Escape:
+                                UnselectAll();
+                                break;
+                        }
+                    };
+                    SelectionMode = SWC.SelectionMode.Extended;
 
                     _scrollViewer = GetScrollViewer(this);
                 }

@@ -19,6 +19,10 @@ using SharpAvi.Output;
 using SharpAvi.Codecs;
 using System.Diagnostics;
 using System.Collections.ObjectModel;
+using System.Text;
+using System.Diagnostics.Contracts;
+using System.Timers;
+using System.Runtime.CompilerServices;
 
 namespace Cat
 {
@@ -104,7 +108,7 @@ namespace Cat
         }
        
         /// <summary>
-QQtce        /// Static class for dealing with direct Clara interactions, such as speech bubbles and images / animations (if we can get it)
+        /// Static class for dealing with direct Clara interactions, such as speech bubbles and images / animations (if we can get it)
         /// </summary>
         /// <remarks>
         /// Need to have back progression (using left arrow)
@@ -878,7 +882,7 @@ QQtce        /// Static class for dealing with direct Clara interactions, such a
                 var screen = Catowo.GetScreen();
                 Width = screen.Bounds.Width;
                 Height = screen.Bounds.Height;
-                this.Background = Brushes.Purple;
+                this.Background = WABrush;
                 inst?.Close();
                 inst = this;
                 InitializeComponents();
@@ -888,19 +892,21 @@ QQtce        /// Static class for dealing with direct Clara interactions, such a
             [LoggingAspects.Logging]
             private void InitializeComponents()
             {
-                mainGrid = new Grid();
+                mainGrid = new Grid() { Background = Brushes.Transparent };
+
                 Content = mainGrid;
                 mainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(200) });
-                mainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                mainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(100, GridUnitType.Star) });
                 mainGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(200) });
 
-                logListBox = new LoggingListBox();
+                logListBox = new LoggingListBox() { Background = new SolidColorBrush(Color.FromArgb(0xAA, 0x0, 0x0, 0x0))};
                 mainGrid.Children.Add(logListBox);
 
-                menu = new MenuBox(logListBox);
+                menu = new MenuBox(logListBox) { Background = Brushes.Transparent };
                 mainGrid.Children.Add(menu);
 
                 files.SelectionChanged += (s, e) => { if (files.SelectedItem is string str && str.StartsWith('L') && str.EndsWith(".LOG")) logListBox.LoadFile(LogFolder + "//" + str); menu.InitializeMenu(); };
+                files.Background = Brushes.Transparent;
                 mainGrid.Children.Add(files);
 
                 Grid.SetColumn(files, 0);
@@ -1107,7 +1113,11 @@ QQtce        /// Static class for dealing with direct Clara interactions, such a
                     baselines.RemoveAll(string.IsNullOrWhiteSpace);
                     foreach (string line in baselines)
                     {
+#if Outline
+                        AddItem(new OutlineText() { Text = line, StrokeColor = Brushes.Black, TextColor = Brushes.White});
+#else
                         AddItem(line);
+#endif
                     }
                 }
             }
@@ -1436,42 +1446,344 @@ QQtce        /// Static class for dealing with direct Clara interactions, such a
             }
         }
 
-        internal class MetricGraph : Canvas
+        internal class ProcessManager : Window
         {
-            private List<(double, double)> Data = new();
-            private double _xStart;
-            private double _xIncrement;
-            private double _yStart;
-            private double _yIncrement;
-            private double _currentX;
-            private double _width;
-            private double _height;
-            private double _scaling_x;
-            private double _scaling_y;
+            private Viewbox Wrapper { get; } = new();
+            private Canvas Canvas { get; } = new();
 
-            public MetricGraph(double width, double height, double xStart, double xIncrement, double yStart, double yIncrement)
+            private DraggableBlock active;
+
+            private int Refreshrate = 1;
+
+            private bool isRunning = true;
+
+            private readonly Process Prcs;
+
+            private System.Timers.Timer timer;
+
+
+            public ProcessManager(int AppID)
             {
-                _width = width;
-                _height = height;
-                _xStart = xStart;
-                _xIncrement = xIncrement;
-                _yStart = yStart;
-                _yIncrement = yIncrement;
-                _currentX = _xStart;
-                Init();
+                Prcs = Process.GetProcessById(AppID);
+                Prcs.Exited += (_, _) => isRunning = false;
+                Background = WABrush;
+                Loaded += (s, e) => InitialiseBase();
+                PreviewMouseLeftButtonDown += (s, e) =>
+                {
+                    if (active != null)
+                    {
+                        Logging.Log("Mouse up on SLB element");
+                        active.PreviewMouseMove -= active.moving;
+                        active.diff = new();
+                        active.Background = Brushes.Transparent;
+                        BorderThickness = new(0);
+                    }
+                };
+                Closing += (s, e) =>
+                {
+                    timer?.Close();
+                    timer?.Dispose();
+                };
             }
 
-            private void Init()
+            private void InitialiseBase()
             {
-                InitBoarder();
+                timer = new() { Interval = Refreshrate * 1000 };
+                Canvas.Width = ActualWidth;
+                Canvas.Height = ActualHeight;
+
+                DraggableBlock cpu = new(this) { Text = "CPU %: ", FontSize = UserData.FontSize }, //
+                    memory = new(this) { Text = "Memory: ", FontSize = UserData.FontSize }, //
+                    gpu = new(this) { Text = "GPU %: ", FontSize = UserData.FontSize }, //
+                    disk = new(this) { Text = "Disk IO: ", FontSize = UserData.FontSize }, //
+                    network = new(this) { Text = "Network: ", FontSize = UserData.FontSize }, //
+                    resources = new(this) { Text = "Resources: ", FontSize = UserData.FontSize }, //
+                    threads = new(this) { Text = "Thread #: ", FontSize = UserData.FontSize }, //
+                    lifetime = new(this) { Text = "Lifetime: ", FontSize = UserData.FontSize }, //
+                    tree = new(this) { Text = "Process Tree: ", FontSize = UserData.FontSize }, //
+                    activity = new(this) { Text = "Activity: ", FontSize = UserData.FontSize }, //
+                    response = new(this) { Text = "Response Time: ", FontSize = UserData.FontSize }, //
+                    calls = new(this) { Text = "Sys Calls: ", FontSize = UserData.FontSize }, //
+                    accesses = new(this) { Text = "Service Accesses: ", FontSize = UserData.FontSize }, // 
+                    interactions = new(this) { Text = "Service Interactions: ", FontSize = UserData.FontSize }, //
+                    state = new(this) { Text = "State: ", FontSize = UserData.FontSize }, //
+                    mkhardware = new(this) { Text = "Mouse / Keyboard events: ", FontSize = UserData.FontSize }, //
+                    ohardware = new(this) { Text = "Other hardware events: ", FontSize = UserData.FontSize }, //
+                    user = new(this) { Text = "User: ", FontSize = UserData.FontSize }, //
+                    authevents = new(this) { Text = "Auth Events: ", FontSize = UserData.FontSize }, //
+                    shardware = new(this) { Text = "Other Hardware Stats: ", FontSize = UserData.FontSize }, //
+                    traffic = new(this) { Text = "Network Traffic: ", FontSize = UserData.FontSize }; //
+
+                var cpuCounter = new PerformanceCounter("Process", "% Processor Time", Prcs.ProcessName, true);
+                cpuCounter.NextValue();
+                var diskCounter = new PerformanceCounter("Process", "IO Data Bytes/sec", Prcs.ProcessName, true);
+
+                timer.Elapsed += (s, e) =>
+                {
+                    float cpuUsage = cpuCounter.NextValue() / System.Environment.ProcessorCount;
+                    float diskUsage = diskCounter.NextValue() / (1024 * 1024);
+                    try
+                    {
+                        Application.Current.Dispatcher.Invoke(() =>
+                        {
+                            using (this.Dispatcher.DisableProcessing())
+                            {
+                                cpu.Text = $"CPU %: {cpuUsage:F2}";
+                                disk.Text = $"Disk IO: {diskUsage:F2} MB";
+                            }
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        try
+                        {
+                            if (!App.IsShuttingDown)
+                                MessageBox.Show("An Error Occured, see logs for details", "Fatal Error Encountered", MessageBoxButton.OK, MessageBoxImage.Error);
+                            Logging.LogError(ex);
+                        }
+                        catch { }
+                    }
+                };
+
+                /* ===== Groupings =====
+                  System Performance:
+                    Cpu: How much % of the cpu the process is using
+                    GPU: How much % of the gpu the process is using
+                    Memory: How much % of the system memory the process is using
+                    Disk: How much mb of the disk the process is using
+                    Shardware: Other hardware stuff (implemented later)
+                  Threads:
+                    threads: how many threads the app is using and what % this is of rhe total amount of threads
+                    lifetime: how long app has been up and running
+                    tree: The process tree
+                    response: Responce time of the process
+                    state: State of the process
+                    resources: How many sys resouces the app is taking 
+                   Events and Networking
+                    activity: implemented later, 
+                    calls: Most recent call to other processes or system functions
+                    mkhardware: Most recent mouse movement or keyboard event
+                    network: How much network its using and what % of total this is
+                    traffic: Most recent network traffic event to the process
+                    ohardware: Other most recent hardware events
+                   User, Security and misc:
+                    user: What user the process is running on
+                    authevents: Most recent auth event
+                    access: What level of security access the app has
+                    interactions: TBD
+                 ==== END ==== */
+
+                double aw = ActualWidth / 2;
+                DraggableBlock[] blocks = {
+                    cpu, memory, gpu, disk, network, resources, threads, lifetime, tree,
+                    activity, response, calls, accesses, interactions, state, mkhardware,
+                    ohardware, user, authevents, shardware, traffic
+                };
+                int y = 10;
+                int x = 20;
+
+                foreach (var block in blocks)
+                {
+                    Canvas.Children.Add(block);
+                    Canvas.SetTop(block, y);
+                    Canvas.SetLeft(block, x);
+                    y += 20;
+                }
+
+
+
+
+
+                Wrapper.Child = Canvas;
+                Content = Wrapper;
+
+
+                timer.Start();
             }
 
-            private void InitBoarder()
-                => Children.Add(new Rectangle() { Fill = Brushes.Transparent, Width = _width + 10, Height = _height + 10, Stroke = Brushes.Black, StrokeThickness = 3});
-        
-            private void InitGrid()
+            internal class DraggableBlock : TextBlock
             {
+                internal Point diff = new();
+                private ProcessManager parent;
 
+                internal DraggableBlock(ProcessManager parent)
+                {
+                    this.parent = parent;
+                    FontSize = UserData.FontSize;
+                    Background = Brushes.Transparent;
+                    PreviewMouseLeftButtonDown += (s, e) =>
+                    {
+                        parent.active = this;
+                        Logging.Log("Mouse down on SLB element, moving?");
+                        diff = e.GetPosition(this);
+                        PreviewMouseMove += moving;
+                        Logging.Log($"Diff: {diff}");
+                        Background = new SolidColorBrush(Color.FromArgb(0xAA, 0x0, 0x0, 0x0));
+                    };
+                    PreviewMouseLeftButtonUp += (s, e) =>
+                    {
+                        Logging.Log("Mouse up on SLB element");
+                        PreviewMouseMove -= moving;
+                        diff = new();
+                        Background = Brushes.Transparent;
+                    };
+                    Loaded += (s, e) => Height = ActualHeight;
+                }
+
+                internal void moving(object sender, System.Windows.Input.MouseEventArgs e)
+                {
+                    Point p1 = new(Canvas.GetLeft(this), Canvas.GetTop(this));
+                    p1.X = double.IsNaN(p1.X) ? 0 : p1.X;
+                    p1.Y = double.IsNaN(p1.Y) ? 0 : p1.Y;
+                    Point p2 = e.GetPosition(this);
+                    Point p3 = new(p2.X - diff.X, p2.Y - diff.Y);
+                    Point p4 = new(p1.X + p3.X, p1.Y + p3.Y);
+                    Logging.Log($"Original Position: {p1}", $"Relative Mouse Position: {p2}", $"Difference: {p3}", $"New Position: {p4}");
+                    Canvas.SetTop(this, p4.Y);
+                    Canvas.SetLeft(this, p4.X);
+                }
+            }
+
+        }
+
+        internal class OutlineText : FrameworkElement
+        {
+            internal static readonly DependencyProperty TextProperty =
+                DependencyProperty.Register("Text", typeof(string), typeof(OutlineText),
+                    new FrameworkPropertyMetadata("", FrameworkPropertyMetadataOptions.AffectsRender));
+
+            internal static readonly DependencyProperty TextColorProperty =
+                DependencyProperty.Register("TextColor", typeof(Brush), typeof(OutlineText),
+                    new FrameworkPropertyMetadata(Brushes.White, FrameworkPropertyMetadataOptions.AffectsRender));
+
+            internal static readonly DependencyProperty StrokeColorProperty =
+                DependencyProperty.Register("StrokeColor", typeof(Brush), typeof(OutlineText),
+                    new FrameworkPropertyMetadata(Brushes.Black, FrameworkPropertyMetadataOptions.AffectsRender));
+
+            internal static readonly DependencyProperty StrokeThicknessProperty =
+                DependencyProperty.Register("StrokeThickness", typeof(double), typeof(OutlineText),
+                    new FrameworkPropertyMetadata(1.0, FrameworkPropertyMetadataOptions.AffectsRender));
+
+            internal static readonly DependencyProperty FontSizeProperty =
+                DependencyProperty.Register("FontSize", typeof(double), typeof(OutlineText),
+                    new FrameworkPropertyMetadata(12.0, FrameworkPropertyMetadataOptions.AffectsRender));
+
+            internal static readonly DependencyProperty FontWeightProperty =
+                DependencyProperty.Register("FontWeight", typeof(FontWeight), typeof(OutlineText),
+                    new FrameworkPropertyMetadata(FontWeights.Normal, FrameworkPropertyMetadataOptions.AffectsRender));
+
+            internal static readonly DependencyProperty FontStyleProperty =
+                DependencyProperty.Register("FontStyle", typeof(System.Windows.FontStyle), typeof(OutlineText),
+                    new FrameworkPropertyMetadata(FontStyles.Normal, FrameworkPropertyMetadataOptions.AffectsRender));
+
+            internal static readonly DependencyProperty PaddingProperty =
+                DependencyProperty.Register("Padding", typeof(Thickness), typeof(OutlineText),
+                    new FrameworkPropertyMetadata(new Thickness(5), FrameworkPropertyMetadataOptions.AffectsRender));
+
+            internal string Text
+            {
+                get { return (string)GetValue(TextProperty); }
+                set { SetValue(TextProperty, value); }
+            }
+
+            internal Brush TextColor
+            {
+                get { return (Brush)GetValue(TextColorProperty); }
+                set { SetValue(TextColorProperty, value); }
+            }
+
+            internal Brush StrokeColor
+            {
+                get { return (Brush)GetValue(StrokeColorProperty); }
+                set { SetValue(StrokeColorProperty, value); }
+            }
+
+            internal double StrokeThickness
+            {
+                get { return (double)GetValue(StrokeThicknessProperty); }
+                set { SetValue(StrokeThicknessProperty, value); }
+            }
+
+            internal double FontSize
+            {
+                get { return (double)GetValue(FontSizeProperty); }
+                set { SetValue(FontSizeProperty, value); }
+            }
+
+            internal FontWeight FontWeight
+            {
+                get { return (FontWeight)GetValue(FontWeightProperty); }
+                set { SetValue(FontWeightProperty, value); }
+            }
+
+            internal System.Windows.FontStyle FontStyle
+            {
+                get { return (System.Windows.FontStyle)GetValue(FontStyleProperty); }
+                set { SetValue(FontStyleProperty, value); }
+            }
+
+            internal Thickness Padding
+            {
+                get { return (Thickness)GetValue(PaddingProperty); }
+                set { SetValue(PaddingProperty, value); }
+            }
+
+            protected override void OnRender(DrawingContext drawingContext)
+            {
+                base.OnRender(drawingContext);
+                double pixelsPerDip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
+
+                Typeface typeface = new Typeface(new System.Windows.Media.FontFamily("Segoe UI"), FontStyle, FontWeight, FontStretches.Normal);
+
+                FormattedText outlineText = new FormattedText(
+                    Text,
+                    CultureInfo.CurrentCulture,
+                    System.Windows.FlowDirection.LeftToRight,
+                    typeface,
+                    FontSize,
+                    StrokeColor, 
+                    pixelsPerDip);
+
+                FormattedText mainText = new FormattedText(
+                    Text,
+                    CultureInfo.CurrentCulture,
+                    System.Windows.FlowDirection.LeftToRight,
+                    typeface,
+                    FontSize,
+                    TextColor,
+                    pixelsPerDip);
+
+                Point textOrigin = new(Padding.Left + StrokeThickness, Padding.Top + StrokeThickness);
+
+                for (int i = -1; i <= 1; i++)
+                {
+                    for (int j = -1; j <= 1; j++)
+                    {
+                        if (i != 0 || j != 0) 
+                        {
+                            drawingContext.DrawText(outlineText, new Point(textOrigin.X + i * StrokeThickness, textOrigin.Y + j * StrokeThickness));
+                        }
+                    }
+                }
+                drawingContext.DrawText(mainText, textOrigin);
+            }
+
+
+            protected override Size MeasureOverride(Size constraint)
+            {
+                Typeface typeface = new Typeface(new System.Windows.Media.FontFamily("Segoe UI"), FontStyle, FontWeight, FontStretches.Normal);
+                FormattedText formattedText = new FormattedText(
+                    Text,
+                    CultureInfo.CurrentCulture,
+                    System.Windows.FlowDirection.LeftToRight,
+                    typeface,
+                    FontSize,
+                    TextColor,
+                    VisualTreeHelper.GetDpi(this).PixelsPerDip);
+
+                Size desiredSize = new Size(formattedText.Width + Padding.Left + Padding.Right + StrokeThickness * 2,
+                                            formattedText.Height + Padding.Top + Padding.Bottom + StrokeThickness * 2);
+                return desiredSize;
             }
         }
     }

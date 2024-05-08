@@ -365,7 +365,7 @@ namespace Cat
 
             /// <summary>Font size for display elements.</summary>
             internal static float FontSize
-            { get => _fontsize; set { _fontsize = value; Catowo.Interface.logListBox.UpdateFontSize(); } }
+            { get => _fontsize; set { _fontsize = value; Catowo.Interface.logListBox.UpdateFontSize(); foreach (Objects.ProcessManager pm in Commands.PMs) pm.InvalidateVisual(); } }
 
 
             private static string DiscordExePath = @"C:\Users\<CURRENTUSER>\AppData\Local\Discord\app-1.0.9043\Discord.exe";

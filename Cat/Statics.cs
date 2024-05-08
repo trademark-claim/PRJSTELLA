@@ -42,6 +42,18 @@ namespace Cat
         internal static SolidColorBrush DEEPPINK { get; } = new(Colors.DeepPink);
         internal static SolidColorBrush HOTPINK { get; } = new(Colors.HotPink);
 
+        internal static LinearGradientBrush WABrush { get; } = new()
+        {
+            GradientStops =
+            {
+                new GradientStop(Colors.White, 0.0),
+                new(Color.FromRgb(0xff, 0xe0, 0xf8), 0.8),
+                new(Color.FromRgb(0xff, 0x8c, 0xe4), 1.0),
+            },
+            StartPoint = new(0,0),
+            EndPoint = new(0.5,0.8),
+        };
+
         internal static readonly LinearGradientBrush brush = new()
         {
             GradientStops =
