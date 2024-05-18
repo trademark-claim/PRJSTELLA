@@ -9,7 +9,7 @@ namespace Cat
         /// <remarks>
         /// Information includes device name, resolution, bounds, primary status, and bits per pixel for each screen.
         /// </remarks>
-        [LoggingAspects.ConsumeException]
+        [CAspects.ConsumeException]
         internal static bool DisplayScreenInformation()
         {
             if (commandstruct == null || commandstruct?.Parameters[1].Length < 1)

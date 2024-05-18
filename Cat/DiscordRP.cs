@@ -6,7 +6,7 @@ namespace Cat
     {
         private static readonly Discord.Discord discord = new(DCID, (UInt64)Discord.CreateFlags.Default);
 
-        [LoggingAspects.Logging]
+        [CAspects.Logging]
         internal static Discord.Activity LoadBaseActivity()
         {
             return new Discord.Activity
@@ -44,14 +44,14 @@ namespace Cat
             };
         }
 
-        [LoggingAspects.Logging]
+        [CAspects.Logging]
         internal static void SetActivity(Discord.Activity activity)
         {
             discord.GetActivityManager().UpdateActivity(activity, (result) => { Logging.Log("==DISCORD LOG== " + result); });
             discord.RunCallbacks();
         }
 
-        [LoggingAspects.Logging]
+        [CAspects.Logging]
         internal static void Init()
         {
             discord.SetLogHook(LogLevel.Debug, (l, m) => Logging.Log($"==DISCORD LOG== ({l}): {m}"));

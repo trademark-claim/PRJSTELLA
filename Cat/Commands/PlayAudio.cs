@@ -12,7 +12,7 @@ namespace Cat
         /// Validates the file path before attempting playback. Stops any currently playing audio before starting the new audio file.
         /// Currently doesn't work
         /// </remarks>
-        [LoggingAspects.ConsumeException]
+        [CAspects.ConsumeException]
         internal static bool PlayAudio()
         {
             string entry = commandstruct?.Parameters[0][0] as string;

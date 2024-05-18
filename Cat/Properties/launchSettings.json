@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Cat": {
+      "commandName": "Project",
+      "commandLineArgs": ""
+    }
+  }
+}

@@ -2,8 +2,9 @@
 {
     internal static partial class Commands
     {
-        [LoggingAspects.Logging]
-        [LoggingAspects.ConsumeException]
+        [CAspects.Logging]
+        [CAspects.ConsumeException]
+        [CAspects.CDebug]
         internal static bool ThrowError()
         {
             int.Parse("hello :3");

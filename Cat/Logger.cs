@@ -584,9 +584,9 @@ namespace Cat
             /// When <paramref name="LogToInterface"/> is true, progress updates are displayed on the user interface.
             /// Otherwise, progress updates are logged internally.
             /// </remarks>
-            [LoggingAspects.Logging]
-            [LoggingAspects.ConsumeException]
-            [LoggingAspects.InterfaceNotice]
+            [CAspects.Logging]
+            [CAspects.ConsumeException]
+            [CAspects.InterfaceNotice]
             internal ProgressLogging(string title, bool LogToInterface)
             {
                 @interface = LogToInterface;

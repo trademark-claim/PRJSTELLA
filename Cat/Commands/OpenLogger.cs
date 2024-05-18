@@ -9,7 +9,7 @@ namespace Cat
         /// <remarks>
         /// Ensures that only one instance of the logging window is open at any given time.
         /// </remarks>
-        [LoggingAspects.ConsumeException]
+        [CAspects.ConsumeException]
         internal static bool OpenLogger()
         {
             if (Logger == null)

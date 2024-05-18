@@ -2,7 +2,7 @@ namespace Cat
 {
     internal static partial class Commands
     {
-        [LoggingAspects.ConsumeException]
+        [CAspects.ConsumeException]
         internal static bool ResetCursor()
         {
             Interface.AddLog("Resetting cursor...");

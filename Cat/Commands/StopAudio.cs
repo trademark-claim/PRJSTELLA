@@ -9,7 +9,7 @@ namespace Cat
         /// <remarks>
         /// Checks if an audio file is currently playing and stops it, ensuring all resources are properly disposed.
         /// </remarks>
-        [LoggingAspects.ConsumeException]
+        [CAspects.ConsumeException]
         internal static bool StopAudio()
         {
             Logging.Log("Stopping Audio playback...");

@@ -9,9 +9,9 @@ namespace Cat
         /// <remarks>
         /// Iterates through all settings obtained from the configuration file, logging both the setting name and its value.
         /// </remarks>
-        [LoggingAspects.Logging]
-        [LoggingAspects.ConsumeException]
-        [LoggingAspects.InterfaceNotice]
+        [CAspects.Logging]
+        [CAspects.ConsumeException]
+        [CAspects.InterfaceNotice]
         internal static bool ShowSettings()
         {
             var data = Helpers.IniParsing.GetStructure(UserDataFile);

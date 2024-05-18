@@ -11,11 +11,10 @@ namespace Cat
         /// <remarks>
         /// Logs the start of the recording session and invokes the screen recording functionality provided by Helpers.ScreenRecording.
         /// </remarks>
+        [CAspects.InDev]
         internal static bool StartRecording()
         {
-            Interface.AddLog("Starting screen recording session");
-            ScreenRecorder = new();
-            ScreenRecorder.StartRecording();
+            Interface.AddLog("Command in development, sorry!");
             return true;
         }
     }

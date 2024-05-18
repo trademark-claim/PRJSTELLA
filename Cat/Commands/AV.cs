@@ -2,8 +2,8 @@
 {
     internal static partial class Commands
     {
-        [LoggingAspects.Logging]
-        [LoggingAspects.ConsumeException]
+        [CAspects.Logging]
+        [CAspects.ConsumeException]
         internal static bool AV()
         {
             Interface.AddLog("Starting Voice Capture...");

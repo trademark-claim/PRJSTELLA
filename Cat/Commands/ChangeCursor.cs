@@ -4,7 +4,7 @@ namespace Cat
 {
     internal static partial class Commands
     {
-        [LoggingAspects.ConsumeException]
+        [CAspects.ConsumeException]
         internal static bool ChangeCursor()
         {
             var entryN = commandstruct?.Parameters[0][0] as string;

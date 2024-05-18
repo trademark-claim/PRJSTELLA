@@ -4,8 +4,8 @@ namespace Cat
 {
     internal static partial class Commands
     {
-        [LoggingAspects.Logging]
-        [LoggingAspects.ConsumeException]
+        [CAspects.Logging]
+        [CAspects.ConsumeException]
         internal static bool ListCursorPreset()
         {
             if (commandstruct == null || commandstruct.Value.Parameters[1].Length == 0)

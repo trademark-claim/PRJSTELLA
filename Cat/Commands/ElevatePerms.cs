@@ -6,8 +6,8 @@
         /// Command that checks if the app is running as admin, and if not, restarts asking for it
         /// </summary>
         /// <returns>true if already has admin, otherwise nothing as it kills the application.</returns>
-        [LoggingAspects.UpsetStomach]
-        [LoggingAspects.ConsumeException]
+        [CAspects.UpsetStomach]
+        [CAspects.ConsumeException]
         internal static bool KillMyselfAndGetGodPowers()
         {
             bool? rah = Helpers.BackendHelping.RestartWithAdminRightsIfNeeded();

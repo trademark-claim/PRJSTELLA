@@ -23,6 +23,7 @@ using System.Text;
 using System.Diagnostics.Contracts;
 using System.Timers;
 using System.Runtime.CompilerServices;
+using System.Net.NetworkInformation;
 
 namespace Cat
 {
@@ -181,8 +182,8 @@ namespace Cat
             /// </summary>
             /// <param name="mode">Which array to run through</param>
             /// <param name="canvas">The canvas</param>
-            [LoggingAspects.Logging]
-            [LoggingAspects.ConsumeException]
+            [CAspects.Logging]
+            [CAspects.ConsumeException]
             internal static async void RunClara(Mode mode, Canvas canvas)
             {
                 ClaraHerself.canvas = canvas;
@@ -491,7 +492,7 @@ namespace Cat
             private static LowLevelProc _proc = HookCallback;
             private static nint _hookID = nint.Zero;
 
-            [LoggingAspects.Logging]
+            [CAspects.Logging]
             internal static void Toggle()
             {
                 if (!isOn) Run();
@@ -499,7 +500,7 @@ namespace Cat
                 isOn = !isOn;
             }
 
-            [LoggingAspects.Logging]
+            [CAspects.Logging]
             private static void Run()
             {
                 if (isOn) return;
@@ -570,7 +571,7 @@ namespace Cat
                 return CallNextHookExWrapper(_hookID, nCode, wParam, lParam);
             }
 
-            [LoggingAspects.Logging]
+            [CAspects.Logging]
             internal static void DestroyKeyHook()
             {
                 Logging.Log("Unhooking key hook...");
@@ -583,7 +584,7 @@ namespace Cat
                 Logging.Log($"Unhooking successful: {b}");
             }
 
-            [LoggingAspects.Logging]
+            [CAspects.Logging]
             private static void Stop()
             {
                 if (!isOn) return;
@@ -627,7 +628,7 @@ namespace Cat
 
                     private static Queue<Effect> effectsQueue = new();
 
-                    [LoggingAspects.Logging]
+                    [CAspects.Logging]
                     internal static void SetUpRectangles()
                     {
                         Memento = new List<Effect>(200);
@@ -874,7 +875,7 @@ namespace Cat
             internal int currentExceptionIndex = -1;
             private SWC.ListBox files = new();
 
-            [LoggingAspects.Logging]
+            [CAspects.Logging]
             internal LogEditor() // Runs upon object creation
             {
                 Topmost = true;
@@ -889,7 +890,7 @@ namespace Cat
                 LoadLogs();
             }
 
-            [LoggingAspects.Logging]
+            [CAspects.Logging]
             private void InitializeComponents()
             {
                 mainGrid = new Grid() { Background = Brushes.Transparent };
@@ -917,8 +918,8 @@ namespace Cat
                     files.Items.Add(file.Replace(LogFolder, ""));
             }
 
-            [LoggingAspects.Logging]
-            [LoggingAspects.ConsumeException]
+            [CAspects.Logging]
+            [CAspects.ConsumeException]
             private async Task LoadLogs()
             {
                 await Logging.FullFlush();
@@ -1214,7 +1215,7 @@ namespace Cat
             internal static bool WasCalled = false;
             internal static Dictionary<string, string> Speechrecogmap { get; private set; }
 
-            [LoggingAspects.Logging]
+            [CAspects.Logging]
             public static void ActivateVoiceCommandHandler()
             {
                 ready = true;
@@ -1256,7 +1257,7 @@ namespace Cat
                 recognizer.SetInputToDefaultAudioDevice();
             }
 
-            [LoggingAspects.Logging]
+            [CAspects.Logging]
             public static Task StartListeningAndProcessingAsync()
             {
                 if (ready)
@@ -1276,7 +1277,7 @@ namespace Cat
                 });
             }
 
-            [LoggingAspects.Logging]
+            [CAspects.Logging]
             public static void StopListening()
             {
                 ready = false;
@@ -1284,164 +1285,93 @@ namespace Cat
             }
         }
 
-        public class ScreenRecorder
+
+        internal class ProcessSelector : Window
         {
-            private AviWriter writer;
-            private IAviVideoStream videoStream;
-            private WaveInEvent audioSource;
-            private IAviAudioStream audioStream;
-            private Thread recordingThread;
-            private bool isRecording;
-            private string outputPath = Environment.VideoFolder;
-            private string name;
-            private string fullname;
+            private SWC.ComboBox processComboBox;
+            private TextBox searchTextBox;
 
-            public void StartRecording()
+            public int SelectedProcessId { get; private set; }
+
+            public ProcessSelector()
             {
-                try
+                InitializeComponents();
+                PopulateProcesses();
+                Topmost = true;
+                Loaded += (s, e) => searchTextBox.Focus();
+                PreviewKeyDown += (s, e) =>
                 {
-                    System.Drawing.Rectangle bounds = Catowo.GetScreen().Bounds;
-                    // Initialize AVI writer
-                    name = $"capture_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}";
-                    fullname = System.IO.Path.Combine(outputPath, $"{name}.avi");
-                    writer = new AviWriter(fullname)
-                    {
-                        FramesPerSecond = 30,
-                        EmitIndex1 = true
-                    };
-
-                    // Create video stream
-                    videoStream = writer.AddVideoStream(bounds.Width, bounds.Height, BitsPerPixel.Bpp24);
-
-                    // Create audio stream
-                    audioSource = new WaveInEvent();
-                    audioSource.DeviceNumber = 0;
-                    audioSource.WaveFormat = new WaveFormat(44100, 1);
-
-                    audioStream = writer.AddAudioStream(audioSource.WaveFormat.Channels, audioSource.WaveFormat.SampleRate);
-                    audioSource.DataAvailable += (s, e) =>
-                    {
-                        audioStream.WriteBlock(e.Buffer, 0, e.BytesRecorded);
-                    };
-
-                    audioSource.StartRecording();
-
-                    // Start capture thread
-                    isRecording = true;
-                    recordingThread = new Thread(() => CaptureScreen(Catowo._Screen))
-                    {
-                        IsBackground = true
-                    };
-                    recordingThread.Start();
-                }
-                catch (Exception ex)
-                {
-                    Logging.LogError(ex);
-                    throw;
-                }
+                    if (e.Key == System.Windows.Input.Key.Enter)
+                        Close();
+                };
             }
 
-            private void CaptureScreen(int screenIndex)
+            private void InitializeComponents()
             {
-                var frameInterval = TimeSpan.FromSeconds(1.0 / (double)writer.FramesPerSecond);
+                Title = "Select a Process";
+                Width = 300;
+                Height = 150;
+                WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
-                while (isRecording)
+                StackPanel panel = new StackPanel
                 {
-                    var startTime = DateTime.Now;
-
-                    string? errorMessage;
-                    using (var bitmap = Helpers.Screenshotting.CaptureScreen(screenIndex, out errorMessage))
-                    {
-                        if (!string.IsNullOrEmpty(errorMessage))
-                        {
-                            Logging.LogError(new Exception($"Failed to capture screen: {errorMessage}"));
-                            continue;
-                        }
-
-                        var bounds = Screen.AllScreens[screenIndex].Bounds;
-                        var buffer = new byte[bounds.Width * bounds.Height * 4];
-
-                        using (var convertedBitmap = ConvertTo24bpp(bitmap))
-                        {
-                            using (var ms = new MemoryStream())
-                            {
-                                convertedBitmap.Save(ms, System.Drawing.Imaging.ImageFormat.Bmp);
-                                ms.Position = 0;
-                                ms.Read(buffer, 0, buffer.Length);
-                                videoStream.WriteFrame(true, buffer, 0, buffer.Length);
-                            }
-                        }
-
-                    }
-
-                    var timeToSleep = frameInterval - (DateTime.Now - startTime);
-                    if (timeToSleep > TimeSpan.Zero)
-                        Thread.Sleep(timeToSleep);
-                }
-            }
-
-            private Bitmap ConvertTo24bpp(Bitmap input)
-            {
-                var output = new Bitmap(input.Width, input.Height, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
-                using (var g = Graphics.FromImage(output))
-                {
-                    g.DrawImage(input, new System.Drawing.Rectangle(0, 0, input.Width, input.Height));
-                }
-                return output;
-            }
-
-
-            public void StopRecording()
-            {
-                isRecording = false;
-                recordingThread.Join();
-                audioSource.StopRecording();
-                audioSource.Dispose();
-                writer.Close();
-                //EncodeVideo(); Dont need this cause it already creates a valid .avi file (though its all green so maybe its not successful)
-            }
-
-            private async Task EncodeVideo()
-            {
-
-                var args = $"ffmpeg -i {fullname} -vcodec libx264 -crf 23 -preset fast -acodec aac -ar 48000 -b:a 192k {System.IO.Path.Combine(outputPath, $"{name}.mp4")}";
-                var process = new Process
-                {
-                    StartInfo = new ProcessStartInfo(FFMPEGPath, args)
-                    {
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        UseShellExecute = false,
-                        CreateNoWindow = true
-                    }
+                    Orientation = SWC.Orientation.Vertical,
+                    Margin = new Thickness(10)
                 };
 
-                process.OutputDataReceived += (sender, e) =>
+                searchTextBox = new TextBox
                 {
-                    if (e.Data != null)
-                        Logging.Log(e.Data);
+                    Margin = new Thickness(0, 0, 0, 10)
                 };
+                searchTextBox.TextChanged += SearchTextBox_TextChanged;
 
-                process.ErrorDataReceived += (sender, e) =>
+                processComboBox = new SWC.ComboBox
                 {
-                    if (e.Data != null)
-                        Logging.Log(e.Data);
+                    Height = 25,
+                    DisplayMemberPath = "ProcessName",
+                    IsSynchronizedWithCurrentItem = true
                 };
+                processComboBox.SelectionChanged += ProcessComboBox_SelectionChanged;
 
-                process.Start();
+                panel.Children.Add(searchTextBox);
+                panel.Children.Add(processComboBox);
+                Content = panel;
+            }
 
-                process.BeginOutputReadLine();
-                process.BeginErrorReadLine();
+            private void PopulateProcesses()
+            {
+                processComboBox.ItemsSource = Process.GetProcesses()
+                    .GroupBy(p => p.ProcessName)
+                    .Select(g => g.First())
+                    .OrderBy(p => p.ProcessName)
+                    .ToList();
+            }
 
-                await process.WaitForExitAsync();
+            private void SearchTextBox_TextChanged(object sender, TextChangedEventArgs e)
+            {
+                var filter = searchTextBox.Text.ToLower();
+                processComboBox.ItemsSource = Process.GetProcesses()
+                    .Where(p => p.ProcessName.ToLower().Contains(filter))
+                    .GroupBy(p => p.ProcessName)
+                    .Select(g => g.First())
+                    .OrderBy(p => p.ProcessName)
+                    .ToList();
+            }
 
-                if (process.ExitCode == 0)
+            private void ProcessComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+            {
+                if (processComboBox.SelectedItem is Process selectedProcess)
                 {
-                    Logging.Log("FFmpeg process completed successfully.");
+                    SelectedProcessId = selectedProcess.Id;
                 }
-                else
+            }
+
+            protected override void OnClosed(EventArgs e)
+            {
+                base.OnClosed(e);
+                if (processComboBox.SelectedItem == null)
                 {
-                    Logging.LogError(new Exception("FFmpeg process failed with exit code " + process.ExitCode));
+                    SelectedProcessId = -1;
                 }
             }
         }
@@ -1462,6 +1392,7 @@ namespace Cat
             private System.Timers.Timer timer;
 
 
+
             public ProcessManager(int AppID)
             {
                 Prcs = Process.GetProcessById(AppID);
@@ -1473,11 +1404,23 @@ namespace Cat
                     if (active != null)
                     {
                         Logging.Log("Mouse up on SLB element");
-                        active.PreviewMouseMove -= active.moving;
+                        active.PreviewMouseMove += moving;
                         active.diff = new();
                         active.Background = Brushes.Transparent;
                         BorderThickness = new(0);
+                        PreviewMouseMove += moving;
                     }
+                };
+                PreviewMouseLeftButtonUp += (s, e) =>
+                {
+                    Logging.Log("Mouse up on SLB element");
+                    if (active != null)
+                    {
+                        active.PreviewMouseMove -= moving;
+                        active.diff = new();
+                        active.Background = Brushes.Transparent;
+                    }
+                    PreviewMouseMove -= moving;
                 };
                 Closing += (s, e) =>
                 {
@@ -1486,50 +1429,105 @@ namespace Cat
                 };
             }
 
-            private void InitialiseBase()
+            private void moving(object sender, System.Windows.Input.MouseEventArgs e)
+            {
+                if (active == null) return;
+                Point p1 = new(Canvas.GetLeft(active), Canvas.GetTop(active));
+                p1.X = double.IsNaN(p1.X) ? 0 : p1.X;
+                p1.Y = double.IsNaN(p1.Y) ? 0 : p1.Y;
+                Point p2 = e.GetPosition(active);
+                Point p3 = new(p2.X - active.diff.X, p2.Y - active.diff.Y);
+                Point p4 = new(p1.X + p3.X, p1.Y + p3.Y);
+                Logging.Log($"Original Position: {p1}", $"Relative Mouse Position: {p2}", $"Difference: {p3}", $"New Position: {p4}");
+                Canvas.SetTop(active, p4.Y);
+                Canvas.SetLeft(active, p4.X);
+            }
+
+            private async void InitialiseBase()
             {
                 timer = new() { Interval = Refreshrate * 1000 };
                 Canvas.Width = ActualWidth;
                 Canvas.Height = ActualHeight;
 
-                DraggableBlock cpu = new(this) { Text = "CPU %: ", FontSize = UserData.FontSize }, //
-                    memory = new(this) { Text = "Memory: ", FontSize = UserData.FontSize }, //
-                    gpu = new(this) { Text = "GPU %: ", FontSize = UserData.FontSize }, //
-                    disk = new(this) { Text = "Disk IO: ", FontSize = UserData.FontSize }, //
-                    network = new(this) { Text = "Network: ", FontSize = UserData.FontSize }, //
-                    resources = new(this) { Text = "Resources: ", FontSize = UserData.FontSize }, //
-                    threads = new(this) { Text = "Thread #: ", FontSize = UserData.FontSize }, //
-                    lifetime = new(this) { Text = "Lifetime: ", FontSize = UserData.FontSize }, //
-                    tree = new(this) { Text = "Process Tree: ", FontSize = UserData.FontSize }, //
-                    activity = new(this) { Text = "Activity: ", FontSize = UserData.FontSize }, //
-                    response = new(this) { Text = "Response Time: ", FontSize = UserData.FontSize }, //
-                    calls = new(this) { Text = "Sys Calls: ", FontSize = UserData.FontSize }, //
-                    accesses = new(this) { Text = "Service Accesses: ", FontSize = UserData.FontSize }, // 
-                    interactions = new(this) { Text = "Service Interactions: ", FontSize = UserData.FontSize }, //
-                    state = new(this) { Text = "State: ", FontSize = UserData.FontSize }, //
-                    mkhardware = new(this) { Text = "Mouse / Keyboard events: ", FontSize = UserData.FontSize }, //
-                    ohardware = new(this) { Text = "Other hardware events: ", FontSize = UserData.FontSize }, //
-                    user = new(this) { Text = "User: ", FontSize = UserData.FontSize }, //
-                    authevents = new(this) { Text = "Auth Events: ", FontSize = UserData.FontSize }, //
-                    shardware = new(this) { Text = "Other Hardware Stats: ", FontSize = UserData.FontSize }, //
-                    traffic = new(this) { Text = "Network Traffic: ", FontSize = UserData.FontSize }; //
+                DraggableBlock cpu = new(this) { Text = "CPU %: ", FontSize = UserData.FontSize },
+                    memory = new(this) { Text = "Memory: ", FontSize = UserData.FontSize },
+                    gpu = new(this) { Text = "GPU %: ", FontSize = UserData.FontSize },
+                    disk = new(this) { Text = "Disk IO: ", FontSize = UserData.FontSize },
+                    network = new(this) { Text = "Network: ", FontSize = UserData.FontSize },
+                    resources = new(this) { Text = "Resources: ", FontSize = UserData.FontSize },
+                    threads = new(this) { Text = "Thread #: ", FontSize = UserData.FontSize },
+                    lifetime = new(this) { Text = "Lifetime: ", FontSize = UserData.FontSize },
+                    tree = new(this) { Text = "Process Tree: ", FontSize = UserData.FontSize },
+                    activity = new(this) { Text = "Activity: ", FontSize = UserData.FontSize },
+                    response = new(this) { Text = "Response Time: ", FontSize = UserData.FontSize },
+                    calls = new(this) { Text = "Sys Calls: ", FontSize = UserData.FontSize },
+                    accesses = new(this) { Text = "Service Accesses: ", FontSize = UserData.FontSize },
+                    interactions = new(this) { Text = "Service Interactions: ", FontSize = UserData.FontSize },
+                    state = new(this) { Text = "State: ", FontSize = UserData.FontSize },
+                    mkhardware = new(this) { Text = "Mouse / Keyboard events: ", FontSize = UserData.FontSize },
+                    ohardware = new(this) { Text = "Other hardware events: ", FontSize = UserData.FontSize },
+                    user = new(this) { Text = "User: ", FontSize = UserData.FontSize },
+                    authevents = new(this) { Text = "Auth Events: ", FontSize = UserData.FontSize },
+                    shardware = new(this) { Text = "Other Hardware Stats: ", FontSize = UserData.FontSize },
+                    traffic = new(this) { Text = "Network Traffic: ", FontSize = UserData.FontSize },
+                    handles = new(this) { Text = "Handles: ", FontSize = UserData.FontSize },
+                    privateBytes = new(this) { Text = "Private Bytes: ", FontSize = UserData.FontSize },
+                    virtualMemory = new(this) { Text = "Virtual Memory: ", FontSize = UserData.FontSize },
+                    ioRead = new(this) { Text = "IO Read Ops: ", FontSize = UserData.FontSize },
+                    ioWrite = new(this) { Text = "IO Write Ops: ", FontSize = UserData.FontSize };
+
+                var networkInterfaces = NetworkInterface.GetAllNetworkInterfaces();
+                foreach (var iface in networkInterfaces) 
+                {
+                    Logging.Log(iface.Name);
+                }
+                //Logging.FullFlush();
+                //await Task.Delay(1000);
+                var networkInterfaceName = networkInterfaces.FirstOrDefault()?.Name ?? "Ethernet";
+                DraggableBlock networkSent = new(this) { Text = "Network Sent: ", FontSize = UserData.FontSize },
+                    networkReceived = new(this) { Text = "Network Received: ", FontSize = UserData.FontSize };
 
                 var cpuCounter = new PerformanceCounter("Process", "% Processor Time", Prcs.ProcessName, true);
                 cpuCounter.NextValue();
                 var diskCounter = new PerformanceCounter("Process", "IO Data Bytes/sec", Prcs.ProcessName, true);
+                var memoryCounter = new PerformanceCounter("Process", "Working Set - Private", Prcs.ProcessName, true);
+                var handleCounter = new PerformanceCounter("Process", "Handle Count", Prcs.ProcessName, true);
+                var privateBytesCounter = new PerformanceCounter("Process", "Private Bytes", Prcs.ProcessName, true);
+                var virtualMemoryCounter = new PerformanceCounter("Process", "Virtual Bytes", Prcs.ProcessName, true);
+                var ioReadCounter = new PerformanceCounter("Process", "IO Read Operations/sec", Prcs.ProcessName, true);
+                var ioWriteCounter = new PerformanceCounter("Process", "IO Write Operations/sec", Prcs.ProcessName, true);
+                var networkSentCounter = new PerformanceCounter("Network Interface", "Bytes Sent/sec", "", true);
+                var networkReceivedCounter = new PerformanceCounter("Network Interface", "Bytes Received/sec", "", true);
 
                 timer.Elapsed += (s, e) =>
                 {
                     float cpuUsage = cpuCounter.NextValue() / System.Environment.ProcessorCount;
-                    float diskUsage = diskCounter.NextValue() / (1024 * 1024);
+                    float diskUsage = diskCounter.NextValue() / (1024 * 1024); // Convert to MB
+                    float memoryUsage = memoryCounter.NextValue() / (1024 * 1024); // Convert to MB
+                    float handleCount = handleCounter.NextValue();
+                    float privateBytesUsage = privateBytesCounter.NextValue() / (1024 * 1024); // Convert to MB
+                    float virtualMemoryUsage = virtualMemoryCounter.NextValue() / (1024 * 1024); // Convert to MB
+                    float ioReadOps = ioReadCounter.NextValue();
+                    float ioWriteOps = ioWriteCounter.NextValue();
+                    float networkSentBytes = networkSentCounter.NextValue() / (1024 * 1024); // Convert to MB
+                    float networkReceivedBytes = networkReceivedCounter.NextValue() / (1024 * 1024); // Convert to MB
                     try
                     {
                         Application.Current.Dispatcher.Invoke(() =>
                         {
                             using (this.Dispatcher.DisableProcessing())
                             {
+
                                 cpu.Text = $"CPU %: {cpuUsage:F2}";
                                 disk.Text = $"Disk IO: {diskUsage:F2} MB";
+                                memory.Text = $"Memory: {memoryUsage:F2} MB";
+                                handles.Text = $"Handles: {handleCount:F0}";
+                                privateBytes.Text = $"Private Bytes: {privateBytesUsage:F2} MB";
+                                virtualMemory.Text = $"Virtual Memory: {virtualMemoryUsage:F2} MB";
+                                ioRead.Text = $"IO Read Ops: {ioReadOps:F0}";
+                                ioWrite.Text = $"IO Write Ops: {ioWriteOps:F0}";
+                                networkSent.Text = $"Network Sent: {networkSentBytes:F2} MB";
+                                networkReceived.Text = $"Network Received: {networkReceivedBytes:F2} MB";
                             }
                         });
                     }
@@ -1545,40 +1543,12 @@ namespace Cat
                     }
                 };
 
-                /* ===== Groupings =====
-                  System Performance:
-                    Cpu: How much % of the cpu the process is using
-                    GPU: How much % of the gpu the process is using
-                    Memory: How much % of the system memory the process is using
-                    Disk: How much mb of the disk the process is using
-                    Shardware: Other hardware stuff (implemented later)
-                  Threads:
-                    threads: how many threads the app is using and what % this is of rhe total amount of threads
-                    lifetime: how long app has been up and running
-                    tree: The process tree
-                    response: Responce time of the process
-                    state: State of the process
-                    resources: How many sys resouces the app is taking 
-                   Events and Networking
-                    activity: implemented later, 
-                    calls: Most recent call to other processes or system functions
-                    mkhardware: Most recent mouse movement or keyboard event
-                    network: How much network its using and what % of total this is
-                    traffic: Most recent network traffic event to the process
-                    ohardware: Other most recent hardware events
-                   User, Security and misc:
-                    user: What user the process is running on
-                    authevents: Most recent auth event
-                    access: What level of security access the app has
-                    interactions: TBD
-                 ==== END ==== */
-
-                double aw = ActualWidth / 2;
                 DraggableBlock[] blocks = {
-                    cpu, memory, gpu, disk, network, resources, threads, lifetime, tree,
-                    activity, response, calls, accesses, interactions, state, mkhardware,
-                    ohardware, user, authevents, shardware, traffic
-                };
+            cpu, memory, gpu, disk, network, resources, threads, lifetime, tree,
+            activity, response, calls, accesses, interactions, state, mkhardware,
+            ohardware, user, authevents, shardware, traffic, handles, privateBytes,
+            virtualMemory, ioRead, ioWrite, networkSent, networkReceived
+        };
                 int y = 10;
                 int x = 20;
 
@@ -1590,13 +1560,8 @@ namespace Cat
                     y += 20;
                 }
 
-
-
-
-
                 Wrapper.Child = Canvas;
                 Content = Wrapper;
-
 
                 timer.Start();
             }
@@ -1616,31 +1581,18 @@ namespace Cat
                         parent.active = this;
                         Logging.Log("Mouse down on SLB element, moving?");
                         diff = e.GetPosition(this);
-                        PreviewMouseMove += moving;
+                        PreviewMouseMove += parent.moving;
                         Logging.Log($"Diff: {diff}");
                         Background = new SolidColorBrush(Color.FromArgb(0xAA, 0x0, 0x0, 0x0));
                     };
                     PreviewMouseLeftButtonUp += (s, e) =>
                     {
                         Logging.Log("Mouse up on SLB element");
-                        PreviewMouseMove -= moving;
+                        PreviewMouseMove -= parent.moving;
                         diff = new();
                         Background = Brushes.Transparent;
                     };
                     Loaded += (s, e) => Height = ActualHeight;
-                }
-
-                internal void moving(object sender, System.Windows.Input.MouseEventArgs e)
-                {
-                    Point p1 = new(Canvas.GetLeft(this), Canvas.GetTop(this));
-                    p1.X = double.IsNaN(p1.X) ? 0 : p1.X;
-                    p1.Y = double.IsNaN(p1.Y) ? 0 : p1.Y;
-                    Point p2 = e.GetPosition(this);
-                    Point p3 = new(p2.X - diff.X, p2.Y - diff.Y);
-                    Point p4 = new(p1.X + p3.X, p1.Y + p3.Y);
-                    Logging.Log($"Original Position: {p1}", $"Relative Mouse Position: {p2}", $"Difference: {p3}", $"New Position: {p4}");
-                    Canvas.SetTop(this, p4.Y);
-                    Canvas.SetLeft(this, p4.X);
                 }
             }
 

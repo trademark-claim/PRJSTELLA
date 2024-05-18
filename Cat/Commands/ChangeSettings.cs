@@ -9,7 +9,7 @@ namespace Cat
         /// <remarks>
         /// Parses the setting name and value from the user input, validating against known settings and applying the change if valid.
         /// </remarks>
-        [LoggingAspects.ConsumeException]
+        [CAspects.ConsumeException]
         internal static bool ChangeSettings()
         {
             try

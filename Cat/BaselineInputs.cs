@@ -21,8 +21,8 @@ namespace Cat
         /// Checks if the default audio endpoint device is muted.
         /// </summary>
         /// <returns>True if the device is muted; otherwise, false.</returns>
-        [LoggingAspects.Logging]
-        [LoggingAspects.ConsumeException]
+        [CAspects.Logging]
+        [CAspects.ConsumeException]
         internal static bool IsMute()
         {
             Logging.Log("Checking Mute status of device...");
@@ -59,8 +59,8 @@ namespace Cat
 
             internal static CursorType CurrentCursor { get; private set; }
 
-            [LoggingAspects.Logging]
-            [LoggingAspects.ConsumeException]
+            [CAspects.Logging]
+            [CAspects.ConsumeException]
             internal static void LoadPresetByIndex(int num)
             {
                 var dirs = Directory.EnumerateDirectories(CursorsFilePath).ToArray().Select(x => x.Replace(CursorsFilePath, "")).ToArray();
@@ -78,8 +78,8 @@ namespace Cat
             /// </summary>
             /// <param name="filename">The path to the cursor file.</param>
             /// <returns>True if the cursor was successfully changed; otherwise, false.</returns>
-            [LoggingAspects.ConsumeException]
-            [LoggingAspects.Logging]
+            [CAspects.ConsumeException]
+            [CAspects.Logging]
             internal static bool ChangeCursor(string filename, uint id = OCR_NORMAL, bool persistent = false)
             {
                 bool allg = true;
@@ -112,8 +112,8 @@ namespace Cat
                 }
             }
 
-            [LoggingAspects.Logging]
-            [LoggingAspects.ConsumeException]
+            [CAspects.Logging]
+            [CAspects.ConsumeException]
             private static bool SetPersistentCursor(string cursorPath, string cursorRegistryKey)
             {
                 var cursorsRegistryPath = @"Control Panel\Cursors";
@@ -159,8 +159,8 @@ namespace Cat
             /// <summary>
             /// Sets the cursor to a black point.
             /// </summary>
-            [LoggingAspects.ConsumeException]
-            [LoggingAspects.Logging]
+            [CAspects.ConsumeException]
+            [CAspects.Logging]
             internal static void BlackPoint()
             {
                 string path = Path.Combine(RunningPath, BCURPATH);
@@ -172,8 +172,8 @@ namespace Cat
             /// <summary>
             /// Resets the cursor to the default system cursor.
             /// </summary>
-            [LoggingAspects.ConsumeException]
-            [LoggingAspects.Logging]
+            [CAspects.ConsumeException]
+            [CAspects.Logging]
             internal static void Reset()
             {
                 Logging.Log("Resetting system cursors...");
@@ -215,7 +215,7 @@ namespace Cat
         /// <summary>
         /// Toggles the mute status of the default audio endpoint device.
         /// </summary>
-        [LoggingAspects.Logging]
+        [CAspects.Logging]
         internal static void ToggleMuteSound()
         {
             Logging.Log($"Toggling mute...");
@@ -223,7 +223,7 @@ namespace Cat
             Logging.Log($"Mute toggle operation complete.");
         }
 
-        [LoggingAspects.Logging]
+        [CAspects.Logging]
         internal static void IncrVol20()
         {
             using (var enumerator = new MMDeviceEnumerator())
@@ -240,7 +240,7 @@ namespace Cat
             }
         }
 
-        [LoggingAspects.Logging]
+        [CAspects.Logging]
         internal static void DecrVol20()
         {
             using (var enumerator = new MMDeviceEnumerator())
@@ -261,7 +261,7 @@ namespace Cat
         /// Toggles the mute status of the default audio endpoint device based on a given condition.
         /// </summary>
         /// <param name="on">Indicates whether to mute (true) or unmute (false) the device.</param>
-        [LoggingAspects.Logging]
+        [CAspects.Logging]
         internal static void ToggleMuteSound(bool on)
         {
             bool muted = IsMute();
@@ -279,7 +279,7 @@ namespace Cat
         /// Hides the cursor.
         /// </summary>
         /// <returns>The new display count of the cursor.</returns>
-        [LoggingAspects.Logging]
+        [CAspects.Logging]
         internal static int HideCursor()
         {
             Logging.Log("Attempting to hide cursor. (WARNING: This operation may fail without error)");
@@ -293,7 +293,7 @@ namespace Cat
         /// Shows the cursor.
         /// </summary>
         /// <returns>The new display count of the cursor.</returns>
-        [LoggingAspects.Logging]
+        [CAspects.Logging]
         internal static int ShowCursor()
         {
             Logging.Log("Attempting to show cursor. (WARNING: This operation may fail without error)");
@@ -306,8 +306,8 @@ namespace Cat
         /// <summary>
         /// Simulates typing "HELLO" using keyboard input.
         /// </summary>
-        [LoggingAspects.Logging]
-        [LoggingAspects.ConsumeException]
+        [CAspects.Logging]
+        [CAspects.ConsumeException]
         internal static void SendHello()
         {
             Logging.Log($"Sending fake hello VIn");
@@ -349,8 +349,8 @@ namespace Cat
         /// Causes the mouse to move erratically on the screen.
         /// </summary>
         /// <param name="smooth">Indicates whether the movement should be smooth.</param>
-        [LoggingAspects.Logging]
-        [LoggingAspects.ConsumeException]
+        [CAspects.Logging]
+        [CAspects.ConsumeException]
         internal static async void CauseMouseToHaveSpasticAttack(bool smooth = false)
         {
             Logging.Log($"Causing mouse to have a spastic attack, smoothing: {smooth}");
@@ -379,8 +379,8 @@ namespace Cat
         /// <param name="startX">The starting X coordinate.</param>
         /// <param name="startY">The starting Y coordinate.</param>
         /// <param name="endX">The ending X coordinate.</param>
-        [LoggingAspects.Logging]
-        [LoggingAspects.AsyncExceptionSwallower]
+        [CAspects.Logging]
+        [CAspects.AsyncExceptionSwallower]
         internal static async Task MoveMouseSmoothly(int startX, int startY, int endX, int endY, int duration)
         {
             Logging.Log($"Moving mouse smoothly from {startX}:{startY} to {endX}:{endY} over {duration} milliseconds. (100 steps)");

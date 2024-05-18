@@ -225,7 +225,7 @@ namespace Cat
         /// The primary screen is determined by iterating through <see cref="System.Windows.Forms.Screen.AllScreens"/>
         /// and identifying the screen marked as primary.
         /// </summary>
-        private static int _screen_ = Array.FindIndex(System.Windows.Forms.Screen.AllScreens, screen => screen.Primary);
+        private static int _screen_ = 1; //Array.FindIndex(System.Windows.Forms.Screen.AllScreens, screen => screen.Primary);
 
         internal static int _Screen { get => _screen_; }
 
@@ -251,19 +251,24 @@ namespace Cat
                 {
                     if (value >= 0 && value < System.Windows.Forms.Screen.AllScreens.Length)
                     {
-                        ToggleInterface();
-                        Screen screen = System.Windows.Forms.Screen.AllScreens[value];
-                        var (width, height, working) = Helpers.ScreenSizing.GetAdjustedScreenSize(screen);
-                        Top = screen.Bounds.Top;
-                        Left = screen.Bounds.Left;
-                        Width = width;
-                        Height = height;
-                        Logging.Log("New Screen Params: ", Top, Left, Width, Height);
-                        _screen_ = value;
-                        ToggleInterface();
+                        ChangeScreen(value);
                     }
                 }
             }
+        }
+
+        private void ChangeScreen(int value)
+        {
+            ToggleInterface(false);
+            Screen screen = System.Windows.Forms.Screen.AllScreens[value];
+            var (width, height, _) = Helpers.ScreenSizing.GetAdjustedScreenSize(screen);
+            Top = screen.Bounds.Top;
+            Left = screen.Bounds.Left;
+            Width = width;
+            Height = height;
+            Logging.Log("New Screen Params: ", Top, Left, Width, Height);
+            ToggleInterface(false);
+            _screen_ = value;
         }
 
         #region Low Levels
@@ -276,7 +281,7 @@ namespace Cat
         /// and then sets the keyboard hook with the system. It logs each step of the process, including the successful
         /// hooking and the associated hook ID. The hook ID is then stored for future reference and unhooking if necessary.
         /// </remarks>
-        [LoggingAspects.Logging]
+        [CAspects.Logging]
         private void InitKeyHook()
         {
             Logging.Log("Setting key hook protocal...");
@@ -296,7 +301,7 @@ namespace Cat
         /// If successful, resets the global hook ID to its default value.
         /// </remarks>
 
-        [LoggingAspects.Logging]
+        [CAspects.Logging]
         internal static void DestroyKeyHook()
         {
             Logging.Log("Unhooking key hook...");
@@ -321,7 +326,7 @@ namespace Cat
         /// the type of hook (WH_KEYBOARD_LL), the callback procedure, and the module handle obtained from
         /// the current process's main module. It logs the process of hook initialization and setting.
         /// </remarks>
-        [LoggingAspects.Logging]
+        [CAspects.Logging]
         private static IntPtr SetKeyboardHook(LowLevelProc proc)
         {
             Logging.Log("Initing Keyboard hook...");
@@ -349,7 +354,7 @@ namespace Cat
         /// application mode and the keys pressed. Actions can include shutting down the application, toggling modes, showing or hiding
         /// the cursor, and more. It logs each key event with its details.
         /// </remarks>
-        [LoggingAspects.Logging]
+        [CAspects.Logging]
         private IntPtr KeyboardProc(int nCode, IntPtr wParam, IntPtr lParam)
         {
             int vkCode = Marshal.ReadInt32(lParam);
@@ -578,7 +583,7 @@ namespace Cat
         /// <remarks>
         /// Attempts to return the screen at the index specified by the internal screen index. If this operation fails, for example, due to an invalid index, the primary screen is returned instead. This method uses exception handling to manage any errors during this process.
         /// </remarks>
-        [LoggingAspects.Logging]
+        [CAspects.Logging]
         internal static Screen GetScreen()
         {
             try
@@ -668,19 +673,33 @@ namespace Cat
         /// <remarks>
         /// If the interface is currently visible, this method clears it and resets the window style to its edited state, logging the change. If the interface is not visible, it sets the window style to include layering and tool window properties, adds a new interface instance to the canvas, and logs the update. In both cases, the method adjusts key hooking accordingly.
         /// </remarks>
-        [LoggingAspects.Logging]
-        [LoggingAspects.ConsumeException]
-        [LoggingAspects.UpsetStomach]
-        internal bool ToggleInterface()
+        [CAspects.Logging]
+        [CAspects.ConsumeException]
+        [CAspects.UpsetStomach]
+        internal bool ToggleInterface(bool animation = true)
         {
             if (Interface.inst != null)
             {
-                Interface.inst.ShrinkAndDisappear(() =>
+                if (animation)
+                    Interface.inst.ShrinkAndDisappear(() =>
+                    {
+                        try
+                        {
+                            Interface.inst.Children?.Clear();
+                            Interface.inst.parent?.Children.Remove(Interface.inst);
+                            Interface.inst = null;
+                        }
+                        catch (Exception ex) 
+                        {
+                            Logging.LogError(ex);
+                        }
+                    });
+                else
                 {
-                    Interface.inst.Children.Clear();
+                    Interface.inst.Children?.Clear();
                     Interface.inst.parent?.Children.Remove(Interface.inst);
                     Interface.inst = null;
-                });
+                }
                 MakeFunnyWindow();
                 return true;
             }
@@ -694,7 +713,7 @@ namespace Cat
             }
         }
 
-        [LoggingAspects.Logging]
+        [CAspects.Logging]
         internal void MakeNormalWindow()
         {
             Logging.Log($"Changing WinStyle of HWND {hwnd}");
@@ -705,7 +724,7 @@ namespace Cat
             DestroyKeyHook();
         }
 
-        [LoggingAspects.Logging]
+        [CAspects.Logging]
         internal void MakeFunnyWindow()
         {
             Logging.Log($"Changing WinStyle of HWND {hwnd}");
@@ -718,7 +737,7 @@ namespace Cat
 
         internal class Interface : Canvas
         {
-            internal SWS.Rectangle Backg { get; }
+            internal SWS.Rectangle Backg { get; set; }
             internal SWC.TextBox inputTextBox { get; private set; }
 
             internal static LogListBox logListBox = new();
@@ -754,22 +773,22 @@ namespace Cat
             {
                 var scre = GetScreen();
                 var (screenWidth, screenHeight, _) = Helpers.ScreenSizing.GetAdjustedScreenSize(scre);
-                SWS.Rectangle rect = new SWS.Rectangle { Width = screenWidth, Height = screenHeight, Fill = new SWM.SolidColorBrush(SWM.Colors.Gray), Opacity = UserData.Opacity };
-                Logging.Log($"{Catowo.inst.Screen}, {rect.Width} {rect.Height}");
+                Backg = new SWS.Rectangle { Width = screenWidth, Height = screenHeight, Fill = new SWM.SolidColorBrush(SWM.Colors.Gray), Opacity = UserData.Opacity };
+                Logging.Log($"{Catowo.inst.Screen}, {Backg.Width} {Backg.Height}");
 #if CrashWary
                 rect.Height = rect.Height - 50;
                 SetTop<double>(rect, 50);
 #else
-                SetTop<double>(rect, 0);
+                SetTop<double>(Backg, 0);
 #endif
-                SetLeft<double>(rect, 0);
-                Children.Add(rect);
-                return rect;
+                SetLeft<double>(Backg, 0);
+                Children.Add(Backg);
+                return Backg;
             }
 
-            [LoggingAspects.Logging]
-            [LoggingAspects.ConsumeException]
-            [LoggingAspects.UpsetStomach]
+            [CAspects.Logging]
+            [CAspects.ConsumeException]
+            [CAspects.UpsetStomach]
             private void InitializeComponents()
             {
                 Screen screen = GetScreen();
@@ -838,6 +857,24 @@ namespace Cat
                 inputTextBox.Focus();
             }
 
+            internal void UpdateInterface()
+            {
+                Screen screen = GetScreen();
+                var (screenWidth, screenHeight, workAreaHeight) = Helpers.ScreenSizing.GetAdjustedScreenSize(screen);
+
+                double taskbarHeight = screenHeight - workAreaHeight;
+                double padding = 20;
+                double inputTextBoxHeight = 30;
+                inputTextBox.Width = screenWidth - (padding * 2);
+                inputTextBox.Height = inputTextBoxHeight;
+                SetTop<double>(inputTextBox, screenHeight - taskbarHeight - inputTextBoxHeight - (padding));
+                logListBox.Width = screenWidth - (padding * 2);
+                logListBox.Height = screenHeight - taskbarHeight - inputTextBoxHeight - (padding * 3);
+
+                Backg.Width = screenWidth;
+                Backg.Height = screenHeight;
+            }
+
             /// <summary>
             /// Asynchronously hides the interface, setting its visibility to collapsed and ensuring the UI updates immediately.
             /// </summary>
@@ -866,7 +903,7 @@ namespace Cat
             /// </summary>
             /// <param name="logMessage">The message to log.</param>
             /// <returns>An integer representing the position of the newly added log message in the log list box.</returns>
-            [LoggingAspects.ConsumeException]
+            [CAspects.ConsumeException]
             internal static int AddLog(string logMessage)
             {
                 Interface? instance = inst;
@@ -885,7 +922,7 @@ namespace Cat
             /// <param name="message">The new log message.</param>
             /// <param name="id">The index of the log message to edit.</param>
             /// <param name="fromEnd">Whether the index is counted from the end of the log list.</param>
-            [LoggingAspects.ConsumeException]
+            [CAspects.ConsumeException]
             internal static int AddLog(params string[] logs)
             {
                 Interface? instance = inst;
@@ -905,7 +942,7 @@ namespace Cat
             /// <param name="message">The new log message.</param>
             /// <param name="id">The index of the log message to edit.</param>
             /// <param name="fromEnd">Whether the index is counted from the end of the log list.</param>
-            [LoggingAspects.ConsumeException]
+            [CAspects.ConsumeException]
             internal static void EditLog(string message, int id, bool fromEnd)
             {
                 Interface? instance = inst;
@@ -935,7 +972,7 @@ namespace Cat
             /// <param name="logMessage">The log message to add.</param>
             /// <param name="color">The color of the text.</param>
             /// <returns>An integer representing the position of the newly added log message in the log list box.</returns>
-            [LoggingAspects.ConsumeException]
+            [CAspects.ConsumeException]
             internal static int AddTextLog(string logMessage, SWM.Color color)
             {
                 Interface? instance = inst;
@@ -949,7 +986,7 @@ namespace Cat
                 return value;
             }
 
-            [LoggingAspects.ConsumeException]
+            [CAspects.ConsumeException]
             internal static (int, TextBlock) AddTextLogR(string logMessage, SolidColorBrush brush = null)
             {
                 Interface? instance = inst;
@@ -964,7 +1001,7 @@ namespace Cat
                 return (value, block);
             }
 
-            [LoggingAspects.ConsumeException]
+            [CAspects.ConsumeException]
             internal static int AddTextLog(string logMessage, SolidColorBrush brush)
             {
                 Interface? instance = inst;
@@ -1306,7 +1343,8 @@ namespace Cat
                             { "desc", "Shuts down the entire program" },
                             { "params", "" },
                             { "function", (Func<bool>)Cat.Commands.Shutdown },
-                            { "shortcut", "Shift Q E"}
+                            { "shortcut", "Shift Q E"},
+                            { "type", 0 }
                         }
                     },
                     {
@@ -1314,8 +1352,9 @@ namespace Cat
                         {
                             { "desc", "Closes the interface, the shortcut will open it." },
                             { "params", "" },
-                            { "function", (Func<bool>)Catowo.inst.ToggleInterface},
-                            { "shortcut", "Shift Q I"}
+                            { "function", (Func<bool>)(() => { return Catowo.inst.ToggleInterface(); }) },
+                            { "shortcut", "Shift Q I"},
+                            { "type", 0 }
                         }
                     },
                     {
@@ -1324,7 +1363,8 @@ namespace Cat
                             { "desc", "Shifts the interface screen to another monitor, takes in a number corresponding to the monitor you want it to shift to (1 being primary)" },
                             { "params", "screennum{int}" },
                             { "function", (Func<bool>)Cat.Commands.ChangeScreen },
-                            { "shortcut", "Shifts Q (number)"}
+                            { "shortcut", "Shifts Q (number)"},
+                            { "type", 0 }
                         }
                     },
                     {
@@ -1333,7 +1373,8 @@ namespace Cat
                             { "desc", "Takes a screenshot of the screen, without the interface. -2 for a stiched image of all screens, -1 for individual screen pics, (number) for an individual screen, leave empty for the current screen Kitty is running on.\nE.g: screenshot ;-2" },
                             { "params", "[mode{int}]" },
                             { "function", (Func<Task<bool>>)Cat.Commands.Screenshot },
-                            { "shortcut", "Shifts Q S"}
+                            { "shortcut", "Shifts Q S"},
+                            { "type", 0 }
                         }
                     },
                     {
@@ -1342,7 +1383,8 @@ namespace Cat
                             { "desc", "Begins capturing screen as a video, mutlimonitor support coming soon. Closes the interface when ran." },
                             { "params", "" },
                             { "function", (Func<bool>)Cat.Commands.StartRecording },
-                            { "shortcut", "Shifts Q R"}
+                            { "shortcut", "Shifts Q R"},
+                            { "type", 2 }
                          }
                     },
                     {
@@ -1351,7 +1393,8 @@ namespace Cat
                             { "desc", "Starts capturing system audio, with optional audio input (0/exclusive, 1/inclusive).\n- Exclusive means only audio input, inclusive means audio input and system audio\nE.g: capture audio ;exclusive\nE.g: capture audio ;1" },
                             { "params", "[mode{int/string}]" },
                             { "function", (Func<bool>)Cat.Commands.StartAudioRecording },
-                            { "shortcut", ""}
+                            { "shortcut", ""},
+                            { "type", 2 }
                         }
                     },
                     {
@@ -1360,7 +1403,8 @@ namespace Cat
                             { "desc", "Stops a currently running recording session, with an optional opening of the recording location after saving (true)\nE.g: stop recording ;true" },
                             { "params", "" },
                             { "function", (Func<bool>)Cat.Commands.StopRecording },
-                            { "shortcut", "Shifts Q D"}
+                            { "shortcut", "Shifts Q D"},
+                            { "type", 2 }
                         }
                     },
                     {
@@ -1369,7 +1413,8 @@ namespace Cat
                             { "desc", "Stops a currently running audio session, with optional opening of the file location after saving.\nE.g: stop audio ;true" },
                             { "params", "" },
                             { "function", (Func<bool>)Cat.Commands.StopAudioRecording },
-                            { "shortcut", ""}
+                            { "shortcut", ""},
+                            { "type", 2 }
                         }
                     },
                     {
@@ -1378,7 +1423,8 @@ namespace Cat
                             { "desc", "Plays an audio file, present the filepath as an argument with optional looping.\nE.g: play audio ;C:/Downloads/Sussyaudio.mp4 ;true" },
                             { "params", "filepath{str}, [looping{bool}]" },
                             { "function", (Func<bool>)Cat.Commands.PlayAudio },
-                            { "shortcut", ""}
+                            { "shortcut", ""},
+                            { "type", 0 }
                         }
                     },
                     {
@@ -1387,7 +1433,8 @@ namespace Cat
                             { "desc", "Changes a control setting, you must specify the \nE.g: change setting ;LogAssemblies ;true\nE.g: change setting ;background ;green" },
                             { "params", "variablename{string}, value{string}" },
                             { "function", (Func<bool>)Cat.Commands.ChangeSettings },
-                            { "shortcut", ""}
+                            { "shortcut", ""},
+                            { "type", 0 }
                         }
                     },
                     {
@@ -1396,34 +1443,38 @@ namespace Cat
                             { "desc", "Takes a 'snapshot' of a specified process and shows information like it's memory usage, cpu usage, etc.\nE.g: take process snapshot ;devenv\nE.g: take process snapshot ;9926381232" },
                             { "params", "process{string/int}" },
                             { "function", (Func<bool>)Cat.Commands.TakeProcessSnapshot },
-                            { "shortcut", "Shifts Q T"}
+                            { "shortcut", "Shifts Q T"},
+                            { "type", 2 }
                         }
                     },
-                                        {
+                    {
                         11, new Dictionary<string, object>
                         {
                             { "desc", "Starts measuring a processes's information until stopped.\nE.g: start measuring process ;devenv" },
                             { "params", "" },
                             { "function", (Func<bool>)Cat.Commands.StartProcessMeasuring },
-                            { "shortcut", "Shifts Q X"}
+                            { "shortcut", "Shifts Q X"},
+                            { "type", 0 }
                         }
                     },
-                                                            {
+                    {
                         12, new Dictionary<string, object>
                         {
                             { "desc", "Stops a currently running process measuring session, with an optional saving of the data.\nE.g: stop measuring process ;false" },
                             { "params", "[savedata{bool}]" },
                             { "function", (Func<bool>)Cat.Commands.StopProcessMeasuring },
-                            { "shortcut", "Shifts Q C"}
+                            { "shortcut", "Shifts Q C"},
+                            { "type", 2 }
                         }
                     },
-                                                                                {
+                    {
                         13, new Dictionary<string, object>
                         {
                             { "desc", "Opens the logs folder.\nE.g: open logs" },
                             { "params", "" },
                             { "function", (Func<bool>)Cat.Commands.OpenLogs },
-                            { "shortcut", ""}
+                            { "shortcut", ""},
+                            { "type", 0 }
                         }
                     },
                     {
@@ -1432,7 +1483,8 @@ namespace Cat
                             { "desc", "Opens a specified log file for viewing, specifying index or name.\nE.g: view log ;1\nE.g: view log ;Lcc0648800552499facf099d368686f0c" },
                             { "params", "filename{string/int}" },
                             { "function", (Func<bool>)Cat.Commands.ViewLog },
-                            { "shortcut", ""}
+                            { "shortcut", ""},
+                            { "type", 2 }
                         }
                     },
                     {
@@ -1441,7 +1493,8 @@ namespace Cat
                             { "desc", "(Attempts to) Changes the cursor to the specified cursor file, specifying file path.\nE.g: change cursor ;the/path/to/your/.cur/file" },
                             { "params", "path{string}" },
                             { "function", (Func<bool>)Cat.Commands.ChangeCursor },
-                            { "shortcut", ""}
+                            { "shortcut", ""},
+                            { "type", 0 }
                         }
                     },
                     {
@@ -1450,7 +1503,8 @@ namespace Cat
                             { "desc", "Resets all system cursors" },
                             { "params", "" },
                             { "function", (Func<bool>)Cat.Commands.ResetCursor },
-                            { "shortcut", ""}
+                            { "shortcut", ""},
+                            { "type", 0 }
                         }
                     },
                     {
@@ -1459,7 +1513,8 @@ namespace Cat
                             { "desc", "Plots a set of data, specifying file path(s) or data in the format: ;int, int, int, ... int ;int, int, int, ... int (two sets of data).\nE.g: plot ;path/to/a/csv/with/two/lines/of/data\nE.g: plot ;path/to/csv/with/x_axis/data ;path/to/2nd/csv/with/y_axis/data\nE.g: plot ;1, 2, 3, 4, 5, 6 ;66, 33, 231, 53242, 564345" },
                             { "params", "filepath{string} | filepath1{string} filepath2{string} | data1{int[]} data2{int[]}" },
                             { "function", (Func<bool>)Cat.Commands.Plot },
-                            { "shortcut", ""}
+                            { "shortcut", ""},
+                            { "type", 2 }
                         }
                     },
                     {
@@ -1468,7 +1523,8 @@ namespace Cat
                             { "desc", "Saves a currently open plot (Plot must be open) to a file.\nE.g: save plot" },
                             { "params", "" },
                             { "function", (Func<bool>)Cat.Commands.SavePlot },
-                            { "shortcut", ""}
+                            { "shortcut", ""},
+                            { "type", 2 }
                         }
                     },
                     {
@@ -1477,7 +1533,8 @@ namespace Cat
                             { "desc", "Shows a random kitty :3" },
                             { "params", "" },
                             { "function", (Func<bool>)Cat.Commands.RandomCatPicture },
-                            { "shortcut", "Shifts Q K"}
+                            { "shortcut", "Shifts Q K"},
+                            { "type", 0 }
                         }
                     },
                     {
@@ -1486,7 +1543,8 @@ namespace Cat
                             { "desc", "Shows a list of commands, specific command info or general info.\nE.g: help\nE.g: help ;commands\nE.g:help ;plot" },
                             { "params", "[cmdname{string}]" },
                             { "function", (Func<bool>)Cat.Commands.Help },
-                            { "shortcut", ""}
+                            { "shortcut", ""},
+                            { "type", 0 }
                         }
                     },
                     {
@@ -1495,7 +1553,8 @@ namespace Cat
                             { "desc", "Displays either all screen information, or just a specified one.\ndsi ;1" },
                             { "params", "[screennumber{int}]" },
                             { "function", (Func<bool>)Cat.Commands.DisplayScreenInformation },
-                            { "shortcut", ""}
+                            { "shortcut", ""},
+                            { "type", 1 }
                         }
                     },
                     {
@@ -1504,7 +1563,8 @@ namespace Cat
                             { "desc", "Opens the live logger. \nE.g:sll" },
                             { "params", "" },
                             { "function", (Func<bool>)Cat.Commands.OpenLogger},
-                            { "shortcut", "Shifts Q ,"}
+                            { "shortcut", "Shifts Q ,"},
+                            { "type", 0 }
                         }
                     },
                     {
@@ -1513,7 +1573,8 @@ namespace Cat
                             { "desc", "Closes an open live logger\nE.g: cll" },
                             { "params", "" },
                             { "function", (Func<bool>)Cat.Commands.CloseLogger },
-                            { "shortcut", "Shifts Q ."}
+                            { "shortcut", "Shifts Q ."},
+                            { "type", 0 }
                         }
                     },
                     {
@@ -1522,7 +1583,8 @@ namespace Cat
                             { "desc", "Aborts a currently playing audio file." },
                             { "params", "" },
                             { "function", (Func<bool>)Cat.Commands.StopAudio },
-                            { "shortcut", "Shifts Q V"}
+                            { "shortcut", "Shifts Q V"},
+                            { "type", 0 }
                         }
                     },
                     {
@@ -1531,7 +1593,8 @@ namespace Cat
                             { "desc", "Prints the interface element details" },
                             { "params", "" },
                             { "function", (Func<bool>)Cat.Commands.PrintElementDetails },
-                            { "shortcut", ""}
+                            { "shortcut", ""},
+                            { "type", 1 }
                         }
                     },
                     {
@@ -1540,7 +1603,8 @@ namespace Cat
                             { "desc", "Forces a logging flush" },
                             { "params", "" },
                             { "function", (Func<Task<bool>>)Cat.Commands.FML },
-                            { "shortcut", "Shifts Q F"}
+                            { "shortcut", "Shifts Q F"},
+                            { "type", 0 }
                         }
                     },
                     {
@@ -1549,7 +1613,8 @@ namespace Cat
                             { "desc", "Downloads exprs" },
                             { "params", "processname{string}" },
                             { "function", (Func<Task<bool>>)Cat.Commands.DEP },
-                            { "shortcut", ""}
+                            { "shortcut", ""},
+                            { "type", 0 }
                         }
                     },
                     {
@@ -1558,7 +1623,8 @@ namespace Cat
                             { "desc", "Generates a progress bar test" },
                             { "params", "" },
                             { "function", (Func<bool>)Cat.Commands.GPT },
-                            { "shortcut", ""}
+                            { "shortcut", ""},
+                            { "type", 1 }
                         }
                     },
                     {
@@ -1567,7 +1633,8 @@ namespace Cat
                             { "desc", "Prints all user settings in the format:\n[Section]\n  [Key]: [Value]" },
                             { "params", "" },
                             { "function", (Func<bool>)Cat.Commands.ShowSettings },
-                            { "shortcut", ""}
+                            { "shortcut", ""},
+                            { "type", 0 }
                         }
                     },
                     {
@@ -1576,7 +1643,8 @@ namespace Cat
                             { "desc", "Loads a specified cursor preset" },
                             { "params", "listname{string}, [persistent{bool}]" },
                             { "function", (Func<bool>)Cat.Commands.LoadCursorPreset },
-                            { "shortcut", ""}
+                            { "shortcut", ""},
+                            { "type", 0 }
                         }
                     },
                     {
@@ -1585,7 +1653,8 @@ namespace Cat
                             { "desc", "Creates a new cursor preset" },
                             { "params", "listname{string}" },
                             { "function", (Func<bool>)Cat.Commands.AddCursorPreset },
-                            { "shortcut", ""}
+                            { "shortcut", ""},
+                            { "type", 0 }
                         }
                     },
                     {
@@ -1594,7 +1663,8 @@ namespace Cat
                             { "desc", "Adds a cursor to a preset" },
                             { "params", "preset{string}, cursorid{string}, filepath{string}" },
                             { "function", (Func<bool>)Cat.Commands.AddCursorToPreset },
-                            { "shortcut", ""}
+                            { "shortcut", ""},
+                            { "type", 0 }
                         }
                     },
                     {
@@ -1603,7 +1673,8 @@ namespace Cat
                             { "desc", "Removes a cursor from a preset" },
                             { "params", "preset{string}, cursorid{string}" },
                             { "function", (Func<bool>)Cat.Commands.RemoveCursorFromPreset },
-                            { "shortcut", ""}
+                            { "shortcut", ""},
+                            { "type", 0 }
                         }
                     },
                     {
@@ -1612,7 +1683,8 @@ namespace Cat
                             { "desc", "Lists all presets, or optionally all cursors changed in a preset" },
                             { "params", "[preset{string}]" },
                             { "function", (Func<bool>)Cat.Commands.ListCursorPreset },
-                            { "shortcut", ""}
+                            { "shortcut", ""},
+                            { "type", 0 }
                         }
                     },
                     {
@@ -1621,7 +1693,8 @@ namespace Cat
                             { "desc", "Opens the log editing GUI" },
                             { "params", "" },
                             { "function", (Func<bool>)Cat.Commands.OpenLogEditor},
-                            { "shortcut", ""}
+                            { "shortcut", ""},
+                            { "type", 0 }
                         }
                     },
                     {
@@ -1630,7 +1703,8 @@ namespace Cat
                             { "desc", "Restarts the application asking for elevation (admin)" },
                             { "params", "" },
                             { "function", (Func<bool>)Cat.Commands.KillMyselfAndGetGodPowers},
-                            { "shortcut", ""}
+                            { "shortcut", ""},
+                            { "type", 0 }
                         }
                     },
                     {
@@ -1639,7 +1713,8 @@ namespace Cat
                             { "desc", "[DEBUG] Throws an error" },
                             { "params", "" },
                             { "function", (Func<bool>)Cat.Commands.ThrowError},
-                            { "shortcut", ""}
+                            { "shortcut", ""},
+                            { "type", 0 }
                         }
                     },
                     {
@@ -1648,7 +1723,8 @@ namespace Cat
                             { "desc", "Activates voice recognition" },
                             { "params", "" },
                             { "function", (Func<bool>)Cat.Commands.AV},
-                            { "shortcut", ""}
+                            { "shortcut", ""},
+                            { "type", 0 }
                         }
                     },
                     {
@@ -1657,7 +1733,8 @@ namespace Cat
                             { "desc", "Closes the log editor" },
                             { "params", "" },
                             { "function", (Func<bool>)Cat.Commands.CLE},
-                            { "shortcut", ""}
+                            { "shortcut", ""},
+                            { "type", 0 }
                         }
                     },
                     {
@@ -1666,7 +1743,8 @@ namespace Cat
                             { "desc", "Defines a word using the DictionaryAPI or the UrbanDictionaryAPI (if allowed)" },
                             { "params", "word{string}" },
                             { "function", (Func<bool>)Cat.Commands.Define},
-                            { "shortcut", ""}
+                            { "shortcut", ""},
+                            { "type", 0 }
                         }
                     },
                     {
@@ -1675,7 +1753,8 @@ namespace Cat
                             { "desc", "Reads a saved object from a data file" },
                             { "params", "filepath {string}, objectname{string}" },
                             { "function", (Func<bool>)Commands.ReadObject},
-                            { "shortcut", ""}
+                            { "shortcut", ""},
+                            { "type", 0 }
                         }
                     },
                     {
@@ -1684,7 +1763,8 @@ namespace Cat
                             { "desc", "[DEBUG] Prints the Raw BinaHex and Translation of a binary file" },
                             { "params", "filename{string}" },
                             { "function", (Func<bool>)Commands.PRB},
-                            { "shortcut", ""}
+                            { "shortcut", ""},
+                            { "type", 1}
                         }
                     },
                     {
@@ -1698,7 +1778,8 @@ namespace Cat
                                 Catowo.inst.ToggleInterface();
                                 return true;
                             }) },
-                            { "shortcut", ""}
+                            { "shortcut", ""},
+                            { "type", 0}
                         }
                     }
                 };
@@ -1710,7 +1791,7 @@ namespace Cat
                 /// If there is a previously executed command available, it retrieves and sets it as the current text of the input box.
                 /// If no previous command is available or if retrieving the previous command fails, no action is taken.
                 /// </remarks>
-                [LoggingAspects.Logging]
+                [CAspects.Logging]
                 internal static void HistoryUp()
                 {
                     string? previousraw = History.GetNext();
@@ -1730,7 +1811,7 @@ namespace Cat
                 /// If no next command is available or if retrieving the next command fails, no action is taken.
                 /// This method complements the HistoryUp method, allowing users to navigate through the command history.
                 /// </remarks>
-                [LoggingAspects.Logging]
+                [CAspects.Logging]
                 internal static void HistoryDown()
                 {
                     string? nextraw = History.GetPrevious();
@@ -1752,7 +1833,7 @@ namespace Cat
                 /// Logs an error and updates the interface with feedback if the command cannot be found, fails to parse, or if the associated action or function cannot be executed.
                 /// Clears the input text box upon completion.
                 /// </remarks>
-                [LoggingAspects.Logging]
+                [CAspects.Logging]
                 internal static async void ProcessCommand(string non_interface_text = null)
                 {
                     commandstruct = null;
@@ -1823,8 +1904,8 @@ namespace Cat
                 /// </summary>
                 private static class ParameterParsing
                 {
-                    [LoggingAspects.ConsumeException]
-                    [LoggingAspects.Logging]
+                    [CAspects.ConsumeException]
+                    [CAspects.Logging]
                     internal static bool ParseCommand(in string raw, in int num, out Command? command, out string? error_message)
                     {
                         //!! I'm going to leave comments here because this will probably be rather complex :p
@@ -1875,8 +1956,8 @@ namespace Cat
                         return false;
                     }
 
-                    [LoggingAspects.ConsumeException]
-                    [LoggingAspects.Logging]
+                    [CAspects.ConsumeException]
+                    [CAspects.Logging]
                     internal static bool? ParseSequence(string[] inputs, string sequence, out string? error_message, out object[][]? parsedparams)
                     {
                         error_message = null;

@@ -9,7 +9,7 @@ namespace Cat
         /// <remarks>
         /// Validates the provided screen index against the available screens and, if valid, moves the application's interface to the specified screen.
         /// </remarks>
-        [LoggingAspects.ConsumeException]
+        [CAspects.ConsumeException]
         internal static bool ChangeScreen()
         {
             int? entry = (int?)(commandstruct?.Parameters[0][0]);

@@ -201,8 +201,8 @@ namespace Cat
         /// </summary>
         /// <param name="depObj">The dependency object to search within.</param>
         /// <returns>The ScrollViewer if found; otherwise, null.</returns>
-        [LoggingAspects.Logging]
-        [LoggingAspects.ConsumeException]
+        [CAspects.Logging]
+        [CAspects.ConsumeException]
         internal static ScrollViewer GetScrollViewer(DependencyObject depObj)
         {
             Logging.Log("Getting Scroll viewer dependacny object from object: " + depObj.GetType().FullName);
@@ -239,8 +239,8 @@ namespace Cat
                 _maxSize = maxSize;
             }
 
-            [LoggingAspects.ConsumeException]
-            [LoggingAspects.Logging]
+            [CAspects.ConsumeException]
+            [CAspects.Logging]
             public T? GetNext()
             {
                 if (++atnow > _queue.Count)
@@ -252,8 +252,8 @@ namespace Cat
                 return _queue[atnow];
             }
 
-            [LoggingAspects.Logging]
-            [LoggingAspects.ConsumeException]
+            [CAspects.Logging]
+            [CAspects.ConsumeException]
             public T? GetPrevious()
             {
                 if (--atnow < _queue.Count)

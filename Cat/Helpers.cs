@@ -53,9 +53,9 @@ namespace Cat
             /// <param name="screenIndex">The index of the screen to capture.</param>
             /// <param name="error_message">Out parameter that will contain any error messages generated.</param>
             /// <returns>A Bitmap object of the captured screen.</returns>
-            [LoggingAspects.Logging]
-            [LoggingAspects.InterfaceNotice]
-            [LoggingAspects.ConsumeException]
+            [CAspects.Logging]
+            [CAspects.InterfaceNotice]
+            [CAspects.ConsumeException]
             internal static Bitmap CaptureScreen(int screenIndex, out string? error_message)
             {
                 error_message = "";
@@ -95,7 +95,7 @@ namespace Cat
             /// </summary>
             /// <param name="errorMessages">Outputs a list of error messages corresponding to each screen capture attempt. A null entry indicates a successful capture.</param>
             /// <returns>A list of Bitmap objects representing the captured screens. Screens that encountered errors will have a corresponding null entry in the list.</returns>
-            [LoggingAspects.Logging]
+            [CAspects.Logging]
             internal static List<Bitmap> AllIndivCapture(out List<string?> errorMessages)
             {
                 Logging.Log("Entering helper method Screenshotting.AllIndivCapture().");
@@ -128,9 +128,9 @@ namespace Cat
             /// </summary>
             /// <param name="error_message">Outputs an error message if the stitching process fails.</param>
             /// <returns>A Bitmap object representing the stitched together screenshots of all screens. Returns a minimal Bitmap in case of failure.</returns>
-            [LoggingAspects.Logging]
-            [LoggingAspects.ConsumeException]
-            [LoggingAspects.InterfaceNotice]
+            [CAspects.Logging]
+            [CAspects.ConsumeException]
+            [CAspects.InterfaceNotice]
             internal static Bitmap StitchCapture(out string? error_message)
             {
                 Logging.Log("Entering helper Screenshotting.StitchCapture()");
@@ -200,7 +200,7 @@ namespace Cat
             /// <remarks>
             /// This method considers the DPI settings of the system to adjust the screen size for high DPI displays.
             /// </remarks>
-            [LoggingAspects.Logging]
+            [CAspects.Logging]
             internal static (double Width, double Height, double WorkingAreaHeight) GetAdjustedScreenSize(Screen screen)
             {
                 var dpiX = GetSystemDpi("DpiX");
@@ -220,7 +220,7 @@ namespace Cat
             /// <remarks>
             /// This method considers the DPI settings of the system to adjust the screen size for high DPI displays.
             /// </remarks>
-            [LoggingAspects.Logging]
+            [CAspects.Logging]
             internal static void GetAdjustedScreenSize(Screen screen, out Rect newbounds)
             {
                 var dpiX = GetSystemDpi("DpiX");
@@ -239,7 +239,7 @@ namespace Cat
             /// <remarks>
             /// This method is used internally to support high DPI displays by calculating screen dimensions accurately.
             /// </remarks>
-            [LoggingAspects.Logging]
+            [CAspects.Logging]
             private static double GetSystemDpi(string dpiPropertyName)
             {
                 var dpiProperty = typeof(SystemParameters).GetProperty(dpiPropertyName, BindingFlags.NonPublic | BindingFlags.Static);
@@ -287,9 +287,9 @@ namespace Cat
             /// This method asynchronously gets a cat image URL from the CATaaS API, downloads the image,
             /// and displays it within the window. If the image fetch fails, an error is logged.
             /// </remarks>
-            [LoggingAspects.Logging]
-            [LoggingAspects.AsyncExceptionSwallower]
-            [LoggingAspects.InterfaceNotice]
+            [CAspects.Logging]
+            [CAspects.AsyncExceptionSwallower]
+            [CAspects.InterfaceNotice]
             private async Task FetchAndDisplayCatImage()
             {
                 Logging.Log("Getting Cat image from https://cataas.com/cat?json=true");
@@ -347,8 +347,8 @@ namespace Cat
 
             internal static bool FFmpegInstalled { get => CheckIfFileExists(FFMPEGPath); }
 
-            [LoggingAspects.Logging]
-            [LoggingAspects.ConsumeException]
+            [CAspects.Logging]
+            [CAspects.ConsumeException]
             internal EPManagement(Processes process)
             {
                 inuse = process switch
@@ -360,7 +360,7 @@ namespace Cat
                 Task.Run(async () => await DownloadAndExtractFile());
             }
 
-            [LoggingAspects.Logging]
+            [CAspects.Logging]
             private static bool CheckIfFileExists(string path)
             {
                 Logging.Log($"Checking if {path} exists...");
@@ -379,9 +379,9 @@ namespace Cat
             /// </remarks>
             /// <param name="downloadUrl">The URL from which to download the file.</param>
             /// <param name="fileExtension">The extension of the compressed file (e.g., ".zip", ".7z").</param>
-            [LoggingAspects.Logging]
-            [LoggingAspects.AsyncExceptionSwallower]
-            [LoggingAspects.InterfaceNotice]
+            [CAspects.Logging]
+            [CAspects.AsyncExceptionSwallower]
+            [CAspects.InterfaceNotice]
             private async Task DownloadAndExtractFile()
             {
                 SectionProgress = new("Downloading...", true);
@@ -449,9 +449,9 @@ namespace Cat
             /// After downloading the archive, this method extracts the contents and moves the
             /// executable to a predefined location for future use.
             /// </remarks>
-            [LoggingAspects.Logging]
-            [LoggingAspects.AsyncExceptionSwallower]
-            [LoggingAspects.InterfaceNotice]
+            [CAspects.Logging]
+            [CAspects.AsyncExceptionSwallower]
+            [CAspects.InterfaceNotice]
             private async Task Extract7zArchiveAsync(string archivePath)
             {
                 Logging.Log($"Extracting {archivePath} to {ExternalProcessesFolder}");
@@ -526,9 +526,9 @@ namespace Cat
             /// This method is used during the download process to copy the contents of the downloaded
             /// file to a local file while reporting the progress of the download.
             /// </remarks>
-            [LoggingAspects.Logging]
-            [LoggingAspects.AsyncExceptionSwallower]
-            [LoggingAspects.InterfaceNotice]
+            [CAspects.Logging]
+            [CAspects.AsyncExceptionSwallower]
+            [CAspects.InterfaceNotice]
             private async Task CopyContentAsync(Stream source, Stream destination, long totalBytes)
             {
                 byte[] buffer = new byte[81920];
@@ -566,7 +566,7 @@ namespace Cat
         /// </summary>
         public static partial class BackendHelping
         {
-            [LoggingAspects.Logging]
+            [CAspects.Logging]
             internal static object[] GetPropertyValues(object obj)
             {
                 List<object> values = new List<object>();
@@ -591,7 +591,7 @@ namespace Cat
             //xx values.RemoveAll(x => x == null || (x is string a && string.IsNullOrWhiteSpace(a)) || (x is System.Collections.IEnumerable enu && enu.Cast<object>().Count() < 1));
 
 
-            [LoggingAspects.Logging]
+            [CAspects.Logging]
             internal static string ExtractGuid(string log)
             {
                 var match = ErrorGuidRegex().Match(log);
@@ -602,8 +602,8 @@ namespace Cat
                 return "";
             }
 
-            [LoggingAspects.Logging]
-            [LoggingAspects.ConsumeException]
+            [CAspects.Logging]
+            [CAspects.ConsumeException]
             internal static IntPtr FindWindowWithPartialName(string name)
             {
                 IntPtr result = IntPtr.Zero;
@@ -681,8 +681,8 @@ namespace Cat
             /// This method uses regular expressions to identify and extract sequences of characters
             /// that are enclosed by specified start and end delimiters.
             /// </remarks>
-            [LoggingAspects.Logging]
-            [LoggingAspects.ConsumeException]
+            [CAspects.Logging]
+            [CAspects.ConsumeException]
             internal static bool ExtractStringGroups(string word, string sequencestarter, string sequenceender, out string[]? results)
             {
                 results = null;
@@ -764,7 +764,7 @@ namespace Cat
                 return textBlock;
             }
 
-            [LoggingAspects.Logging]
+            [CAspects.Logging]
             public static bool CheckIfAdmin()
             {
                 using (var identity = System.Security.Principal.WindowsIdentity.GetCurrent())
@@ -778,7 +778,7 @@ namespace Cat
             /// Checks if the current process has administrative privileges and, if not,
             /// attempts to restart the program with elevated privileges.
             /// </summary>
-            [LoggingAspects.Logging]
+            [CAspects.Logging]
             public static bool? RestartWithAdminRightsIfNeeded()
             {
                 if (CheckIfAdmin())
@@ -831,8 +831,8 @@ namespace Cat
             /// visual feedback during the test's execution. This method serves as a demonstration of asynchronous progress reporting
             /// within a potentially long-running operation.
             /// </remarks>
-            [LoggingAspects.Logging]
-            [LoggingAspects.AsyncExceptionSwallower]
+            [CAspects.Logging]
+            [CAspects.AsyncExceptionSwallower]
             internal static async void GenerateProgressingTest()
             {
                 uint rnd = (uint)random.Next(int.MaxValue);
@@ -917,9 +917,9 @@ namespace Cat
             /// This method constructs an INI file structure from a predefined dictionary of settings and writes it to a file.
             /// It's used for initializing user configuration settings upon application setup or when resetting to default settings.
             /// </remarks>
-            [LoggingAspects.Logging]
-            [LoggingAspects.ConsumeException]
-            [LoggingAspects.UpsetStomach]
+            [CAspects.Logging]
+            [CAspects.ConsumeException]
+            [CAspects.UpsetStomach]
             internal static void GenerateUserData()
             {
                 IniData data = new();
@@ -943,9 +943,9 @@ namespace Cat
             /// <param name="section">The section in the INI file containing the key.</param>
             /// <param name="key">The key whose value is to be retrieved.</param>
             /// <returns>The value associated with the specified key within the given section, or null if not found.</returns>
-            [LoggingAspects.Logging]
-            [LoggingAspects.ConsumeException]
-            [LoggingAspects.InterfaceNotice]
+            [CAspects.Logging]
+            [CAspects.ConsumeException]
+            [CAspects.InterfaceNotice]
             public static string GetValue(string filePath, string section, string key)
             {
                 var parser = new FileIniDataParser();
@@ -964,9 +964,9 @@ namespace Cat
             /// </summary>
             /// <param name="filePath">The path to the INI file.</param>
             /// <returns>A dictionary representing the sections of the INI file, each containing a dictionary of key-value pairs.</returns>
-            [LoggingAspects.Logging]
-            [LoggingAspects.ConsumeException]
-            [LoggingAspects.InterfaceNotice]
+            [CAspects.Logging]
+            [CAspects.ConsumeException]
+            [CAspects.InterfaceNotice]
             public static Dictionary<string, Dictionary<string, string>> GetStructure(string filePath)
             {
                 var parser = new FileIniDataParser();
@@ -993,9 +993,9 @@ namespace Cat
             /// <param name="section">The section in the INI file where the key-value pair should be updated or added.</param>
             /// <param name="key">The key to update or add.</param>
             /// <param name="value">The value to assign to the key.</param>
-            [LoggingAspects.Logging]
-            [LoggingAspects.ConsumeException]
-            [LoggingAspects.InterfaceNotice]
+            [CAspects.Logging]
+            [CAspects.ConsumeException]
+            [CAspects.InterfaceNotice]
             public static void UpAddValue(string filePath, string section, string key, string value)
             {
                 var parser = new FileIniDataParser();
@@ -1016,9 +1016,9 @@ namespace Cat
             /// <param name="filePath">The path to the INI file.</param>
             /// <param name="section">The section from which to remove the key.</param>
             /// <param name="key">The key to remove.</param>
-            [LoggingAspects.Logging]
-            [LoggingAspects.ConsumeException]
-            [LoggingAspects.InterfaceNotice]
+            [CAspects.Logging]
+            [CAspects.ConsumeException]
+            [CAspects.InterfaceNotice]
             public static void RemoveEntry(string filePath, string section, string key)
             {
                 var parser = new FileIniDataParser();
@@ -1077,7 +1077,7 @@ namespace Cat
 
         internal static class HTMLStuff
         {
-            [LoggingAspects.Logging]
+            [CAspects.Logging]
             private static async Task<(bool, dynamic? d)> GetDictAPIDefinition(string word)
             {
                 string url = $"https://api.dictionaryapi.dev/api/v2/entries/en/{word}";
@@ -1095,7 +1095,7 @@ namespace Cat
                 }
             }
 
-            [LoggingAspects.Logging]
+            [CAspects.Logging]
             private static async Task<(bool, dynamic? d)> GetUAPIDefinition(string word)
             {
                 string url = $"https://unofficialurbandictionaryapi.com/api/search?term={word}&strict=false&matchCase=false&limit=3&page=1&multiPage=false&";
@@ -1113,8 +1113,8 @@ namespace Cat
                 }
             }
 
-            [LoggingAspects.Logging]
-            [LoggingAspects.AsyncExceptionSwallower]
+            [CAspects.Logging]
+            [CAspects.AsyncExceptionSwallower]
             internal static async Task<(bool?, Dictionary<string, dynamic>?)> DefineWord(string word)
             {
                 (bool state, dynamic? d) = await GetDictAPIDefinition(word);
@@ -1208,7 +1208,7 @@ namespace Cat
             private readonly bool? reading;
             private readonly string filename;
 
-            [LoggingAspects.Logging]
+            [CAspects.Logging]
             internal static bool CheckTypeMatch(byte enumValue, object obj)
             {
                 if (obj == null)
@@ -1320,7 +1320,7 @@ namespace Cat
                 return output;
             }
 
-            [LoggingAspects.Logging]
+            [CAspects.Logging]
             private (byte[], List<Types>) SerializeObject(object obj, int schema, bool? skipReflection /*true for skipping property serialisation, null for using the object as its (not put in an array), false for default property usage (classes)*/= false)
             {
                 Logging.Log($"Recursion: {skipReflection}");
@@ -1515,9 +1515,9 @@ namespace Cat
                     BinaryAccessStream = new BinaryWriter(fs);
             }
 
-            [LoggingAspects.Logging]
-            [LoggingAspects.ConsumeException]
-            [LoggingAspects.RecordTime]
+            [CAspects.Logging]
+            [CAspects.ConsumeException]
+            [CAspects.RecordTime]
             internal List<Types> AddObject(object obj, int schema = -1, bool? skipreflect = false)
             {
                 Logging.Log("Seeking end..");
@@ -1540,9 +1540,9 @@ namespace Cat
                 return typeswritten;
             }
 
-            [LoggingAspects.Logging]
-            [LoggingAspects.ConsumeException]
-            [LoggingAspects.RecordTime]
+            [CAspects.Logging]
+            [CAspects.ConsumeException]
+            [CAspects.RecordTime]
             internal List<Types> AddBareObjects(params object[] obj)
             {
                 Logging.Log("Seeking end..");
@@ -1867,7 +1867,7 @@ namespace Cat
                 return values;
             }
 
-            [LoggingAspects.Logging]
+            [CAspects.Logging]
             internal Dictionary<string, dynamic> DeserialiseObject(List<object> data)
             {
                 Logging.Log("Deserialising: ", data);
@@ -1911,90 +1911,6 @@ namespace Cat
                     j++;
                 }
                 return d;
-            }
-        }
-
-        internal class ProcessSelector : Window
-        {
-            private SWC.ComboBox processComboBox;
-            private TextBox searchTextBox;
-
-            public int SelectedProcessId { get; private set; }
-
-            public ProcessSelector()
-            {
-                InitializeComponents();
-                PopulateProcesses();
-                Topmost = true;
-            }
-
-            private void InitializeComponents()
-            {
-                Title = "Select a Process";
-                Width = 300;
-                Height = 150;
-                WindowStartupLocation = WindowStartupLocation.CenterScreen;
-
-                StackPanel panel = new StackPanel
-                {
-                    Orientation = SWC.Orientation.Vertical,
-                    Margin = new Thickness(10)
-                };
-
-                searchTextBox = new TextBox
-                {
-                    Margin = new Thickness(0, 0, 0, 10)
-                };
-                searchTextBox.TextChanged += SearchTextBox_TextChanged;
-
-                processComboBox = new SWC.ComboBox
-                {
-                    Height = 25,
-                    DisplayMemberPath = "ProcessName",
-                    IsSynchronizedWithCurrentItem = true
-                };
-                processComboBox.SelectionChanged += ProcessComboBox_SelectionChanged;
-
-                panel.Children.Add(searchTextBox);
-                panel.Children.Add(processComboBox);
-                Content = panel;
-            }
-
-            private void PopulateProcesses()
-            {
-                processComboBox.ItemsSource = Process.GetProcesses()
-                    .GroupBy(p => p.ProcessName)
-                    .Select(g => g.First())
-                    .OrderBy(p => p.ProcessName)
-                    .ToList();
-            }
-
-            private void SearchTextBox_TextChanged(object sender, TextChangedEventArgs e)
-            {
-                var filter = searchTextBox.Text.ToLower();
-                processComboBox.ItemsSource = Process.GetProcesses()
-                    .Where(p => p.ProcessName.ToLower().Contains(filter))
-                    .GroupBy(p => p.ProcessName)
-                    .Select(g => g.First())
-                    .OrderBy(p => p.ProcessName)
-                    .ToList();
-            }
-
-            private void ProcessComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-            {
-                if (processComboBox.SelectedItem is Process selectedProcess)
-                {
-                    SelectedProcessId = selectedProcess.Id;
-                }
-            }
-
-            protected override void OnClosed(EventArgs e)
-            {
-                base.OnClosed(e);
-                if (processComboBox.SelectedItem == null)
-                {
-                    SelectedProcessId = -1;
-                }
             }
         }
     }

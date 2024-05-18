@@ -2,16 +2,16 @@ namespace Cat
 {
     internal static partial class Commands
     {
-        internal static List<Objects.ProcessManager> PMs { get; } = [];
+        private static List<Objects.ProcessManager> pms = [];
+        internal static List<Objects.ProcessManager> PMs => pms;
 
-        [LoggingAspects.Logging]
-        [LoggingAspects.ConsumeException]
+        [CAspects.Logging]
+        [CAspects.ConsumeException]
         internal static bool StartProcessMeasuring()
         {
-            var ps = new Helpers.ProcessSelector();
+            var ps = new Objects.ProcessSelector();
             ps.ShowDialog();
             new Objects.ProcessManager(ps.SelectedProcessId).Show();
-            Catowo.inst.ToggleInterface();
             return true;
         }
     }

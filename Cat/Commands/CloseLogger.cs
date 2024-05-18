@@ -9,7 +9,7 @@ namespace Cat
         /// <remarks>
         /// Verifies if the logging window is open before attempting to close it.
         /// </remarks>
-        [LoggingAspects.ConsumeException]
+        [CAspects.ConsumeException]
         internal static bool CloseLogger()
         {
             if (Logger != null)

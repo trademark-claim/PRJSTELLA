@@ -15,8 +15,21 @@ using System.Runtime.ExceptionServices;
 
 namespace Cat
 {
-    internal static class LoggingAspects
+    internal static class CAspects
     {
+        /// <summary>
+        /// Marks methods for which exceptions should trigger an urgent logging flush.
+        /// </summary>
+        [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
+        public class CDebug : Attribute;
+
+
+        /// <summary>
+        /// Marks methods for which exceptions should trigger an urgent logging flush.
+        /// </summary>
+        [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
+        public class InDev : Attribute;
+
         /// <summary>
         /// Aspect for logging method entry, exit, and execution time if specified.
         /// </summary>

@@ -9,13 +9,10 @@ namespace Cat
         /// <remarks>
         /// Invokes a final logging flush and then stops the recording session using Helpers.ScreenRecording, logging the end of the session.
         /// </remarks>
-        [LoggingAspects.ConsumeException]
+        [CAspects.ConsumeException]
+        [CAspects.InDev]
         internal static bool StopRecording()
         {
-            FML();
-            Interface.AddLog("Ending screen recording session");
-            ScreenRecorder.StopRecording();
-            Interface.AddLog("Screen recording session ended.");
             return true;
         }
     }

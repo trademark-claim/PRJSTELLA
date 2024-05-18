@@ -9,7 +9,8 @@ namespace Cat
         /// <remarks>
         /// This method is used to trigger a progress test, useful for debugging or demonstration purposes.
         /// </remarks>
-        [LoggingAspects.ConsumeException]
+        [CAspects.ConsumeException]
+        [CAspects.CDebug]
         internal static bool GPT()
         {
             Helpers.ProgressTesting.GenerateProgressingTest();

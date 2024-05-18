@@ -11,7 +11,8 @@ namespace Cat
         /// <remarks>
         /// Useful for debugging layout issues or for verifying that interface elements are being initialized with the correct properties.
         /// </remarks>
-        [LoggingAspects.ConsumeException]
+        [CAspects.ConsumeException]
+        [CAspects.CDebug]
         internal static bool PrintElementDetails()
         {
             Interface.AddLog("Background Rectangle: ", inst.Backg.Width.ToString(), inst.Backg.Height.ToString());

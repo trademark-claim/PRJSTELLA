@@ -2,7 +2,7 @@
 {
     internal static partial class Commands
     {
-        [LoggingAspects.Logging]
+        [CAspects.Logging]
         internal static bool CLE()
         {
             editor?.Close();

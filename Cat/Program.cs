@@ -10,7 +10,7 @@ namespace Cat
     internal static class Program
     {
         /// <summary>
-        /// solution for showing the tutorial / introductory dialogue.
+        /// Temporary solution for showing the tutorial / introductory dialogue.
         /// </summary>
         internal static bool hadUserData = true;
 
@@ -36,8 +36,8 @@ namespace Cat
         /// <summary>
         /// Checks for necessary internal data and directories before starting the application.
         /// </summary>
-        [LoggingAspects.Logging]
-        [LoggingAspects.AsyncExceptionSwallower]
+        [CAspects.Logging]
+        [CAspects.AsyncExceptionSwallower]
         private static async Task<bool> CheckInternalData()
         {
             Logging.Log("Checking if directories exist...");
@@ -72,8 +72,8 @@ namespace Cat
         /// <summary>
         /// Loads external binaries required by the application.
         /// </summary>
-        [LoggingAspects.Logging]
-        [LoggingAspects.AsyncExceptionSwallower]
+        [CAspects.Logging]
+        [CAspects.AsyncExceptionSwallower]
         private static async Task LoadExternalBinaries()
         {
             Logging.Log("Loading External Binaries...");
@@ -111,8 +111,8 @@ namespace Cat
         /// <summary>
         /// Loads initial files required by the application.
         /// </summary>
-        [LoggingAspects.Logging]
-        [LoggingAspects.ConsumeException]
+        [CAspects.Logging]
+        [CAspects.ConsumeException]
         private static void LoadInitialFiles()
         {
             Logging.Log("Loading Initial Files...");
@@ -166,8 +166,8 @@ namespace Cat
             CheckStartups();
         }
 
-        [LoggingAspects.Logging]
-        [LoggingAspects.ConsumeException]
+        [CAspects.Logging]
+        [CAspects.ConsumeException]
         private static void CheckStartups()
         {
             if (UserData.StartWithConsole)

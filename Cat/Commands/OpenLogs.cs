@@ -4,7 +4,7 @@ namespace Cat
 {
     internal static partial class Commands
     {
-        [LoggingAspects.ConsumeException]
+        [CAspects.ConsumeException]
         internal static bool OpenLogs()
         {
             Process.Start("explorer.exe", LogFolder);

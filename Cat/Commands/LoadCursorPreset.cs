@@ -9,8 +9,8 @@ namespace Cat
         /// Loads an entire cursor preset
         /// </summary>
         /// <returns>true if successful at all, false otherwise</returns>
-        [LoggingAspects.ConsumeException]
-        [LoggingAspects.Logging]
+        [CAspects.ConsumeException]
+        [CAspects.Logging]
         internal static bool LoadCursorPreset()
         {
             string entryN = commandstruct.Value.Parameters[0][0] as string;

@@ -9,7 +9,7 @@ namespace Cat
         /// <remarks>
         /// Intended for future use to capture and log detailed metrics of a specified process.
         /// </remarks>
-        [LoggingAspects.ConsumeException]
+        [CAspects.ConsumeException]
         internal static bool TakeProcessSnapshot()
         {
             FYI();

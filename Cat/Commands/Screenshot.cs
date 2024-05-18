@@ -11,8 +11,8 @@ namespace Cat
         /// <remarks>
         /// Supports taking individual screenshots of each screen, a stitched screenshot of all screens, or a screenshot of a specific screen, based on the input parameter.
         /// </remarks>
-        [LoggingAspects.AsyncExceptionSwallower]
-        [LoggingAspects.Logging]
+        [CAspects.AsyncExceptionSwallower]
+        [CAspects.Logging]
         internal static async Task<bool> Screenshot()
         {
             if (@interface != null) 

@@ -8,8 +8,8 @@ namespace Cat
         /// Creates a new, unique cursor preset
         /// </summary>
         /// <returns>true if successful at all, false otherwise</returns>
-        [LoggingAspects.ConsumeException]
-        [LoggingAspects.Logging]
+        [CAspects.ConsumeException]
+        [CAspects.Logging]
         internal static bool AddCursorPreset()
         {
             var entryN = commandstruct.Value.Parameters[0][0];

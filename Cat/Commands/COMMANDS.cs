@@ -20,7 +20,6 @@ namespace Cat
         private static AudioFileReader AFR;
         internal static Command? commandstruct;
         private static bool SilentAudioCleanup = false;
-        private static Objects.ScreenRecorder ScreenRecorder;
         private static System.Windows.Window? Logger = null;
         private static object TempHolder;
 
@@ -281,7 +280,7 @@ namespace Cat
             }
         };
 
-        [LoggingAspects.Logging]
+        [CAspects.Logging]
         internal static void ProcessVoiceCommand(string audioi)
         {
             rawdio = audioi;
@@ -335,7 +334,7 @@ namespace Cat
             commandstruct = null;
         }
 
-        [LoggingAspects.Logging]
+        [CAspects.Logging]
         private static void GenerateQuote()
         {
             List<string> quotes = Helpers.JSONManager.ExtractValueFromJsonFile<string, List<string>>("misc.json", "quotes");

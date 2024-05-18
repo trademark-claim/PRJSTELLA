@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace Cat
 {
     internal static partial class Commands
@@ -8,7 +10,7 @@ namespace Cat
         /// <returns>False if the help request could not be fulfilled, true otherwise.</returns>
         /// <remarks>
         /// If no specific command is requested, displays general help information about the application and how to
-        [LoggingAspects.ConsumeException]
+        [CAspects.ConsumeException]
         internal static bool Help()
         {
             if (commandstruct == null || commandstruct.Value.Parameters[1].Length < 1)
@@ -31,11 +33,20 @@ namespace Cat
                 if (str == "commands")
                 {
                     Interface.AddLog("Heres a list of every command:");
-                    foreach (int key in Interface.CommandProcessing.Cmds.Keys)
+                    string[] s = ["Complete Commands:", "Debug Commands", "In Development"];
+                    var list = Interface.CommandProcessing.Cmds.GroupBy(x => x.Value["type"]).ToList();
+                    for (int i = 0; i < list.Count; i++) 
                     {
-                        var firstKey = Interface.CommandProcessing.cmdmap.FirstOrDefault(x => x.Value == key).Key;
-                        Interface.AddLog($"- {firstKey}");
+                        Interface.AddLog(s[i]);
+                        foreach (var kvp in list[i])
+                        {
+                            int key = kvp.Key;
+                            var firstKey = Interface.CommandProcessing.cmdmap.FirstOrDefault(x => x.Value == key).Key;
+                            Interface.AddLog($"- {firstKey}");
+                        }
+                        Interface.AddLog("");
                     }
+
                 }
                 else if (Interface.CommandProcessing.cmdmap.TryGetValue(str, out int result))
                 {

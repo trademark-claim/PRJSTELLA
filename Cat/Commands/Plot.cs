@@ -2,11 +2,11 @@ namespace Cat
 {
     internal static partial class Commands
     {
-        [LoggingAspects.ConsumeException]
-        [LoggingAspects.Logging]
+        [CAspects.ConsumeException]
+        [CAspects.Logging]
+        [CAspects.InDev]
         internal static bool Plot()
         {
-            FYI();
             return true;
         }
     }

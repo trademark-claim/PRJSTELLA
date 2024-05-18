@@ -9,7 +9,7 @@ namespace Cat
         /// <remarks>
         /// Asynchronously flushes the log queue, useful for ensuring that all pending log entries are processed and stored as intended, typically before shutdown or when debugging.
         /// </remarks>
-        [LoggingAspects.AsyncExceptionSwallower]
+        [CAspects.AsyncExceptionSwallower]
         internal static async Task<bool> FML()
         {
             Interface.AddLog("Flushing Log queue...");

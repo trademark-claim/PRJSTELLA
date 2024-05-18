@@ -9,7 +9,7 @@ namespace Cat
 {
     internal static partial class Commands
     {
-        [LoggingAspects.Logging]
+        [CAspects.Logging]
         internal static bool ReadObject()
         {
             string file = commandstruct.Value.Parameters[0][0] as string, entry = commandstruct.Value.Parameters[0][1].ToString();

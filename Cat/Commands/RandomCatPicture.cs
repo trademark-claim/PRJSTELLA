@@ -9,8 +9,8 @@ namespace Cat
         /// <remarks>
         /// Utilizes the Helpers.CatWindow class to create and show a window containing a randomly selected cat image.
         /// </remarks>
-        [LoggingAspects.ConsumeException]
-        [LoggingAspects.Logging]
+        [CAspects.ConsumeException]
+        [CAspects.Logging]
         internal static bool RandomCatPicture()
         {
             Interface.AddLog("Generating kitty...");

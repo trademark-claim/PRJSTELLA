@@ -9,7 +9,7 @@ namespace Cat
         /// <remarks>
         /// Attempts to identify and execute a download or process execution based on the input parameters. Specific actions, such as downloading FFMPEG, are determined by the command argument.
         /// </remarks>
-        [LoggingAspects.AsyncExceptionSwallower]
+        [CAspects.AsyncExceptionSwallower]
         internal static async Task<bool> DEP()
         {
             if (commandstruct?.Parameters[0][0] is not string entry)
