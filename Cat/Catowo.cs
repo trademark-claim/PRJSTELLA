@@ -17,8 +17,6 @@
  *
  *  - Notes:
  *      > This file will be continuously worked on throughout the project
- *      > Consider splitting each different command into their own file just to make it neater
- *      >
  *
  ***************************************************************************************/
 
@@ -26,6 +24,7 @@ global using static Cat.BaselineInputs;
 global using static Cat.Environment;
 global using static Cat.Objects;
 global using static Cat.PInvoke;
+global using static Cat.Catowo.Hooking;
 global using static Cat.Statics;
 global using static Cat.Structs;
 global using Interface = Cat.Catowo.Interface;
@@ -273,269 +272,297 @@ namespace Cat
 
         #region Low Levels
 
-        /// <summary>
-        /// Initializes the keyboard hook by setting a callback for keyboard events and logging the process.
-        /// </summary>
-        /// <remarks>
-        /// This method logs the start of the keyboard hook setting process, assigns the keyboard procedure callback,
-        /// and then sets the keyboard hook with the system. It logs each step of the process, including the successful
-        /// hooking and the associated hook ID. The hook ID is then stored for future reference and unhooking if necessary.
-        /// </remarks>
-        [CAspects.Logging]
-        private void InitKeyHook()
-        {
-            Logging.Log("Setting key hook protocal...");
-            _keyboardProc = KeyboardProc;
-            Logging.Log("hooking...");
-            _keyboardHookID = SetKeyboardHook(_keyboardProc);
-            Logging.Log($"Hooking protocal {_keyboardProc} hooked with nint {_keyboardHookID}");
-            keyhook = _keyboardHookID;
-        }
 
-        /// <summary>
-        /// Unhooks the previously set keyboard hook and logs the process.
-        /// </summary>
-        /// <remarks>
-        /// Initiates by logging the intent to unhook. If the current hook ID is the default value (indicating no hook is set),
-        /// logs this status and exits. Otherwise, attempts to unhook using the UnhookWindowsHookExWrapper method and logs the result.
-        /// If successful, resets the global hook ID to its default value.
-        /// </remarks>
-
-        [CAspects.Logging]
-        internal static void DestroyKeyHook()
+        internal static class Hooking
         {
-            Logging.Log("Unhooking key hook...");
-            if (_keyboardHookID == IntPtr.Zero)
+            private static bool Qd { get => inst.Qd; set => Catowo.inst.Qd = value; }
+            private static bool RShifted { get => inst.RShifted; set => inst.RShifted = value; }
+            private static bool LShifted { get => inst.LShifted; set => inst.LShifted = value; }
+            private static Label DebugLabel { get => inst.DebugLabel;  }
+            private static Modes mode { get => inst.mode; set => inst.mode = value; }
+            private static bool Cd { get => inst.Cd; set => inst.Cd = value; }
+            private static bool isCursor { get => inst.isCursor; set => inst.isCursor = value; }
+
+            private static Modes Mode { get => inst.Mode; set => inst.Mode = value; }
+
+            private static int[] SeekKey = [];
+
+
+            /// <summary>
+            /// Initializes the keyboard hook by setting a callback for keyboard events and logging the process.
+            /// </summary>
+            /// <remarks>
+            /// This method logs the start of the keyboard hook setting process, assigns the keyboard procedure callback,
+            /// and then sets the keyboard hook with the system. It logs each step of the process, including the successful
+            /// hooking and the associated hook ID. The hook ID is then stored for future reference and unhooking if necessary.
+            /// </remarks>
+            [CAspects.Logging]
+            internal static void InitKeyHook()
             {
-                Logging.Log("Key hook is default, exiting.");
-                return;
+                Logging.Log("Setting key hook protocal...");
+                _keyboardProc = KeyboardProc;
+                Logging.Log("hooking...");
+                _keyboardHookID = SetKeyboardHook(_keyboardProc);
+                Logging.Log($"Hooking protocal {_keyboardProc} hooked with nint {_keyboardHookID}");
+                keyhook = _keyboardHookID;
             }
-            bool b = UnhookWindowsHookExWrapper(_keyboardHookID);
-            Logging.Log($"Unhooking successful: {b}");
-            if (b)
-                keyhook = IntPtr.Zero;
-        }
 
-        /// <summary>
-        /// Sets up a low-level keyboard hook to monitor keystroke events across the entire system.
-        /// </summary>
-        /// <param name="proc">The callback procedure that will be invoked with every keyboard event.</param>
-        /// <returns>A handle to the keyboard hook.</returns>
-        /// <remarks>
-        /// This method initializes a global keyboard hook by invoking SetWindowsHookExWrapper, passing it
-        /// the type of hook (WH_KEYBOARD_LL), the callback procedure, and the module handle obtained from
-        /// the current process's main module. It logs the process of hook initialization and setting.
-        /// </remarks>
-        [CAspects.Logging]
-        private static IntPtr SetKeyboardHook(LowLevelProc proc)
-        {
-            Logging.Log("Initing Keyboard hook...");
-            using (Process curProcess = Process.GetCurrentProcess())
-            using (ProcessModule curModule = curProcess.MainModule)
+            /// <summary>
+            /// Unhooks the previously set keyboard hook and logs the process.
+            /// </summary>
+            /// <remarks>
+            /// Initiates by logging the intent to unhook. If the current hook ID is the default value (indicating no hook is set),
+            /// logs this status and exits. Otherwise, attempts to unhook using the UnhookWindowsHookExWrapper method and logs the result.
+            /// If successful, resets the global hook ID to its default value.
+            /// </remarks>
+
+            [CAspects.Logging]
+            internal static void DestroyKeyHook()
             {
-                Logging.Log("Hook initiated, setting...");
-                return SetWindowsHookExWrapper(WH_KEYBOARD_LL, proc, GetModuleHandleWrapper(curModule.ModuleName), 0);
+                Logging.Log("Unhooking key hook...");
+                if (_keyboardHookID == IntPtr.Zero)
+                {
+                    Logging.Log("Key hook is default, exiting.");
+                    return;
+                }
+                bool b = UnhookWindowsHookExWrapper(_keyboardHookID);
+                Logging.Log($"Unhooking successful: {b}");
+                if (b)
+                    keyhook = IntPtr.Zero;
             }
-        }
 
-        /// <summary>
-        /// Processes keyboard events captured by the global hook.
-        /// </summary>
-        /// <param name="nCode">A code the hook procedure uses to determine how to process the message.</param>
-        /// <param name="wParam">The identifier of the keyboard message. This parameter can be WM_KEYDOWN, WM_KEYUP, etc.</param>
-        /// <param name="lParam">A pointer to a KBDLLHOOKSTRUCT structure that contains details about the keystroke message.</param>
-        /// <returns>
-        /// If nCode is less than 0, the method calls CallNextHookExWrapper using the same parameters. Otherwise, it processes
-        /// the keystroke event and may block the message by returning a non-zero value, or pass it to the next hook by returning
-        /// the result of CallNextHookExWrapper.
-        /// </returns>
-        /// <remarks>
-        /// This method checks for specific key combinations (e.g., Q, RShift, LShift) and performs actions based on the current
-        /// application mode and the keys pressed. Actions can include shutting down the application, toggling modes, showing or hiding
-        /// the cursor, and more. It logs each key event with its details.
-        /// </remarks>
-        [CAspects.Logging]
-        private IntPtr KeyboardProc(int nCode, IntPtr wParam, IntPtr lParam)
-        {
-            int vkCode = Marshal.ReadInt32(lParam);
-            bool isKeyDown = nCode >= 0 && wParam == WM_KEYDOWN;
-            bool isKeyUp = nCode >= 0 && wParam == WM_KEYUP;
-            string log = $"Key{(isKeyDown ? "KeyDown" : "KeyUp")}: {(Keys)vkCode} ({vkCode})" + (RShifted ? " (rshifted) " : "") + (LShifted ? " (Lshifted) " : "") + (Qd ? " (q) " : "");
-            Logging.Log(log);
-            if (isKeyDown)
+            /// <summary>
+            /// Sets up a low-level keyboard hook to monitor keystroke events across the entire system.
+            /// </summary>
+            /// <param name="proc">The callback procedure that will be invoked with every keyboard event.</param>
+            /// <returns>A handle to the keyboard hook.</returns>
+            /// <remarks>
+            /// This method initializes a global keyboard hook by invoking SetWindowsHookExWrapper, passing it
+            /// the type of hook (WH_KEYBOARD_LL), the callback procedure, and the module handle obtained from
+            /// the current process's main module. It logs the process of hook initialization and setting.
+            /// </remarks>
+            [CAspects.Logging]
+            internal static IntPtr SetKeyboardHook(LowLevelProc proc)
             {
-                DebugLabel.Content += $"{Qd}, {RShifted}, {LShifted}, {vkCode}, {wParam}, {(Keys)vkCode}";
-                if (!Qd && vkCode == VK_Q)
+                Logging.Log("Initing Keyboard hook...");
+                using (Process curProcess = Process.GetCurrentProcess())
+                using (ProcessModule curModule = curProcess.MainModule)
                 {
-                    Qd = true;
-                    return CallNextHookExWrapper(_keyboardHookID, nCode, wParam, lParam);
+                    Logging.Log("Hook initiated, setting...");
+                    return SetWindowsHookExWrapper(WH_KEYBOARD_LL, proc, GetModuleHandleWrapper(curModule.ModuleName), 0);
                 }
-                if (!RShifted && vkCode == VK_RSHIFT)
+            }
+
+            /// <summary>
+            /// Processes keyboard events captured by the global hook.
+            /// </summary>
+            /// <param name="nCode">A code the hook procedure uses to determine how to process the message.</param>
+            /// <param name="wParam">The identifier of the keyboard message. This parameter can be WM_KEYDOWN, WM_KEYUP, etc.</param>
+            /// <param name="lParam">A pointer to a KBDLLHOOKSTRUCT structure that contains details about the keystroke message.</param>
+            /// <returns>
+            /// If nCode is less than 0, the method calls CallNextHookExWrapper using the same parameters. Otherwise, it processes
+            /// the keystroke event and may block the message by returning a non-zero value, or pass it to the next hook by returning
+            /// the result of CallNextHookExWrapper.
+            /// </returns>
+            /// <remarks>
+            /// This method checks for specific key combinations (e.g., Q, RShift, LShift) and performs actions based on the current
+            /// application mode and the keys pressed. Actions can include shutting down the application, toggling modes, showing or hiding
+            /// the cursor, and more. It logs each key event with its details.
+            /// </remarks>
+            [CAspects.Logging]
+            internal static IntPtr KeyboardProc(int nCode, IntPtr wParam, IntPtr lParam)
+            {
+                int vkCode = Marshal.ReadInt32(lParam);
+                bool isKeyDown = nCode >= 0 && wParam == WM_KEYDOWN;
+                bool isKeyUp = nCode >= 0 && wParam == WM_KEYUP;
+                string log = $"Key{(isKeyDown ? "KeyDown" : "KeyUp")}: {(Keys)vkCode} ({vkCode})" + (RShifted ? " (rshifted) " : "") + (LShifted ? " (Lshifted) " : "") + (Qd ? " (q) " : "");
+                Logging.Log(log);
+                if (isKeyDown)
                 {
-                    RShifted = true;
-                    return CallNextHookExWrapper(_keyboardHookID, nCode, wParam, lParam);
-                }
-                if (!LShifted && vkCode == VK_LSHIFT)
-                {
-                    LShifted = true;
-                    return CallNextHookExWrapper(_keyboardHookID, nCode, wParam, lParam);
-                }
-                if (!Cd && vkCode == VK_C)
-                {
-                    Cd = true;
-                    return CallNextHookExWrapper(_keyboardHookID, nCode, wParam, lParam);
-                }
-                if (Qd)
-                {
-                    if (Cd)
+                    if (SeekKey.Length > 0)
                     {
-                        switch (vkCode)
+                        if (!SeekKey.Contains(vkCode))
                         {
-                            case VK_0:
-                                BaselineInputs.Cursor.Reset();
-                                break;
-
-                            case >= VK_1 and <= VK_9:
-                                string item = vkCodeToCharMap[vkCode].Item1.ToString();
-                                Logging.Log(item);
-                                BaselineInputs.Cursor.LoadPresetByIndex(int.Parse(item));
-                                break;
-
-                            case VK_E:
-                                Objects.CursorEffects.Toggle();
-                                break;
+                            if (vkCode != VK_ESC)
+                                SeekKey = [];
+                            return new IntPtr(1);
                         }
+                        return CallNextHookExWrapper(_keyboardHookID, nCode, wParam, lParam);
                     }
-                    else if (RShifted && LShifted)
+
+                    DebugLabel.Content += $"{Qd}, {RShifted}, {LShifted}, {vkCode}, {wParam}, {(Keys)vkCode}";
+                    if (!Qd && vkCode == VK_Q)
                     {
-                        switch (vkCode)
+                        Qd = true;
+                        return CallNextHookExWrapper(_keyboardHookID, nCode, wParam, lParam);
+                    }
+                    if (!RShifted && vkCode == VK_RSHIFT)
+                    {
+                        RShifted = true;
+                        return CallNextHookExWrapper(_keyboardHookID, nCode, wParam, lParam);
+                    }
+                    if (!LShifted && vkCode == VK_LSHIFT)
+                    {
+                        LShifted = true;
+                        return CallNextHookExWrapper(_keyboardHookID, nCode, wParam, lParam);
+                    }
+                    if (!Cd && vkCode == VK_C)
+                    {
+                        Cd = true;
+                        return CallNextHookExWrapper(_keyboardHookID, nCode, wParam, lParam);
+                    }
+                    if (Qd)
+                    {
+                        if (Cd)
                         {
-                            case VK_E:
-                                if (!ShuttingDown)
+                            switch (vkCode)
+                            {
+                                case VK_0:
+                                    BaselineInputs.Cursor.Reset();
+                                    break;
+
+                                case >= VK_1 and <= VK_9:
+                                    string item = vkCodeToCharMap[vkCode].Item1.ToString();
+                                    Logging.Log(item);
+                                    BaselineInputs.Cursor.LoadPresetByIndex(int.Parse(item));
+                                    break;
+
+                                case VK_E:
+                                    Objects.CursorEffects.Toggle();
+                                    break;
+                            }
+                        }
+                        else if (RShifted && LShifted)
+                        {
+                            switch (vkCode)
+                            {
+                                case VK_E:
+                                    if (!ShuttingDown)
+                                    {
+                                        ShuttingDown = true;
+                                        App.ShuttingDown();
+                                    }
+                                    break;
+
+                                case VK_1:
+                                    Mode ^= Modes.Shortcuts;
+                                    break;
+
+                                case VK_2:
+                                    Mode ^= Modes.Functionality;
+                                    break;
+
+                                case VK_3:
+                                    Mode ^= Modes.DANGER;
+                                    break;
+
+                                case VK_4:
+                                    Mode ^= Modes.DEBUG;
+                                    break;
+
+                                case VK_0:
+                                    Mode ^= Modes.DANGER | Modes.Shortcuts | Modes.Functionality | Modes.DEBUG;
+                                    break;
+
+                                case VK_I:
+                                    inst.ToggleInterface();
+                                    break;
+
+                                default:
+                                    break;
+                            }
+                        }
+                        else
+                        {
+                            if (mode.HasFlag(Modes.DEBUG))
+                            {
+                                switch (vkCode)
                                 {
-                                    ShuttingDown = true;
-                                    App.ShuttingDown();
+                                    case VK_K:
+                                        SendHello();
+                                        return new IntPtr(1);
+
+                                    case VK_M:
+                                        if (isCursor)
+                                            HideCursor();
+                                        else
+                                            ShowCursor();
+                                        isCursor = !isCursor;
+                                        break;
+
+                                    case VK_S:
+                                        ToggleMuteSound();
+                                        break;
+
+                                    case VK_B:
+                                        if (BaselineInputs.Cursor.CurrentCursor == BaselineInputs.Cursor.CursorType.Default)
+                                        {
+                                            BaselineInputs.Cursor.BlackPoint();
+                                        }
+                                        else
+                                        {
+                                            BaselineInputs.Cursor.Reset();
+                                        }
+                                        break;
+
+                                    default:
+                                        break;
                                 }
-                                break;
+                            }
+                            else if (mode.HasFlag(Modes.DANGER))
+                            {
+                                switch (vkCode)
+                                {
+                                    case VK_W:
+                                        if (LShifted)
+                                            CauseMouseToHaveSpasticAttack(true);
+                                        else
+                                            CauseMouseToHaveSpasticAttack();
+                                        break;
 
-                            case VK_1:
-                                Mode ^= Modes.Shortcuts;
-                                break;
+                                    default:
+                                        break;
+                                }
+                            }
+                            else if (mode.HasFlag(Modes.Functionality))
+                            {
+                                switch (vkCode)
+                                {
+                                    case VK_S:
+                                        //ShutDownScreen.ToggleScreen(canvas);
+                                        break;
 
-                            case VK_2:
-                                Mode ^= Modes.Functionality;
-                                break;
-
-                            case VK_3:
-                                Mode ^= Modes.DANGER;
-                                break;
-
-                            case VK_4:
-                                Mode ^= Modes.DEBUG;
-                                break;
-
-                            case VK_0:
-                                Mode ^= Modes.DANGER | Modes.Shortcuts | Modes.Functionality | Modes.DEBUG;
-                                break;
-
-                            case VK_I:
-                                ToggleInterface();
-                                break;
-
-                            default:
-                                break;
+                                    default:
+                                        break;
+                                }
+                            }
                         }
+                        return new IntPtr(1);
                     }
-                    else
-                    {
-                        if (mode.HasFlag(Modes.DEBUG))
-                        {
-                            switch (vkCode)
-                            {
-                                case VK_K:
-                                    SendHello();
-                                    return new IntPtr(1);
-
-                                case VK_M:
-                                    if (isCursor)
-                                        HideCursor();
-                                    else
-                                        ShowCursor();
-                                    isCursor = !isCursor;
-                                    break;
-
-                                case VK_S:
-                                    ToggleMuteSound();
-                                    break;
-
-                                case VK_B:
-                                    if (BaselineInputs.Cursor.CurrentCursor == BaselineInputs.Cursor.CursorType.Default)
-                                    {
-                                        BaselineInputs.Cursor.BlackPoint();
-                                    }
-                                    else
-                                    {
-                                        BaselineInputs.Cursor.Reset();
-                                    }
-                                    break;
-
-                                default:
-                                    break;
-                            }
-                        }
-                        else if (mode.HasFlag(Modes.DANGER))
-                        {
-                            switch (vkCode)
-                            {
-                                case VK_W:
-                                    if (LShifted)
-                                        CauseMouseToHaveSpasticAttack(true);
-                                    else
-                                        CauseMouseToHaveSpasticAttack();
-                                    break;
-
-                                default:
-                                    break;
-                            }
-                        }
-                        else if (mode.HasFlag(Modes.Functionality))
-                        {
-                            switch (vkCode)
-                            {
-                                case VK_S:
-                                    //ShutDownScreen.ToggleScreen(canvas);
-                                    break;
-
-                                default:
-                                    break;
-                            }
-                        }
-                    }
-                    return new IntPtr(1);
                 }
-            }
-            else if (isKeyUp)
-            {
-                switch (vkCode)
+                else if (isKeyUp)
                 {
-                    case VK_Q:
-                        Qd = false;
-                        break;
+                    switch (vkCode)
+                    {
+                        case VK_Q:
+                            Qd = false;
+                            break;
 
-                    case VK_RSHIFT:
-                        RShifted = false;
-                        break;
+                        case VK_RSHIFT:
+                            RShifted = false;
+                            break;
 
-                    case VK_LSHIFT:
-                        LShifted = false;
-                        break;
+                        case VK_LSHIFT:
+                            LShifted = false;
+                            break;
 
-                    case VK_C:
-                        Cd = false;
-                        break;
+                        case VK_C:
+                            Cd = false;
+                            break;
+                    }
                 }
+                return CallNextHookExWrapper(_keyboardHookID, nCode, wParam, lParam);
             }
-            return CallNextHookExWrapper(_keyboardHookID, nCode, wParam, lParam);
         }
 
         #endregion Low Levels

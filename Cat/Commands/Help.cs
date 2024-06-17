@@ -33,7 +33,7 @@ namespace Cat
                 if (str == "commands")
                 {
                     Interface.AddLog("Heres a list of every command:");
-                    string[] s = ["Complete Commands:", "Debug Commands", "In Development"];
+                    string[] s = ["Complete Commands:", "In Development", "Debug Commands"];
                     var list = Interface.CommandProcessing.Cmds.GroupBy(x => x.Value["type"]).ToList();
                     for (int i = 0; i < list.Count; i++) 
                     {

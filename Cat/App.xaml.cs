@@ -67,7 +67,7 @@ namespace Cat
             TimeSpan dur = endtime - starttime;
             long averageMemoryUsage = maxMemory / 2;
             Logging.Log("Shutting down...");
-            Catowo.DestroyKeyHook();
+            DestroyKeyHook();
             Logging.Log($"Application Start Time: {starttime}");
             Logging.Log($"Application End Time: {endtime}");
             Logging.Log($"Run Duration: {dur}");

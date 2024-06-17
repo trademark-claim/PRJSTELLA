@@ -74,6 +74,7 @@ namespace Cat
         internal const int VK_RSHIFT = 0xA1;
         internal const int VK_LSHIFT = 0xA0;
         internal const int VK_BACK = 0x08;
+        internal const int VK_ESC = 0x1B; 
         internal const int VK_A = 0x41; // A key
         internal const int VK_B = 0x42; // B key
         internal const int VK_C = 0x43; // C key
@@ -201,6 +202,7 @@ namespace Cat
             { VK_RMENU, "Right Menu" },
             { VK_LMENU, "Left Menu" },
             { VK_BACK, "Back" },
+            { VK_ESC, "Escape" }
         };
 
         // Cursors
