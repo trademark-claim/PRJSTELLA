@@ -192,6 +192,26 @@ namespace Cat
             }
         }
 
+        internal readonly record struct ExtendedInput(ushort Key, byte DownFor = 0);
+
+        [CAspects.Logging]
+        [CAspects.AsyncExceptionSwallower]
+        internal static async Task SendKeyboardInput(int delayms, params ExtendedInput[] vks)
+        {
+            INPUT[] inputs = new INPUT[vks.Length * 2];
+            for (int i = 0; i < vks.Length; i++)
+            {
+                ExtendedInput exi = vks[i];
+                inputs[i].type = INPUT_KEYBOARD;
+                inputs[i].U.ki.wVk = exi.Key;
+                inputs[i].U.ki.dwFlags = KEYEVENTF_EXTENDEDKEY;
+                inputs[i + (exi.DownFor > 0 ? (exi.DownFor * 2) : 1)].type = INPUT_KEYBOARD;
+                inputs[i + (exi.DownFor > 0 ? (exi.DownFor * 2) : 1)].U.ki.wVk = exi.Key;
+                inputs[i + (exi.DownFor > 0 ? (exi.DownFor * 2) : 1)].U.ki.dwFlags = KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP;
+            }
+
+        }
+
         /// <summary>
         /// Simulates keyboard input for a specified virtual key code.
         /// </summary>
@@ -210,6 +230,48 @@ namespace Cat
             inputs[1].U.ki.dwFlags = KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP;
 
             SendInputWrapper((uint)inputs.Length, inputs);
+        }
+
+        /// <summary>
+        /// Simulates typing "HELLO" using keyboard input.
+        /// </summary>
+        [CAspects.Logging]
+        [CAspects.ConsumeException]
+        internal static void SendHello()
+        {
+            Logging.Log($"Sending fake hello VIn");
+            List<INPUT> inputs = new List<INPUT>();
+            var vkCodes = new ushort[] { 0x48, 0x45, 0x4C, 0x4C, 0x4F };
+
+            foreach (var vkCode in vkCodes)
+            {
+                inputs.Add(new INPUT
+                {
+                    type = 1,
+                    U = new InputUnion
+                    {
+                        ki = new KEYBDINPUT
+                        {
+                            wVk = vkCode,
+                            dwFlags = 0,
+                        }
+                    }
+                });
+                inputs.Add(new INPUT
+                {
+                    type = 1,
+                    U = new InputUnion
+                    {
+                        ki = new KEYBDINPUT
+                        {
+                            wVk = vkCode,
+                            dwFlags = 2,
+                        }
+                    }
+                });
+            }
+
+            SendInputWrapper((uint)inputs.Count, inputs.ToArray());
         }
 
         /// <summary>
@@ -301,48 +363,6 @@ namespace Cat
             while (curs < 0)
                 curs = PInvoke.ShowCursorWrapper(true);
             return curs;
-        }
-
-        /// <summary>
-        /// Simulates typing "HELLO" using keyboard input.
-        /// </summary>
-        [CAspects.Logging]
-        [CAspects.ConsumeException]
-        internal static void SendHello()
-        {
-            Logging.Log($"Sending fake hello VIn");
-            List<INPUT> inputs = new List<INPUT>();
-            var vkCodes = new ushort[] { 0x48, 0x45, 0x4C, 0x4C, 0x4F };
-
-            foreach (var vkCode in vkCodes)
-            {
-                inputs.Add(new INPUT
-                {
-                    type = 1,
-                    U = new InputUnion
-                    {
-                        ki = new KEYBDINPUT
-                        {
-                            wVk = vkCode,
-                            dwFlags = 0,
-                        }
-                    }
-                });
-                inputs.Add(new INPUT
-                {
-                    type = 1,
-                    U = new InputUnion
-                    {
-                        ki = new KEYBDINPUT
-                        {
-                            wVk = vkCode,
-                            dwFlags = 2,
-                        }
-                    }
-                });
-            }
-
-            SendInputWrapper((uint)inputs.Count, inputs.ToArray());
         }
 
         /// <summary>

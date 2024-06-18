@@ -285,8 +285,17 @@ namespace Cat
 
             private static Modes Mode { get => inst.Mode; set => inst.Mode = value; }
 
-            private static int[] SeekKey = [];
+            private static List<int> SeekKey = [];
 
+            internal static void ChangeSeeking(int vkCode, bool? state)
+            {
+                if (state == null)
+                    SeekKey.Clear();
+                else if (state == true)
+                    SeekKey.Add(vkCode);
+                else
+                    SeekKey.Remove(vkCode);
+            }
 
             /// <summary>
             /// Initializes the keyboard hook by setting a callback for keyboard events and logging the process.
@@ -379,7 +388,7 @@ namespace Cat
                 Logging.Log(log);
                 if (isKeyDown)
                 {
-                    if (SeekKey.Length > 0)
+                    if (SeekKey.Count > 0)
                     {
                         if (!SeekKey.Contains(vkCode))
                         {
@@ -387,7 +396,7 @@ namespace Cat
                                 SeekKey = [];
                             return new IntPtr(1);
                         }
-                        return CallNextHookExWrapper(_keyboardHookID, nCode, wParam, lParam);
+                        SeekKey.Remove(vkCode);
                     }
 
                     DebugLabel.Content += $"{Qd}, {RShifted}, {LShifted}, {vkCode}, {wParam}, {(Keys)vkCode}";
@@ -1341,6 +1350,8 @@ namespace Cat
 
                     { "define", 40 },
 
+                    { "tutorial", 41 },
+
                     { "read object", 42 },
                     { "ro", 42 },
 
@@ -1770,6 +1781,16 @@ namespace Cat
                             { "desc", "Defines a word using the DictionaryAPI or the UrbanDictionaryAPI (if allowed)" },
                             { "params", "word{string}" },
                             { "function", (Func<bool>)Cat.Commands.Define},
+                            { "shortcut", ""},
+                            { "type", 0 }
+                        }
+                    },
+                    {
+                        41, new Dictionary<string, object>
+                        {
+                            { "desc", "Runs the tutorial sequence for a given command." },
+                            { "params", "[commandname{string}]" },
+                            { "function", (Func<bool>)Cat.Commands.Tutorial},
                             { "shortcut", ""},
                             { "type", 0 }
                         }

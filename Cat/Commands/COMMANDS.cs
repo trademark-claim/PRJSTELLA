@@ -264,7 +264,7 @@ namespace Cat
                                         .AppendLine(string.Join("\n", (d["data"] as List<Dictionary<string, string>>).Select(x => $"{x["meaning"]}\n<tab><i>{x["example"]}</i>")));
                                     message = sb.ToString();
                                 }
-                                ClaraHerself.fadedelay = 10000;
+                                ClaraHerself.FadeDelay = 10000;
                                 ClaraHerself.Custom = [message,];
                                 ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
                             }

@@ -135,7 +135,7 @@ namespace Cat
                 "Hmmm.. is there anything else..?\nOh right! Local data is stored at C:\\ProgramData\\Kitty\\Cat\\\nHave fun, I hope you enjoy this app! o/"
             ];
 
-            internal static string[] Custom = ["Uh oh! You shouldn't see this!"];
+            internal static string[] Custom { get; set; } = ["Uh oh! You shouldn't see this!"];
 
             /// <summary>
             /// Whichever array is currently being spoken
@@ -175,7 +175,13 @@ namespace Cat
                 Custom
             }
 
-            internal static int fadedelay = 1500;
+            internal static int FadeDelay { get; set; } = 1500;
+
+            internal static bool Fading { get; set; } = true;
+
+            internal static bool KeyNavigation { get; set; } = true;
+
+            internal static bool HaveOverlay { get; set; } = true;
 
             /// <summary>
             /// Cancer cures smoking.
@@ -184,7 +190,7 @@ namespace Cat
             /// <param name="canvas">The canvas</param>
             [CAspects.Logging]
             [CAspects.ConsumeException]
-            internal static async void RunClara(Mode mode, Canvas canvas)
+            internal static async Task RunClara(Mode mode, Canvas canvas)
             {
                 ClaraHerself.canvas = canvas;
                 if (bubble != null && Catowo.inst != null && canvas != null)
@@ -200,7 +206,8 @@ namespace Cat
                     case Mode.Introduction:
                         CurrentStory = Introduction;
                         Catowo.inst.MakeNormalWindow();
-                        overlay = OverlayRect.AddToCanvas(canvas);
+                        if (HaveOverlay)
+                            overlay = OverlayRect.AddToCanvas(canvas);
                         break;
 
                     case Mode.Custom:
@@ -214,48 +221,49 @@ namespace Cat
                         fadeCancellationTokenSource = new();
                         var token = fadeCancellationTokenSource.Token;
 
-                        Task.Run(async () =>
-                        {
-                            await Task.Delay(fadedelay, token);
-                            while (true)
+                        if (Fading)
+                            Task.Run(async () =>
                             {
-                                if (token.IsCancellationRequested)
-                                    return;
-
-                                await Task.Delay(50, token);
-                                try
+                                await Task.Delay(FadeDelay, token);
+                                while (true)
                                 {
-                                    if (Application.Current != null && Application.Current.Dispatcher != null)
-                                        Application.Current.Dispatcher.Invoke(() =>
-                                        {
-                                            try
+                                    if (token.IsCancellationRequested)
+                                        return;
+
+                                    await Task.Delay(50, token);
+                                    try
+                                    {
+                                        if (Application.Current != null && Application.Current.Dispatcher != null)
+                                            Application.Current.Dispatcher.Invoke(() =>
                                             {
-                                                if (bubble != null && Catowo.inst != null && canvas != null )
+                                                try
                                                 {
-                                                    bubble.Opacity -= 0.015f;
-                                                    if (bubble.Opacity < 0.0f)
+                                                    if (bubble != null && Catowo.inst != null && canvas != null )
                                                     {
-                                                        bubble.Opacity = 0.0f;
-                                                        num = 0;
-                                                        Catowo.inst.PreviewKeyDown -= ProgressionKeydown;
-                                                        canvas.Children.Remove(bubble);
-                                                        bubble = null;
-                                                        return;
+                                                        bubble.Opacity -= 0.015f;
+                                                        if (bubble.Opacity < 0.0f)
+                                                        {
+                                                            bubble.Opacity = 0.0f;
+                                                            num = 0;
+                                                            Catowo.inst.PreviewKeyDown -= ProgressionKeydown;
+                                                            canvas.Children.Remove(bubble);
+                                                            bubble = null;
+                                                            return;
+                                                        }
                                                     }
                                                 }
-                                            }
-                                            catch
-                                            {
-                                                _ = "Lorum Ipsum";
-                                            }
-                                        });
+                                                catch
+                                                {
+                                                    _ = "Lorum Ipsum";
+                                                }
+                                            });
+                                    }
+                                    catch 
+                                    {
+                                        _ = "Lorum Ipsum";
+                                    }
                                 }
-                                catch 
-                                {
-                                    _ = "Lorum Ipsum";
-                                }
-                            }
-                        }, token);
+                            }, token);
                         break;
                 }
                 // The first message
@@ -266,7 +274,22 @@ namespace Cat
                 bubble.Text = CurrentStory[num];
                 canvas.Children.Add(bubble);
                 Catowo.inst.PreviewKeyDown += ProgressionKeydown;
+                return;
             }
+
+            internal static void ForceRemove()
+            {
+                num = 0;
+                Catowo.inst.PreviewKeyDown -= ProgressionKeydown;
+                if (bubble != null)
+                {
+                    canvas.Children.Remove(bubble);
+                    bubble = null;
+                }
+            }
+
+            internal static void RemoveOverlay()
+                => OverlayRect.RemoveFromCanvas(canvas, overlay);
 
             /// <summary>
             /// Event handler for the pressing of keys while a speech is activated. This is the base method to be used in tangent with specific methods for each set of speech, and is to be loading in and out as needed.
@@ -275,35 +298,43 @@ namespace Cat
             /// <param name="e">The key event args</param>
             private static void ProgressionKeydown(object sender, System.Windows.Input.KeyEventArgs e)
             {
-                if (e.Key == Key.Right)
-                    if (canvas != null)
-                    {
-                        if (++num > CurrentStory.Length - 1)
+                if (KeyNavigation)
+                {
+                    if (e.Key == Key.Right)
+                        if (canvas != null)
                         {
-                            num = 0;
-                            Catowo.inst.MakeFunnyWindow();
-                            Catowo.inst.PreviewKeyDown -= ProgressionKeydown;
-                            OverlayRect.RemoveFromCanvas(canvas, overlay);
-                            if (bubble != null)
+                            if (++num > CurrentStory.Length - 1)
                             {
-                                canvas.Children.Remove(bubble);
-                                bubble = null;
+                                num = 0;
+                                Catowo.inst.MakeFunnyWindow();
+                                Catowo.inst.PreviewKeyDown -= ProgressionKeydown;
+                                if (HaveOverlay)
+                                    OverlayRect.RemoveFromCanvas(canvas, overlay);
+                                if (bubble != null)
+                                {
+                                    canvas.Children.Remove(bubble);
+                                    bubble = null;
+                                }
+                                return;
                             }
-                            return;
-                        }
-                        if (bubble != null)
-                            bubble.Text = CurrentStory[num];
-                        return;
-                    }
-                if (e.Key == Key.Left)
-                    if (canvas != null)
-                    {
-                        num--;
-                        if (num >= 0)
                             if (bubble != null)
                                 bubble.Text = CurrentStory[num];
-                        return;
-                    }
+                            return;
+                        }
+                    if (e.Key == Key.Left)
+                        if (canvas != null)
+                        {
+                            num--;
+                            if (num >= 0)
+                                if (bubble != null)
+                                    bubble.Text = CurrentStory[num];
+                            return;
+                        }
+                    if (e.Key == Key.Down)
+                        if (delegation != null)
+                            delegation();
+                }
+
                 if (e.Key == Key.Up)
                     if (canvas != null)
                     {
@@ -316,11 +347,14 @@ namespace Cat
                             canvas.Children.Remove(bubble);
                             bubble = null;
                         }
+                        Fading = true;
+                        FadeDelay = 1500;
+                        Custom = [];
+                        KeyNavigation = true;
+                        HaveOverlay = true;
+                        Catowo.Hooking.ChangeSeeking(0, null);
                         return;
                     }
-                if (e.Key == Key.Down)
-                    if (delegation != null)
-                        delegation();
             }
 
             /// <summary>
