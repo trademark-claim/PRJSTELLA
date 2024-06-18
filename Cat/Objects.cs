@@ -183,6 +183,10 @@ namespace Cat
 
             internal static bool HaveOverlay { get; set; } = true;
 
+            internal static bool CleanUp { get; set; } = true;
+
+            internal static TaskCompletionSource<bool> TCS { get; private set; }
+
             /// <summary>
             /// Cancer cures smoking.
             /// </summary>
@@ -211,6 +215,7 @@ namespace Cat
                         break;
 
                     case Mode.Custom:
+                        TCS = new TaskCompletionSource<bool>();
                         CurrentStory = Custom;
                         Logging.Log("Custom Clara Speech: ", CurrentStory);
                         if (fadeCancellationTokenSource != null && !fadeCancellationTokenSource.IsCancellationRequested)
@@ -286,6 +291,7 @@ namespace Cat
                     canvas.Children.Remove(bubble);
                     bubble = null;
                 }
+                TCS.SetResult(true);
             }
 
             internal static void RemoveOverlay()
@@ -305,11 +311,15 @@ namespace Cat
                         {
                             if (++num > CurrentStory.Length - 1)
                             {
+                                TCS.SetResult(true);
                                 num = 0;
-                                Catowo.inst.MakeFunnyWindow();
                                 Catowo.inst.PreviewKeyDown -= ProgressionKeydown;
-                                if (HaveOverlay)
-                                    OverlayRect.RemoveFromCanvas(canvas, overlay);
+                                if (CleanUp)
+                                {
+                                    Catowo.inst.MakeFunnyWindow();
+                                    if (HaveOverlay)
+                                        OverlayRect.RemoveFromCanvas(canvas, overlay);
+                                }
                                 if (bubble != null)
                                 {
                                     canvas.Children.Remove(bubble);
@@ -338,6 +348,7 @@ namespace Cat
                 if (e.Key == Key.Up)
                     if (canvas != null)
                     {
+                        TCS.SetResult(true);
                         num = 0;
                         Catowo.inst.MakeFunnyWindow();
                         Catowo.inst.PreviewKeyDown -= ProgressionKeydown;

@@ -192,43 +192,56 @@ namespace Cat
             }
         }
 
-        internal readonly record struct ExtendedInput(ushort Key, byte DownFor = 0);
+        internal readonly record struct ExtendedInput(ushort Key, byte DownFor = 0, bool up = false);
 
         [CAspects.Logging]
         [CAspects.AsyncExceptionSwallower]
         internal static async Task SendKeyboardInput(int delayms, params ExtendedInput[] vks)
         {
-            INPUT[] inputs = new INPUT[vks.Length * 2];
+            var lst = vks.ToList();
+            List<(int, ExtendedInput)> eexis = new();
             for (int i = 0; i < vks.Length; i++)
             {
-                ExtendedInput exi = vks[i];
-                inputs[i].type = INPUT_KEYBOARD;
-                inputs[i].U.ki.wVk = exi.Key;
-                inputs[i].U.ki.dwFlags = KEYEVENTF_EXTENDEDKEY;
-                inputs[i + (exi.DownFor > 0 ? (exi.DownFor * 2) : 1)].type = INPUT_KEYBOARD;
-                inputs[i + (exi.DownFor > 0 ? (exi.DownFor * 2) : 1)].U.ki.wVk = exi.Key;
-                inputs[i + (exi.DownFor > 0 ? (exi.DownFor * 2) : 1)].U.ki.dwFlags = KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP;
+                ExtendedInput v = vks[i];
+                if (v.DownFor > 0)
+                    eexis.Add((i + v.DownFor + 1 + eexis.Count, new(v.Key, 0, true)));
             }
-
+            foreach (var v in eexis)
+                lst.Insert(v.Item1, v.Item2);
+            Logging.Log("New List: ", lst);
+            for (int i = 0; i < lst.Count; i++)
+            {
+                ExtendedInput v = lst[i];
+                SendKeyboardInput(v.Key, v.DownFor > 0 ? false : v.up ? true : null);
+                await Task.Delay(TimeSpan.FromMilliseconds(delayms));
+            }
+            
         }
 
         /// <summary>
         /// Simulates keyboard input for a specified virtual key code.
         /// </summary>
         /// <param name="virtualKeyCode">The virtual key code of the key.</param>
-        internal static void SendKeyboardInput(ushort virtualKeyCode)
+        [CAspects.Logging]
+        [CAspects.ConsumeException]
+        internal static void SendKeyboardInput(ushort virtualKeyCode, bool? onlyup = null)
         {
-            Logging.Log($"Sending KEYUP KEYDOWN for VK {virtualKeyCode}");
-            var inputs = new Structs.INPUT[2];
+            Logging.Log($"Sending {(onlyup == true ? "KEYUP" : onlyup == false? "KEYDOWN" : "KEYDOWN and KEYUP")} for VK {virtualKeyCode}");
+            var inputs = new Structs.INPUT[onlyup == null? 2 : 1];
 
-            inputs[0].type = INPUT_KEYBOARD;
-            inputs[0].U.ki.wVk = virtualKeyCode;
-            inputs[0].U.ki.dwFlags = KEYEVENTF_EXTENDEDKEY;
+            if (onlyup == null || onlyup == false)
+            {
+                inputs[0].type = INPUT_KEYBOARD;
+                inputs[0].U.ki.wVk = virtualKeyCode;
+                inputs[0].U.ki.dwFlags = KEYEVENTF_EXTENDEDKEY;
+            }
 
-            inputs[1].type = INPUT_KEYBOARD;
-            inputs[1].U.ki.wVk = virtualKeyCode;
-            inputs[1].U.ki.dwFlags = KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP;
-
+            if (onlyup == null || onlyup == true)
+            {
+                inputs[onlyup == null ? 1 : 0].type = INPUT_KEYBOARD;
+                inputs[onlyup == null ? 1 : 0].U.ki.wVk = virtualKeyCode;
+                inputs[onlyup == null ? 1 : 0].U.ki.dwFlags = KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP;
+            }
             SendInputWrapper((uint)inputs.Length, inputs);
         }
 

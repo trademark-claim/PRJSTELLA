@@ -41,6 +41,7 @@ namespace Cat
         {
             ClaraHerself.Fading = false;
             ClaraHerself.HaveOverlay = false;
+            ClaraHerself.CleanUp = false;
             ClaraHerself.Custom = [
                 "This is the AddCursorPreset tutorial! (Press left and right arrows to navigate the next two, \nor press the key it asks for. \nPress the Up Arrow to cancel the tutorial.)",
                 "Command description:\n\"" + (string)Interface.CommandProcessing.Cmds[Interface.CommandProcessing.cmdmap["add cursor preset"]]["desc"] + "\"",
@@ -48,21 +49,29 @@ namespace Cat
                 "First, I'll type the base command in for you, here!",
                 ];
             await ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
-            Interface.inst.inputTextBox.Dispatcher.InvokeAsync(() => Interface.inst.inputTextBox.Text = "add cursor preset");
+            await ClaraHerself.TCS.Task;
+            Interface.inst.inputTextBox.Text = "add cursor preset";
             ClaraHerself.Custom = [
                 "Now we need to insert our parameters!",
                 "The raw parameters are: listname{string}\nThis means that it accepts one parameter, a string\n'listname' is just to help you understand what it wants.\n Which, in this case, is the name of the preset list!",
                 "For now, we'll just call it 'test1'."
                 ];
             await ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
-            Interface.inst.inputTextBox.Dispatcher.InvokeAsync(() => Interface.inst.inputTextBox.Text = "add cursor preset ;test1");
+            await ClaraHerself.TCS.Task;
+            Interface.inst.inputTextBox.Text = "add cursor preset ;test1";
             Interface.CommandProcessing.ProcessCommand();
             ClaraHerself.Custom = [
                 "Now the command has executed, and you can see the output in the UI.",
                 $"The preset can be found at {CursorsFilePath}, here, I'll open it for you!",
                 ];
-            BaselineInputs.SendKeyboardInput();
-            await ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
+            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
+            await ClaraHerself.TCS.Task;
+            //Catowo.inst.ToggleInterface();
+            var vks = Environment.ConvertStringToVKArray(CursorsFilePath);
+            List<BaselineInputs.ExtendedInput> exis = [new BaselineInputs.ExtendedInput(VK_LWIN, 1), new BaselineInputs.ExtendedInput(VK_R), ];
+            exis.AddRange(vks.Select(k => new ExtendedInput(k, k == VK_LSHIFT ? (byte)1 : (byte)0)));
+            exis.Add(new(VK_RETURN));
+            BaselineInputs.SendKeyboardInput(50, [.. exis]);
             return;
         }
     }

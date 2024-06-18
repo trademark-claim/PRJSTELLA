@@ -134,6 +134,10 @@ namespace Cat
         internal const uint KEYEVENTF_KEYUP = 0x0002;
         internal const uint INPUT_KEYBOARD = 1;
 
+        internal const int VK_LWIN = 0x5B; // Left Windows key
+        internal const int VK_RWIN = 0x5C; // Right Windows key
+        internal const int VK_SPACE = 0x20;
+
         internal static LowLevelProc _keyboardProc;
 
         #endregion VKs and Styles
@@ -193,7 +197,59 @@ namespace Cat
             { VK_OEM_PERIOD, ('.', '>')},
             { VK_OEM_2, ('/', '?')},
             { VK_OEM_3, ('`', '~')}
+
         };
+
+        private static readonly Dictionary<char, int[]> vkMap = new Dictionary<char, int[]>
+        {
+            {'A', new int[] {VK_A}}, {'B', new int[] {VK_B}}, {'C', new int[] {VK_C}},
+            {'D', new int[] {VK_D}}, {'E', new int[] {VK_E}}, {'F', new int[] {VK_F}},
+            {'G', new int[] {VK_G}}, {'H', new int[] {VK_H}}, {'I', new int[] {VK_I}},
+            {'J', new int[] {VK_J}}, {'K', new int[] {VK_K}}, {'L', new int[] {VK_L}},
+            {'M', new int[] {VK_M}}, {'N', new int[] {VK_N}}, {'O', new int[] {VK_O}},
+            {'P', new int[] {VK_P}}, {'Q', new int[] {VK_Q}}, {'R', new int[] {VK_R}},
+            {'S', new int[] {VK_S}}, {'T', new int[] {VK_T}}, {'U', new int[] {VK_U}},
+            {'V', new int[] {VK_V}}, {'W', new int[] {VK_W}}, {'X', new int[] {VK_X}},
+            {'Y', new int[] {VK_Y}}, {'Z', new int[] {VK_Z}},
+            {'0', new int[] {VK_0}}, {'1', new int[] {VK_1}}, {'2', new int[] {VK_2}}, {'3', new int[] {VK_3}},
+            {'4', new int[] {VK_4}}, {'5', new int[] {VK_5}}, {'6', new int[] {VK_6}}, {'7', new int[] {VK_7}},
+            {'8', new int[] {VK_8}}, {'9', new int[] {VK_9}},
+            {' ', new int[] {VK_SPACE}}, {',', new int[] {VK_OEM_COMMA}}, {'.', new int[] {VK_OEM_PERIOD}},
+            {';', new int[] {VK_OEM_1}}, {':', new int[] {VK_LSHIFT, VK_OEM_1}}, {'?', new int[] {VK_LSHIFT, VK_OEM_2}},
+            {'!', new int[] {VK_LSHIFT, VK_1}}, {'@', new int[] {VK_LSHIFT, VK_2}}, {'#', new int[] {VK_LSHIFT, VK_3}},
+            {'$', new int[] {VK_LSHIFT, VK_4}}, {'%', new int[] {VK_LSHIFT, VK_5}}, {'^', new int[] {VK_LSHIFT, VK_6}},
+            {'&', new int[] {VK_LSHIFT, VK_7}}, {'*', new int[] {VK_LSHIFT, VK_8}}, {'(', new int[] {VK_LSHIFT, VK_9}},
+            {')', new int[] {VK_LSHIFT, VK_0}}, {'-', new int[] {VK_OEM_MINUS}}, {'_', new int[] {VK_LSHIFT, VK_OEM_MINUS}},
+            {'=', new int[] {VK_OEM_PLUS}}, {'+', new int[] {VK_LSHIFT, VK_OEM_PLUS}}, {'[', new int[] {VK_OEM_4}},
+            {']', new int[] {VK_OEM_6}}, {'{', new int[] {VK_LSHIFT, VK_OEM_4}}, {'}', new int[] {VK_LSHIFT, VK_OEM_6}},
+            {'\\', new int[] {VK_OEM_5}}, {'|', new int[] {VK_LSHIFT, VK_OEM_5}}, {'/', new int[] {VK_OEM_2}},
+            {'\'', new int[] {VK_OEM_7}}, {'"', new int[] {VK_LSHIFT, VK_OEM_7}}, {'`', new int[] {VK_OEM_3}},
+            {'~', new int[] {VK_LSHIFT, VK_OEM_3}}
+        };
+
+
+
+        [CAspects.Logging]
+        [CAspects.ConsumeException]
+        internal static List<ushort> ConvertStringToVKArray(string input)
+        {
+            List<ushort> vkArray = new List<ushort>();
+
+            foreach (char c in input.ToUpper())
+            {
+                if (vkMap.TryGetValue(c, out int[] vk))
+                {
+                    vkArray.AddRange(vk.Select(k => (ushort)k));
+                }
+                else
+                {
+                    vkArray.Add((ushort)VK_OEM_PERIOD);
+                }
+            }
+
+            return vkArray;
+        }
+
 
         /// <summary>Maps modifier key virtual codes to their string representations.</summary>
         internal static readonly Dictionary<int, string> ModifierVkCodetoStringMap = new()
