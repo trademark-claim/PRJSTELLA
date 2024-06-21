@@ -645,7 +645,7 @@ namespace Cat
             Background = System.Windows.Media.Brushes.Transparent;
             Topmost = true;
             ShowActivated = false;
-            ShowInTaskbar = false; /* [OUTDATED BUT MIGHT BE USEFUL INFO]: */ //x When making new code, set this to true t can close the crashed app
+            ShowInTaskbar = false; /* [OUTDATED BUT MIGHT BE USEFUL]: */ //x When making new code, set this to true t can close the crashed app
             Left = 0;
             Top = 0;
             _screen_ = Array.FindIndex(System.Windows.Forms.Screen.AllScreens, screen => screen.Primary);
@@ -653,7 +653,7 @@ namespace Cat
             Width = scre.Bounds.Width;
             Height = scre.Bounds.Height;
             Logging.Log($"Width: {Width}", $"Height: {Height}");
-            //System.Windows.MessageBox.Show($"{_screen_}, {Width}, {Height}");
+            //x System.Windows.MessageBox.Show($"{_screen_}, {Width}, {Height}");
 
             Loaded += (sender, e) =>
             {

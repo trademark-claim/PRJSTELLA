@@ -63,15 +63,23 @@ namespace Cat
             ClaraHerself.Custom = [
                 "Now the command has executed, and you can see the output in the UI.",
                 $"The preset can be found at {CursorsFilePath}, here, I'll open it for you!",
+                "Just gonna close the interface..."    
+            ];
+            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
+            await ClaraHerself.TCS.Task;
+            //x Catowo.inst.ToggleInterface(false);
+            await Task.Delay(200);
+            var vks = ConvertStringToVKArray(CursorsFilePath);
+            List<ExtendedInput> exis = [new ExtendedInput(VK_LWIN, 1), new BaselineInputs.ExtendedInput(VK_R), ];
+            exis.AddRange(vks.Select(k => new ExtendedInput(k, k == VK_LSHIFT ? (byte)1 : (byte)0)));
+            exis.Add(new(VK_RETURN));
+            SendKeyboardInput(75, [.. exis]);
+            ClaraHerself.Custom = [
+                "If the folder opened correctly, you'll see a folder named 'test1'\nwith a 'CLF' file inside it. CLF stands for Cursor List File.",
+                "Thanks for following this tutorial!\nRelated commands: 'add cursor to preset', 'list preset', 'remove cursor from preset'."
                 ];
             ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
             await ClaraHerself.TCS.Task;
-            //Catowo.inst.ToggleInterface();
-            var vks = Environment.ConvertStringToVKArray(CursorsFilePath);
-            List<BaselineInputs.ExtendedInput> exis = [new BaselineInputs.ExtendedInput(VK_LWIN, 1), new BaselineInputs.ExtendedInput(VK_R), ];
-            exis.AddRange(vks.Select(k => new ExtendedInput(k, k == VK_LSHIFT ? (byte)1 : (byte)0)));
-            exis.Add(new(VK_RETURN));
-            BaselineInputs.SendKeyboardInput(50, [.. exis]);
             return;
         }
     }

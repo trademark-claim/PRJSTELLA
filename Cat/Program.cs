@@ -84,7 +84,8 @@ namespace Cat
                 Logging.Log($"Checking if FFMpeg binaries in source: {source}");
                 if (!File.Exists(source))
                 {
-                    Logging.Log("FATAL ERROR: Cannot find FFMpeg binaries in source! Please verify files or reinstall Kitty!");
+                    Logging.Log("ERROR: Cannot find FFMpeg binaries in source! Please verify files or reinstall Kitty!");
+                    Logging.Log("You may ignore this as all video encoding commands have been disabled for this version.");
                     //System.Windows.MessageBox.Show("Cannot find FFMpeg binaries in source! Please verify files or run 'load expr ;ffmpeg'", "Fatal Error -- Missing Binaries!", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
                     //App.ShuttingDown();
                     return;

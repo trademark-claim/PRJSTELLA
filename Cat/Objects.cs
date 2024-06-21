@@ -1330,19 +1330,17 @@ namespace Cat
             }
         }
 
-
-        internal class ProcessSelector : Window
+        internal abstract class BoxSelecter<T> : Window
         {
-            private SWC.ComboBox processComboBox;
-            private TextBox searchTextBox;
+            protected SWC.ComboBox processComboBox;
+            protected TextBox searchTextBox;
+            protected T SelectedItem;
 
-            public int SelectedProcessId { get; private set; }
-
-            public ProcessSelector()
+            public BoxSelecter(List<T> items)
             {
                 InitializeComponents();
-                PopulateProcesses();
                 Topmost = true;
+                items.ForEach(item => processComboBox.Items.Add(items));
                 Loaded += (s, e) => searchTextBox.Focus();
                 PreviewKeyDown += (s, e) =>
                 {
@@ -1351,9 +1349,9 @@ namespace Cat
                 };
             }
 
-            private void InitializeComponents()
+            protected void InitializeComponents(string title)
             {
-                Title = "Select a Process";
+                Title = title;
                 Width = 300;
                 Height = 150;
                 WindowStartupLocation = WindowStartupLocation.CenterScreen;
@@ -1373,7 +1371,6 @@ namespace Cat
                 processComboBox = new SWC.ComboBox
                 {
                     Height = 25,
-                    DisplayMemberPath = "ProcessName",
                     IsSynchronizedWithCurrentItem = true
                 };
                 processComboBox.SelectionChanged += ProcessComboBox_SelectionChanged;
@@ -1383,31 +1380,14 @@ namespace Cat
                 Content = panel;
             }
 
-            private void PopulateProcesses()
-            {
-                processComboBox.ItemsSource = Process.GetProcesses()
-                    .GroupBy(p => p.ProcessName)
-                    .Select(g => g.First())
-                    .OrderBy(p => p.ProcessName)
-                    .ToList();
-            }
 
-            private void SearchTextBox_TextChanged(object sender, TextChangedEventArgs e)
-            {
-                var filter = searchTextBox.Text.ToLower();
-                processComboBox.ItemsSource = Process.GetProcesses()
-                    .Where(p => p.ProcessName.ToLower().Contains(filter))
-                    .GroupBy(p => p.ProcessName)
-                    .Select(g => g.First())
-                    .OrderBy(p => p.ProcessName)
-                    .ToList();
-            }
+            protected abstract void SearchTextBox_TextChanged(object sender, TextChangedEventArgs e);
 
-            private void ProcessComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+            protected virtual void ProcessComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
             {
-                if (processComboBox.SelectedItem is Process selectedProcess)
+                if (processComboBox.SelectedItem is T selectedProcess)
                 {
-                    SelectedProcessId = selectedProcess.Id;
+                    SelectedItem = selectedProcess;
                 }
             }
 
@@ -1416,8 +1396,38 @@ namespace Cat
                 base.OnClosed(e);
                 if (processComboBox.SelectedItem == null)
                 {
-                    SelectedProcessId = -1;
+                    SelectedItem = (T)Helpers.BackendHelping.CreateDefault(typeof(T));
                 }
+            }
+        }
+
+
+        internal class ProcessSelector : Window
+        {
+            private SWC.ComboBox processComboBox;
+            private TextBox searchTextBox;
+
+            public int SelectedProcessId { get; private set; }
+
+            public ProcessSelector()
+            {
+                PopulateProcesses();
+                Topmost = true;
+                Loaded += (s, e) => searchTextBox.Focus();
+                PreviewKeyDown += (s, e) =>
+                {
+                    if (e.Key == System.Windows.Input.Key.Enter)
+                        Close();
+                };
+            }
+
+            private List<Process> PopulateProcesses()
+            {
+                return Process.GetProcesses()
+                    .GroupBy(p => p.ProcessName)
+                    .Select(g => g.First())
+                    .OrderBy(p => p.ProcessName)
+                    .ToList();
             }
         }
 

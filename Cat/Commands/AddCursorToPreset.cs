@@ -84,5 +84,65 @@ namespace Cat
             Interface.AddLog($"Successfully added cursor to {entryN}");
             return true;
         }
+
+        [CAspects.ConsumeException]
+        [CAspects.Logging]
+        internal async static Task TAddCursorPreset()
+        {
+            ClaraHerself.Fading = false;
+            ClaraHerself.HaveOverlay = false;
+            ClaraHerself.CleanUp = false;
+            ClaraHerself.Custom = [
+                "This is the AddCursorToPreset tutorial! (Press left and right arrows to navigate the next two, \nor press the key it asks for. \nPress the Up Arrow to cancel the tutorial.)",
+                "Command description:\n\"" + (string)Interface.CommandProcessing.Cmds[Interface.CommandProcessing.cmdmap["add cursor to preset"]]["desc"] + "\"",
+                "This tutorial will walk you through, letter by letter, on how to execute this command!",
+                "First, I'll type the base command in for you, here!",
+                ];
+            await ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
+            await ClaraHerself.TCS.Task;
+            Interface.inst.inputTextBox.Text = "add cursor to preset";
+            ClaraHerself.Custom = [
+                "Now we need to insert our parameters!",
+                "The raw parameters are: \npreset{string}, cursorid{string}, filepath{string}\nThis means that it accepts three parameters, three strings.",
+                "The first parameter is 'preset', this is the name of the preset you're adding a cursor to.\nYou can run 'list presets' to see every preset you have."
+                ];
+            await ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
+            await ClaraHerself.TCS.Task;
+            if (Directory.GetDirectories(CursorsFilePath).Length < 1)
+            {
+                ClaraHerself.Custom = [
+                "It seems you dont have any presets made!",
+                "I'll make you one called 'placeholder' using the 'add cursor preset' command\n(you can see the tutorial for that command by running the 'tutorial ;add cursor preset' command).",                ];
+                await ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
+                await ClaraHerself.TCS.Task;
+                Interface.inst.inputTextBox.Text = "add cursor preset ;placeholder";
+                Interface.CommandProcessing.ProcessCommand();
+                ClaraHerself.Custom = ["The preset has been created, moving on!"];
+                await ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
+                await ClaraHerself.TCS.Task;
+            }
+            else
+            {
+
+            }
+            ClaraHerself.Custom = [
+                ""
+            ];
+            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
+            await ClaraHerself.TCS.Task;
+            await Task.Delay(200);
+            var vks = ConvertStringToVKArray(CursorsFilePath);
+            List<ExtendedInput> exis = [new ExtendedInput(VK_LWIN, 1), new BaselineInputs.ExtendedInput(VK_R),];
+            exis.AddRange(vks.Select(k => new ExtendedInput(k, k == VK_LSHIFT ? (byte)1 : (byte)0)));
+            exis.Add(new(VK_RETURN));
+            SendKeyboardInput(75, [.. exis]);
+            ClaraHerself.Custom = [
+                "If the folder opened correctly, you'll see a folder named 'test1'\nwith a 'CLF' file inside it. CLF stands for Cursor List File.",
+                "Thanks for following this tutorial!\nRelated commands: 'add cursor to preset', 'list preset', 'remove cursor from preset'."
+                ];
+            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
+            await ClaraHerself.TCS.Task;
+            return;
+        }
     }
 }

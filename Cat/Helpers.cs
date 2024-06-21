@@ -566,6 +566,13 @@ namespace Cat
         /// </summary>
         public static partial class BackendHelping
         {
+            internal static object CreateDefault(Type t)
+            {
+                if (t == typeof(bool)) return false;
+                else if (t.IsValueType) return Activator.CreateInstance(t);
+                else return null;
+            }
+
             [CAspects.Logging]
             internal static object[] GetPropertyValues(object obj)
             {
