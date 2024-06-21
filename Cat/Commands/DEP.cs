@@ -18,15 +18,18 @@ namespace Cat
                 Interface.AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
                 return false;
             }
-            if (entry == "ffmpeg")
+            switch (entry)
             {
-                _ = new Helpers.EPManagement(Helpers.EPManagement.Processes.FFmpeg);
-                Logging.Log("DEP Execution Complete");
-            }
-            else
-            {
-                Interface.AddLog("Unrecognised Process name. (FFMPEG)");
-                return false;
+                case "ffmpeg":
+                    _ = new Helpers.EPManagement(Helpers.EPManagement.Processes.FFmpeg);
+                    Logging.Log("DEP Execution Complete");
+                    break;
+                case "cat cursor" or "cat single":
+                    Helpers.ExternalDownloading.FromGDrive(SingleCat, Downloads);
+                    break;
+                default:
+                    Interface.AddLog("Unrecognised Process name. (FFMPEG)");
+                    return false;
             }
             return true;
         }

@@ -1330,17 +1330,20 @@ namespace Cat
             }
         }
 
-        internal abstract class BoxSelecter<T> : Window
+        internal class BoxSelecter<T> : Window
         {
             protected SWC.ComboBox processComboBox;
             protected TextBox searchTextBox;
-            protected T SelectedItem;
+            internal T SelectedItem { get; private set; }
+            internal TaskCompletionSource<bool> TCS { get; } = new();
+            protected List<T> items;
 
-            public BoxSelecter(List<T> items)
+            public BoxSelecter(List<T> items, string title)
             {
-                InitializeComponents();
+                this.items = items;
+                InitializeComponents(title);
                 Topmost = true;
-                items.ForEach(item => processComboBox.Items.Add(items));
+                processComboBox.ItemsSource = this.items;
                 Loaded += (s, e) => searchTextBox.Focus();
                 PreviewKeyDown += (s, e) =>
                 {
@@ -1381,7 +1384,10 @@ namespace Cat
             }
 
 
-            protected abstract void SearchTextBox_TextChanged(object sender, TextChangedEventArgs e);
+            protected virtual void SearchTextBox_TextChanged(object sender, TextChangedEventArgs e) 
+            {
+                processComboBox.ItemsSource = items.Where(item => (item.ToString() ?? "").ToLower().Contains(searchTextBox.Text));
+            }
 
             protected virtual void ProcessComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
             {
@@ -1396,38 +1402,56 @@ namespace Cat
                 base.OnClosed(e);
                 if (processComboBox.SelectedItem == null)
                 {
-                    SelectedItem = (T)Helpers.BackendHelping.CreateDefault(typeof(T));
+                    SelectedItem = items[0] == null ? (T)Helpers.BackendHelping.CreateDefault(typeof(T)) : items[0];
                 }
+                TCS.SetResult(true);
             }
         }
 
 
-        internal class ProcessSelector : Window
+        internal class ProcessSelector : BoxSelecter<Process>
         {
-            private SWC.ComboBox processComboBox;
-            private TextBox searchTextBox;
-
             public int SelectedProcessId { get; private set; }
+            private static List<Process> Processes { get => PopulateProcesses(); }
 
-            public ProcessSelector()
-            {
-                PopulateProcesses();
-                Topmost = true;
-                Loaded += (s, e) => searchTextBox.Focus();
-                PreviewKeyDown += (s, e) =>
-                {
-                    if (e.Key == System.Windows.Input.Key.Enter)
-                        Close();
-                };
-            }
+            public ProcessSelector() : base(items: Processes, "Select Process: ")
+                => _ = "Lorum Ipsum";
 
-            private List<Process> PopulateProcesses()
+            private static List<Process> PopulateProcesses()
             {
                 return Process.GetProcesses()
                     .GroupBy(p => p.ProcessName)
                     .Select(g => g.First())
                     .OrderBy(p => p.ProcessName)
                     .ToList();
+            }
+
+            protected override void SearchTextBox_TextChanged(object sender, TextChangedEventArgs e)
+            {
+                var filter = searchTextBox.Text.ToLower();
+                processComboBox.ItemsSource = Process.GetProcesses()
+                    .Where(p => p.ProcessName.ToLower().Contains(filter))
+                    .GroupBy(p => p.ProcessName)
+                    .Select(g => g.First())
+                    .OrderBy(p => p.ProcessName)
+                    .ToList();
+            }
+
+            protected override void ProcessComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+            {
+                if (processComboBox.SelectedItem is Process selectedProcess)
+                {
+                    SelectedProcessId = selectedProcess.Id;
+                }
+            }
+
+            protected override void OnClosed(EventArgs e)
+            {
+                if (processComboBox.SelectedItem == null)
+                {
+                    SelectedProcessId = -1;
+                }
+                base.OnClosed(e);
             }
         }
 

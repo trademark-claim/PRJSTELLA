@@ -14,6 +14,8 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
+using System.Net;
 using System.Net.Http;
 using System.Reflection;
 using System.Text.Json;
@@ -566,6 +568,7 @@ namespace Cat
         /// </summary>
         public static partial class BackendHelping
         {
+
             internal static object CreateDefault(Type t)
             {
                 if (t == typeof(bool)) return false;
@@ -1201,6 +1204,64 @@ namespace Cat
                     internal string contributor { get; private set; }
                     internal string date { get; private set; }
                 }
+            }
+        }
+
+        internal static class ExternalDownloading
+        {
+            private static readonly HttpClient httpClient = new HttpClient();
+            internal static TaskCompletionSource<bool> TCS { get; private set; }
+
+            [CAspects.Logging]
+            [CAspects.AsyncExceptionSwallower]
+            internal static async Task FromGDrive(string fileId, string destinationPath)
+            {
+                TCS = new();
+                var baseUri = "https://drive.google.com/uc?export=download";
+                var requestUri = $"{baseUri}&id={fileId}";
+
+                var response = await httpClient.GetAsync(requestUri);
+                if (response.IsSuccessStatusCode)
+                {
+                    if (response.Content.Headers.ContentDisposition == null || string.IsNullOrEmpty(response.Content.Headers.ContentDisposition.FileName))
+                    {
+                        var htmlContent = await response.Content.ReadAsStringAsync();
+                        var confirmationToken = GetConfirmationToken(htmlContent);
+
+                        if (confirmationToken != null)
+                        {
+                            var confirmationUri = $"{baseUri}&confirm={confirmationToken}&id={fileId}";
+                            response = await httpClient.GetAsync(confirmationUri);
+                            response.EnsureSuccessStatusCode();
+                        }
+                    }
+
+                    using (Stream contentStream = await response.Content.ReadAsStreamAsync(),
+                                  fileStream = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None, 8192, true))
+                    {
+                        await contentStream.CopyToAsync(fileStream);
+                    }
+                }
+                TCS.SetResult(true);
+            }
+
+            private static string GetConfirmationToken(string htmlContent)
+            {
+                const string tokenMarker = "confirm=";
+                var startIndex = htmlContent.IndexOf(tokenMarker, StringComparison.Ordinal);
+                if (startIndex == -1) return null;
+                var endIndex = htmlContent.IndexOf('&', startIndex + tokenMarker.Length);
+                if (endIndex == -1) endIndex = htmlContent.IndexOf("\"", startIndex + tokenMarker.Length);
+                return htmlContent.Substring(startIndex + tokenMarker.Length, endIndex - startIndex - tokenMarker.Length);
+            }
+
+            [CAspects.Logging]
+            [CAspects.ConsumeException]
+            internal static void UnzipFile(string zipFilePath, string extractPath)
+            {
+                TCS = new();
+                ZipFile.ExtractToDirectory(zipFilePath, extractPath);
+                TCS.SetResult(true);
             }
         }
 

@@ -29,6 +29,7 @@ namespace Cat
         internal static readonly string LogPath = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\Logs\\L" + GUIDRegex().Replace(Guid.NewGuid().ToString(), "") + ".LOG";
 
         // Paths to various folders used by the application
+        internal static string Downloads { get => System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile) + @"\Downloads"; }
         internal const string LogFolder = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\Logs\\";
         internal const string AudioFolder = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\Audio\\";
         internal const string UserFolder = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\User\\";
@@ -44,6 +45,11 @@ namespace Cat
         internal const string StatsFile = NotesFolder + "stats.bin";
         internal const string SchemaFile = NotesFolder + "schemas.bin";
         internal const long DCID = 1231580969698459688;
+
+        internal const string SingleCat = "1WrlyOud00t0mk53hqMcSlNar1zQ448oK";
+        internal const string GatoZip = "1aGAVZIhM4MdDz7VHs5zzH_0r4GlKzxCN";
+        internal const string HZDZip = "11gm9hGWWusPa4NdPLgeHf8QXRpeDS-u3";
+        internal const string HeartsZip = "1Qit60S3uZ3ABpyi33LiQ7QRT7ANMT2Pj";
 
         #region VKs and Styles
 

@@ -1942,7 +1942,7 @@ namespace Cat
                         Logging.Log("Command Not Found");
                         Interface.AddLog($"No recognisable command '{call}', please use 'help ;commands' for a list of commands!");
                     }
-                    if (@interface != null)
+                    if (@interface != null && non_interface_text == null)
                         @interface.inputTextBox.Text = string.Empty;
                     Interface.AddLog("\n");
                 }
