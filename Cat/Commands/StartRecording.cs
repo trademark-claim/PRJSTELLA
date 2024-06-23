@@ -11,6 +11,8 @@ namespace Cat
         /// <remarks>
         /// Logs the start of the recording session and invokes the screen recording functionality provided by Helpers.ScreenRecording.
         /// </remarks>
+        [CAspects.ConsumeException]
+        [CAspects.Logging]
         [CAspects.InDev]
         internal static bool StartRecording()
         {

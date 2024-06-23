@@ -23,5 +23,29 @@ namespace Cat
                 Interface.AddTextLog("Live logger already open...", HOTPINK);
             return true;
         }
+
+        [CAspects.Logging]
+        [CAspects.AsyncExceptionSwallower]
+        internal static async Task TOpenLogger()
+        {
+            ClaraHerself.Fading = false;
+            ClaraHerself.HaveOverlay = false;
+            ClaraHerself.CleanUp = false;
+            ClaraHerself.Custom = [
+                "Command description:\n\""
+            + (string)Interface.
+                CommandProcessing
+                .Cmds[Interface
+                    .CommandProcessing
+                    .cmdmap["open console"]
+                ]["desc"]
+            + "\"",
+            "There's nothing much to this command, just run it and it'll open a live logger, so you can see log messages as I send them. (close one with 'close console')"
+            ];
+            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
+            var b = await ClaraHerself.TCS.Task;
+            if (!b) return;
+            Interface.CommandProcessing.ProcessCommand("close log editor");
+        }
     }
 }

@@ -32,5 +32,29 @@ namespace Cat
                 return false;
             }
         }
+
+        [CAspects.Logging]
+        [CAspects.AsyncExceptionSwallower]
+        internal static async Task TChangeScreen()
+        {
+            ClaraHerself.Fading = false;
+            ClaraHerself.HaveOverlay = false;
+            ClaraHerself.CleanUp = false;
+            ClaraHerself.Custom = [
+                "Command description:\n\""
+                    + (string)Interface.
+                        CommandProcessing
+                        .Cmds[Interface
+                            .CommandProcessing
+                            .cmdmap["change screen"]
+                        ]["desc"]
+                    + "\"",
+                    "This is the change screen command! It takes in one parameter: an integer being the id of the screen to move to.",
+                    "All you need to do is enter a number and if it's a valid screen it'll change!",
+                    "You can use the 'dsi' command to see your connected screens."
+            ];
+            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
+            await ClaraHerself.TCS.Task;
+        }
     }
 }

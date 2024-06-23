@@ -36,12 +36,13 @@ namespace Cat
         internal const string SSFolder = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\Screenshots\\";
         internal const string VideoFolder = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\Videos\\";
         internal const string NotesFolder = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\Notes\\";
-        internal const string ExternalProcessesFolder = "C:\\ProgramData\\Kitty\\Cat\\Processes\\";
+        internal const string ExternalDownloadsFolder = "C:\\ProgramData\\Kitty\\Cat\\Downloads\\";
         internal const string EPTempF = "C:\\ProgramData\\Kitty\\Cat\\Processes\\temp";
         internal const string CursorsFilePath = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\Cursors\\";
         internal const string UserDataFile = UserFolder + "hello_mr_edit_my_raw_data.ini";
-        internal const string FFMPEGPath = ExternalProcessesFolder + "ffmpeg.exe";
-        internal const string FlatCPath = ExternalProcessesFolder + "flatc.exe";
+        internal const string FFMPEGPath = ExternalDownloadsFolder + "ffmpeg.exe";
+        [Obsolete]
+        internal const string FlatCPath = ExternalDownloadsFolder + "flatc.exe";
         internal const string StatsFile = NotesFolder + "stats.bin";
         internal const string SchemaFile = NotesFolder + "schemas.bin";
         internal const long DCID = 1231580969698459688;
@@ -50,6 +51,7 @@ namespace Cat
         internal const string GatoZip = "1aGAVZIhM4MdDz7VHs5zzH_0r4GlKzxCN";
         internal const string HZDZip = "11gm9hGWWusPa4NdPLgeHf8QXRpeDS-u3";
         internal const string HeartsZip = "1Qit60S3uZ3ABpyi33LiQ7QRT7ANMT2Pj";
+        internal const string CopiedCityMP3 = "1ScB_zySR4VuRBPT7ExXaXi_7kpwGiZd9";
 
         #region VKs and Styles
 

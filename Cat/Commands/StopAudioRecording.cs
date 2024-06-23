@@ -10,6 +10,8 @@ namespace Cat
         /// This method is a stub for future development and currently triggers a notification about unimplemented functionality.
         /// </remarks>
         [CAspects.ConsumeException]
+        [CAspects.Logging]
+        [CAspects.InDev]
         internal static bool StopAudioRecording()
         {
             FYI();

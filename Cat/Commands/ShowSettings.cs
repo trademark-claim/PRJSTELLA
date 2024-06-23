@@ -25,5 +25,26 @@ namespace Cat
             }
             return true;
         }
+
+        [CAspects.Logging]
+        [CAspects.AsyncExceptionSwallower]
+        internal static async Task TShowSettings()
+        {
+            ClaraHerself.Custom = [
+                "Command description:\n\""
+            + (string)Interface.
+                CommandProcessing
+                .Cmds[Interface
+                    .CommandProcessing
+                    .cmdmap["close log editor"]
+                ]["desc"]
+            + "\"",
+            "There's nothing much to this command, just run it and it'll list all the changeable settings by group."
+            ];
+            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
+            var b = await ClaraHerself.TCS.Task;
+            if (!b) return;
+            Interface.CommandProcessing.ProcessCommand("show settings");
+        }
     }
 }

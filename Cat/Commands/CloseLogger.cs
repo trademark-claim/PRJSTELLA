@@ -22,5 +22,29 @@ namespace Cat
                 Interface.AddTextLog("This would be great to run... if there was a log window to run it on.", HOTPINK);
             return true;
         }
+
+        [CAspects.Logging]
+        [CAspects.AsyncExceptionSwallower]
+        internal static async Task TCloseLogger()
+        {
+            ClaraHerself.Fading = false;
+            ClaraHerself.HaveOverlay = false;
+            ClaraHerself.CleanUp = false;
+            ClaraHerself.Custom = [
+                "Command description:\n\""
+                    + (string)Interface.
+                        CommandProcessing
+                        .Cmds[Interface
+                            .CommandProcessing
+                            .cmdmap["close console"]
+                        ]["desc"]
+                    + "\"",
+                    "There's nothing much to this command, just run it and it'll close an open console window. (Open one with 'show console')"
+            ];
+            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
+            var b = await ClaraHerself.TCS.Task;
+            if (!b) return;
+            Interface.CommandProcessing.ProcessCommand("close console");
+        }
     }
 }

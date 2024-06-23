@@ -97,5 +97,32 @@ namespace Cat
             Interface.AddLog(message);
             return true;
         }
+
+        [CAspects.Logging]
+        [CAspects.AsyncExceptionSwallower]
+        internal static async Task TDefine()
+        {
+            ClaraHerself.Fading = false;
+            ClaraHerself.HaveOverlay = false;
+            ClaraHerself.CleanUp = false;
+            ClaraHerself.Custom = [
+                "Command description:\n\""
+                    + (string)Interface.
+                        CommandProcessing
+                        .Cmds[Interface
+                            .CommandProcessing
+                            .cmdmap["define"]
+                        ]["desc"]
+                    + "\"",
+                    "This command gives you the full definition of an inputted word.",
+                    "If you have the Urban Dictionary option on (see 'change settings'), it'll use that if the word isnt found in a proper english dictionary.",
+                    "I'll show you how to use it: here's what running 'define ;absquatulate' returns..."
+            ];
+            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
+            var b = await ClaraHerself.TCS.Task;
+            if (!b) return;
+            Interface.CommandProcessing.ProcessCommand("define ;absquatulate");
+
+        }
     }
 }

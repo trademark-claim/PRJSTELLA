@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NAudio.SoundFont;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -49,6 +50,29 @@ namespace Cat
             foreach (var kvp in decereal)
                 Interface.AddLog($"{kvp.Key}: {Logging.ProcessMessage(kvp.Value)}");
             return true;
+        }
+
+        [CAspects.Logging]
+        [CAspects.AsyncExceptionSwallower]
+        internal static async Task TReadObject()
+        {
+            ClaraHerself.Fading = false;
+            ClaraHerself.HaveOverlay = false;
+            ClaraHerself.CleanUp = false;
+            ClaraHerself.Custom = [
+                "Command description:\n\""
+            + (string)Interface.
+                CommandProcessing
+                .Cmds[Interface
+                    .CommandProcessing
+                    .cmdmap["read object"]
+                ]["desc"]
+            + "\"",
+            "Complex command for my binary storage functionality. Please refer to the 'Binary Storage' section of the user manual for details."
+            ];
+            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
+            var b = await ClaraHerself.TCS.Task;
+            if (!b) return;
         }
     }
 }

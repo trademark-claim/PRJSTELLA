@@ -642,7 +642,7 @@ namespace Cat
                 /// <summary>
                 /// Gets an optional note associated with the progress update.
                 /// </summary>
-                internal string? Note { get; private set; }
+                internal string? Note { get; set; }
 
                 /// <summary>
                 /// Initializes a new instance of the <see cref="ProgressUpdateEventArgs"/> class.

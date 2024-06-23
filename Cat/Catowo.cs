@@ -702,6 +702,8 @@ namespace Cat
 
         #region Interface
 
+        internal TaskCompletionSource<bool> UIToggleTCS { get; private set; }
+
         /// <summary>
         /// Toggles the visibility and functionality of the application's interface.
         /// </summary>
@@ -712,8 +714,9 @@ namespace Cat
         [CAspects.Logging]
         [CAspects.ConsumeException]
         [CAspects.UpsetStomach]
-        internal bool ToggleInterface(bool animation = true)
+        internal bool ToggleInterface(bool animation = true, bool makefunny = true)
         {
+            UIToggleTCS = new();
             if (Interface.inst != null)
             {
                 if (animation)
@@ -736,15 +739,19 @@ namespace Cat
                     Interface.inst.parent?.Children.Remove(Interface.inst);
                     Interface.inst = null;
                 }
-                MakeFunnyWindow();
+                if (makefunny)
+                    MakeFunnyWindow();
+                UIToggleTCS.SetResult(true);
                 return true;
             }
             else
             {
-                MakeNormalWindow();
+                if (makefunny)
+                    MakeNormalWindow();
                 canvas.Children.Add(new Interface(canvas));
                 Objects.CursorEffects.MoveTop();
                 Interface.inst.inputTextBox?.Focus();
+                UIToggleTCS.SetResult(true);
                 return true;
             }
         }
@@ -775,6 +782,8 @@ namespace Cat
         {
             internal SWS.Rectangle Backg { get; set; }
             internal SWC.TextBox inputTextBox { get; private set; }
+
+            internal static string Input { get => inst.inputTextBox.Text; set => inst.inputTextBox.Text = value; }
 
             internal static LogListBox logListBox = new();
             internal static Interface? inst = null;
@@ -917,8 +926,7 @@ namespace Cat
             internal async Task Hide()
             {
                 Logging.Log("Hiding interface...");
-                Visibility = Visibility.Collapsed;
-                Dispatcher.Invoke(() => { }, DispatcherPriority.Render);
+                Dispatcher.Invoke(() => { Visibility = Visibility.Collapsed; }, DispatcherPriority.Render);
                 await Task.Delay(500);
                 Logging.Log("Interface hidden");
             }
@@ -1233,10 +1241,6 @@ namespace Cat
                     { "ol", 13 },
                     { "olf", 13 },
 
-                    { "view log", 14 },
-                    { "open log", 14 },
-                    { "vl", 14 },
-
                     { "change cursor", 15 },
                     { "cc", 15 },
                     { "change mouse", 15 },
@@ -1310,6 +1314,9 @@ namespace Cat
                     { "force flush logs", 26 },
 
                     { "download expr", 27 },
+                    { "dexpr", 27 },
+                    { "d expr", 27 },
+                    { "download external item", 27 },
 
                     { "run progress bar test", 28 },
 
@@ -1334,6 +1341,7 @@ namespace Cat
 
                     { "list cursor presets", 34 },
                     { "lcps", 34 },
+                    { "list cursor preset", 34 },
 
                     { "open log editor", 35 },
                     { "ole", 35},
@@ -1380,7 +1388,7 @@ namespace Cat
                         {
                             { "desc", "Shuts down the entire program" },
                             { "params", "" },
-                            { "function", (Func<bool>)Cat.Commands.Shutdown },
+                            { "function", (Func<Task<bool>>)Cat.Commands.Shutdown },
                             { "shortcut", "Shift Q E"},
                             { "type", 0 }
                         }
@@ -1411,6 +1419,7 @@ namespace Cat
                             { "desc", "Takes a screenshot of the screen, without the interface. -2 for a stiched image of all screens, -1 for individual screen pics, (number) for an individual screen, leave empty for the current screen Kitty is running on.\nE.g: screenshot ;-2" },
                             { "params", "[mode{int}]" },
                             { "function", (Func<Task<bool>>)Cat.Commands.Screenshot },
+                            { "tutorial", (Func<Task>)Commands.TScreenshot },
                             { "shortcut", "Shifts Q S"},
                             { "type", 0 }
                         }
@@ -1516,23 +1525,14 @@ namespace Cat
                         }
                     },
                     {
-                        14, new Dictionary<string, object>
-                        {
-                            { "desc", "Opens a specified log file for viewing, specifying index or name.\nE.g: view log ;1\nE.g: view log ;Lcc0648800552499facf099d368686f0c" },
-                            { "params", "filename{string/int}" },
-                            { "function", (Func<bool>)Cat.Commands.ViewLog },
-                            { "shortcut", ""},
-                            { "type", 2 }
-                        }
-                    },
-                    {
                         15, new Dictionary<string, object>
                         {
                             { "desc", "(Attempts to) Changes the cursor to the specified cursor file, specifying file path.\nE.g: change cursor ;the/path/to/your/.cur/file" },
                             { "params", "path{string}" },
                             { "function", (Func<bool>)Cat.Commands.ChangeCursor },
                             { "shortcut", ""},
-                            { "type", 0 }
+                            { "type", 0 },
+                            { "tutorial", (Func<Task>)Commands.TChangeCursor }
                         }
                     },
                     {
@@ -1692,7 +1692,8 @@ namespace Cat
                             { "params", "listname{string}" },
                             { "function", (Func<bool>)Cat.Commands.AddCursorPreset },
                             { "shortcut", ""},
-                            { "type", 0 }
+                            { "type", 0 },
+                            { "tutorial", (Func<Task>)Commands.TAddCursorPreset}
                         }
                     },
                     {
@@ -1702,7 +1703,8 @@ namespace Cat
                             { "params", "preset{string}, cursorid{string}, filepath{string}" },
                             { "function", (Func<bool>)Cat.Commands.AddCursorToPreset },
                             { "shortcut", ""},
-                            { "type", 0 }
+                            { "type", 0 },
+                            { "tutorial", (Func<Task>)Commands.TAddCursorToPreset}
                         }
                     },
                     {
@@ -1762,7 +1764,8 @@ namespace Cat
                             { "params", "" },
                             { "function", (Func<bool>)Cat.Commands.AV},
                             { "shortcut", ""},
-                            { "type", 0 }
+                            { "type", 0 },
+                            { "tutorial", (Func<Task>)Commands.TAV }
                         }
                     },
                     {
@@ -1788,8 +1791,8 @@ namespace Cat
                     {
                         41, new Dictionary<string, object>
                         {
-                            { "desc", "Runs the tutorial sequence for a given command." },
-                            { "params", "[commandname{string}]" },
+                            { "desc", "Runs the tutorial sequence for a given command.\nRun it with 'tutorial ;commandName' where 'commandName' is the name of any command." },
+                            { "params", "commandname{string}" },
                             { "function", (Func<bool>)Cat.Commands.Tutorial},
                             { "shortcut", ""},
                             { "type", 0 }
@@ -1822,7 +1825,7 @@ namespace Cat
                             { "params", "" },
                             { "function", (Func<bool>)(() =>
                             {
-                                Objects.CursorEffects.Toggle();
+                                CursorEffects.Toggle();
                                 Catowo.inst.ToggleInterface();
                                 return true;
                             }) },
@@ -1831,6 +1834,8 @@ namespace Cat
                         }
                     }
                 };
+                
+                internal readonly record struct CommandSchema(string desc, string parameters, Delegate function, Func<Task<bool>> tutorial, string shortcut, int type);
 
                 /// <summary>
                 /// Navigates to the previous command in the history queue and displays it in the input text box.
@@ -2000,7 +2005,8 @@ namespace Cat
                             }
                         }
                         Logging.Log($"[PARSE FAILED] No matching sequence to input found. Please use 'help ;{call}' to see expected command parameters.");
-                        error_message = "Unrecognised arguments." + (error_message != "" && error_message != null ? "Additional Error(s): " + error_message : "");
+                        error_message = "Unrecognised arguments / argument pattern." + (error_message != "" && error_message != null ? "Additional Error(s): " + error_message : "");
+                        Interface.AddTextLog(error_message, Colors.Red);
                         return false;
                     }
 
