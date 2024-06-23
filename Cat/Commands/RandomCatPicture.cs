@@ -18,5 +18,29 @@ namespace Cat
             r.Show();
             return true;
         }
+
+        [CAspects.Logging]
+        [CAspects.AsyncExceptionSwallower]
+        internal static async Task TRandomCatPicture()
+        {
+            ClaraHerself.Fading = false;
+            ClaraHerself.HaveOverlay = false;
+            ClaraHerself.CleanUp = false;
+            ClaraHerself.Custom = [
+                "Command description:\n\""
+            + (string)Interface.
+                CommandProcessing
+                .Cmds[Interface
+                    .CommandProcessing
+                    .cmdmap["generate cat"]
+                ]["desc"]
+            + "\"",
+            "There's nothing much to this command, just run it and it'll show a fluffy friend!!! \\o/)"
+            ];
+            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
+            var b = await ClaraHerself.TCS.Task;
+            if (!b) return;
+            Interface.CommandProcessing.ProcessCommand("generate cat");
+        }
     }
 }

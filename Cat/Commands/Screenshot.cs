@@ -110,5 +110,52 @@ namespace Cat
             @interface?.Show();
             return true;
         }
+
+        [CAspects.Logging]
+        [CAspects.AsyncExceptionSwallower]
+        internal static async Task TScreenshot()
+        {
+            ClaraHerself.Fading = false;
+            ClaraHerself.HaveOverlay = false;
+            ClaraHerself.CleanUp = false;
+            ClaraHerself.Custom = [
+                "Command description:\n\""
+            + (string)Interface.
+                CommandProcessing
+                .Cmds[Interface
+                    .CommandProcessing
+                    .cmdmap["screenshot"]
+                ]["desc"]
+            + "\"",
+            "This is my screenshot functionality!\n It takes in one parameter, the capture mode, an integer.",
+            "If the value is:",
+            "-2, it will take a screenshot of your entire setup, all monitor screens, and stitch them together according to their size and location",
+            "-1, it will take individual screenshots of every connected monitor and save them individually",
+            "any positive number, it will attempt to find the screen at that index, and if found, will take a screenshot of that screen.",
+            "The screenshots are of the DPI, Scaling and resolution of the monitor they're taken on, as they copy it pixel for pixel (1:1 scaling)",
+            "Regardless of this very tedious process, it's extremely fast, so don't worry!",
+            "The interface, if open, will also close automatically for the screenshot.",
+            "Lets take a stitched one by running 'screenshot ;-2'"
+            ];
+            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
+            var b = await ClaraHerself.TCS.Task;
+            if (!b) return;
+            await Helpers.BackendHelping.EnsureCompletion(Interface.CommandProcessing.ProcessCommand, ["screenshot ;-2"], finishdelayms: 200).Task;
+            ClaraHerself.Custom = [
+                "There, screenshot taken!",
+                $"It'll be located at {SSFolder}, lemme open it for ya!"
+                ];
+            b = await ClaraHerself.TCS.Task;
+            if (!b) return;
+            Catowo.inst.ToggleInterface(true, false);
+            await Catowo.inst.UIToggleTCS.Task;
+            await Task.Delay(200);
+            Console.WriteLine("I dont know why this line makes it work, but it does.");
+            var vks = ConvertStringToVKArray(SSFolder);
+            List<ExtendedInput> exis = [new ExtendedInput(VK_LWIN, 1), new BaselineInputs.ExtendedInput(VK_R),];
+            exis.AddRange(vks.Select(k => new ExtendedInput(k, k == VK_LSHIFT ? (byte)1 : (byte)0)));
+            exis.Add(new(VK_RETURN));
+            SendKeyboardInput(75, [.. exis]);
+        }
     }
 }

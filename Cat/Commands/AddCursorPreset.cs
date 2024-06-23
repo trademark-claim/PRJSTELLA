@@ -49,37 +49,54 @@ namespace Cat
                 "First, I'll type the base command in for you, here!",
                 ];
             await ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
-            await ClaraHerself.TCS.Task;
-            Interface.inst.inputTextBox.Text = "add cursor preset";
+            bool can = await ClaraHerself.TCS.Task;
+            if (!can)
+                return;
+            Interface.Input = "add cursor preset";
             ClaraHerself.Custom = [
                 "Now we need to insert our parameters!",
                 "The raw parameters are: listname{string}\nThis means that it accepts one parameter, a string\n'listname' is just to help you understand what it wants.\n Which, in this case, is the name of the preset list!",
                 "For now, we'll just call it 'test1'."
                 ];
             await ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
-            await ClaraHerself.TCS.Task;
-            Interface.inst.inputTextBox.Text = "add cursor preset ;test1";
+            can = await ClaraHerself.TCS.Task;
+            if (!can)
+                return;
+            Interface.Input = "add cursor preset ;test1";
             Interface.CommandProcessing.ProcessCommand();
             ClaraHerself.Custom = [
                 "Now the command has executed, and you can see the output in the UI.",
                 $"The preset can be found at {CursorsFilePath}, here, I'll open it for you!",
-                "Just gonna close the interface..."    
+                //"Just gonna close the interface..."    
             ];
             ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
-            await ClaraHerself.TCS.Task;
-            //x Catowo.inst.ToggleInterface(false);
+            can = await ClaraHerself.TCS.Task;
+            if (!can)
+                return;
+            Catowo.inst.ToggleInterface(true, false);
+            await Catowo.inst.UIToggleTCS.Task;
             await Task.Delay(200);
+            Console.WriteLine("I dont know why this line makes it work, but it does.");
             var vks = ConvertStringToVKArray(CursorsFilePath);
             List<ExtendedInput> exis = [new ExtendedInput(VK_LWIN, 1), new BaselineInputs.ExtendedInput(VK_R), ];
             exis.AddRange(vks.Select(k => new ExtendedInput(k, k == VK_LSHIFT ? (byte)1 : (byte)0)));
             exis.Add(new(VK_RETURN));
             SendKeyboardInput(75, [.. exis]);
+            await BaselineInputs.KeyboardTCS.Task;
             ClaraHerself.Custom = [
                 "If the folder opened correctly, you'll see a folder named 'test1'\nwith a 'CLF' file inside it. CLF stands for Cursor List File.",
                 "Thanks for following this tutorial!\nRelated commands: 'add cursor to preset', 'list preset', 'remove cursor from preset'."
                 ];
             ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
             await ClaraHerself.TCS.Task;
+            try
+            {
+                Logging.Log($"Focusing back to catowo canvas: {Catowo.inst.Focus()}");
+                Logging.Log($"Focusing back to Clara bubble: {ClaraHerself.Bubble.Focus()}");
+            }
+            catch { }
+            ClaraHerself.CleanUp = true;
+            ClaraHerself.ForceRemove();
             return;
         }
     }

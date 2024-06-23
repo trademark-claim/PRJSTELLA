@@ -67,5 +67,34 @@ namespace Cat
                 return true;
             }
         }
+
+        [CAspects.Logging]
+        [CAspects.AsyncExceptionSwallower]
+        internal static async Task THelp()
+        {
+            ClaraHerself.Fading = false;
+            ClaraHerself.HaveOverlay = false;
+            ClaraHerself.CleanUp = false;
+            ClaraHerself.Custom = [
+                "Command description:\n\""
+            + (string)Interface.
+                CommandProcessing
+                .Cmds[Interface
+                    .CommandProcessing
+                    .cmdmap["close log editor"]
+                ]["desc"]
+            + "\"",
+            "This is the help command, a central command.",
+            "You can run it with 'help', and it takes an optional parameter of 'commands' or a specific command name",
+            "'help' shows every command by group",
+            "'help ;commands' shows a list of all commands by group",
+            "'help ;(commandName)', like 'help ;define' shows the help page for that individual command",
+            "Here's 'help ;define' run for you:"
+            ];
+            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
+            var b = await ClaraHerself.TCS.Task;
+            if (!b) return;
+            Interface.CommandProcessing.ProcessCommand("help ;define");
+        }
     }
 }

@@ -31,6 +31,7 @@ using System.Windows.Threading;
 using System.Xml;
 using System.Xml.Linq;
 using static Cat.Helpers.BinaryFileHandler;
+using static Cat.Logging;
 using CLR = System.Drawing.Color;
 using Formatting = Newtonsoft.Json.Formatting;
 using JsonSerializer = Newtonsoft.Json.JsonSerializer;
@@ -456,14 +457,14 @@ namespace Cat
             [CAspects.InterfaceNotice]
             private async Task Extract7zArchiveAsync(string archivePath)
             {
-                Logging.Log($"Extracting {archivePath} to {ExternalProcessesFolder}");
+                Logging.Log($"Extracting {archivePath} to {ExternalDownloadsFolder}");
                 SectionProgress = new Logging.ProgressLogging("Extracting...", true);
                 var loader = new Logging.ProgressLogging.SpinnyThing();
                 try
                 {
-                    if (!Directory.Exists(ExternalProcessesFolder))
+                    if (!Directory.Exists(ExternalDownloadsFolder))
                     {
-                        Directory.CreateDirectory(ExternalProcessesFolder);
+                        Directory.CreateDirectory(ExternalDownloadsFolder);
                     }
 
                     using (var archive = SharpCompress.Archives.SevenZip.SevenZipArchive.Open(archivePath))
@@ -473,7 +474,7 @@ namespace Cat
 
                         foreach (var entry in archive.Entries.Where(entry => !entry.IsDirectory))
                         {
-                            await Task.Run(() => entry.WriteToDirectory(ExternalProcessesFolder, new SharpCompress.Common.ExtractionOptions() { ExtractFullPath = true, Overwrite = true }));
+                            await Task.Run(() => entry.WriteToDirectory(ExternalDownloadsFolder, new SharpCompress.Common.ExtractionOptions() { ExtractFullPath = true, Overwrite = true }));
                             entriesExtracted++;
                             int percentComplete = (int)(((double)entriesExtracted / totalEntries) * 100);
                             SectionProgress.InvokeEvent(new((byte)percentComplete));
@@ -481,7 +482,7 @@ namespace Cat
                         }
                     }
                     Interface.AddLog("Locating and Moving executable...");
-                    string extractedFolderPath = Path.Combine(ExternalProcessesFolder, inuse.Archivename);
+                    string extractedFolderPath = Path.Combine(ExternalDownloadsFolder, inuse.Archivename);
                     if (inuse.Nest != null)
                         extractedFolderPath = Path.Combine(extractedFolderPath, inuse.Nest);
                     string extractpath = Path.Combine(extractedFolderPath, inuse.Filename);
@@ -719,6 +720,80 @@ namespace Cat
                 }
                 results = matches.ToArray();
                 return true;
+            }
+
+            internal static TaskCompletionSource<(bool Success, object Output)> EnsureCompletion(
+                Delegate function,
+                object[] args,
+                int startdelayms = 0,
+                int finishdelayms = 0)
+            {
+                TaskCompletionSource<(bool, object)> tcs = new();
+
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        if (startdelayms > 0)
+                        {
+                            Log("Starting delay for", startdelayms, "ms");
+                            await Task.Delay(startdelayms);
+                        }
+
+                        MethodInfo method = function.Method;
+                        ParameterInfo[] parameters = method.GetParameters();
+
+                        if (parameters.Length != args.Length || !parameters.Select((p, i) => p.ParameterType.IsInstanceOfType(args[i])).All(x => x))
+                        {
+                            Log("Arguments do not match the expected parameters.");
+                            tcs.SetResult((false, null));
+                            return;
+                        }
+
+                        Log("Invoking function", method.Name, "with arguments", args);
+                        object result = function.DynamicInvoke(args);
+
+                        if (result is Task task)
+                        {
+                            await task;
+                            if (task.GetType().IsGenericType)
+                            {
+                                var taskResult = ((dynamic)task).Result;
+                                if (finishdelayms > 0)
+                                {
+                                    Log("Finishing delay for", finishdelayms, "ms");
+                                    await Task.Delay(finishdelayms);
+                                }
+                                tcs.SetResult((true, taskResult));
+                            }
+                            else
+                            {
+                                if (finishdelayms > 0)
+                                {
+                                    Log("Finishing delay for", finishdelayms, "ms");
+                                    await Task.Delay(finishdelayms);
+                                }
+                                tcs.SetResult((true, null));
+                            }
+                        }
+                        else
+                        {
+                            if (finishdelayms > 0)
+                            {
+                                Log("Finishing delay for", finishdelayms, "ms");
+                                await Task.Delay(finishdelayms);
+                            }
+                            tcs.SetResult((true, result));
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        LogError(ex);
+                        tcs.SetResult((false, null));
+                    }
+                });
+
+                return tcs;
             }
 
             internal static TextBlock FormatTextBlock(string text)
@@ -1216,35 +1291,81 @@ namespace Cat
             [CAspects.AsyncExceptionSwallower]
             internal static async Task FromGDrive(string fileId, string destinationPath)
             {
-                TCS = new();
+                TCS = new TaskCompletionSource<bool>();
                 var baseUri = "https://drive.google.com/uc?export=download";
                 var requestUri = $"{baseUri}&id={fileId}";
-
-                var response = await httpClient.GetAsync(requestUri);
-                if (response.IsSuccessStatusCode)
+                var progressLogger = new ProgressLogging("Downloading File (This may take a while to connect to GDrive).", true);
+                var spin = new ProgressLogging.SpinnyThing();
+                try
                 {
-                    if (response.Content.Headers.ContentDisposition == null || string.IsNullOrEmpty(response.Content.Headers.ContentDisposition.FileName))
+                    Log("Sending and fetching response...");
+                    var response = await httpClient.GetAsync(requestUri, HttpCompletionOption.ResponseHeadersRead);
+                    Log($"Response gotten: {response}");
+                    if (response.IsSuccessStatusCode)
                     {
-                        var htmlContent = await response.Content.ReadAsStringAsync();
-                        var confirmationToken = GetConfirmationToken(htmlContent);
-
-                        if (confirmationToken != null)
+                        if (response.Content.Headers.ContentDisposition == null || string.IsNullOrEmpty(response.Content.Headers.ContentDisposition.FileName))
                         {
-                            var confirmationUri = $"{baseUri}&confirm={confirmationToken}&id={fileId}";
-                            response = await httpClient.GetAsync(confirmationUri);
-                            response.EnsureSuccessStatusCode();
+                            Log("Requires virus confirmation, extracting token...");
+                            var htmlContent = await response.Content.ReadAsStringAsync();
+                            var confirmationToken = GetConfirmationToken(htmlContent);
+                            Log("Extracted token.");
+                            if (confirmationToken != null)
+                            {
+                                var confirmationUri = $"{baseUri}&confirm={confirmationToken}&id={fileId}";
+                                Log($"Sending and recieving new fetch request with token {confirmationToken} @ {confirmationUri}");
+                                response = await httpClient.GetAsync(confirmationUri, HttpCompletionOption.ResponseHeadersRead);
+                                response.EnsureSuccessStatusCode();
+                            }
+                        }
+
+                        var totalBytes = response.Content.Headers.ContentLength.HasValue ? response.Content.Headers.ContentLength.Value : -1L;
+                        var canReportProgress = totalBytes != -1;
+                        Log($"TotalBytes: {totalBytes}, canReportProgress: {canReportProgress}, path: {destinationPath}");
+                        using (Stream contentStream = await response.Content.ReadAsStreamAsync(),
+                                      fileStream = new FileStream(destinationPath, FileMode.Create, FileAccess.ReadWrite, FileShare.None, 8192, true))
+                        {
+                            var totalRead = 0L;
+                            var buffer = new byte[8192];
+                            var isMoreToRead = true;
+
+                            while (isMoreToRead)
+                            {
+                                var read = await contentStream.ReadAsync(buffer, 0, buffer.Length);
+                                Log($"Progress on download: Total read: {totalRead}, isMoreToRead: {isMoreToRead}");
+                                if (read == 0)
+                                {
+                                    isMoreToRead = false;
+                                    progressLogger.InvokeEvent(new ProgressLogging.ProgressUpdateEventArgs(100));
+                                    continue;
+                                }
+
+                                await fileStream.WriteAsync(buffer, 0, read);
+                                totalRead += read;
+
+                                if (canReportProgress && isMoreToRead)
+                                {
+                                    var progress = (int)((totalRead * 1d) / (totalBytes * 1d) * 100);
+                                    progressLogger.InvokeEvent(new ProgressLogging.ProgressUpdateEventArgs((byte)progress));
+                                }
+                            }
                         }
                     }
-
-                    using (Stream contentStream = await response.Content.ReadAsStreamAsync(),
-                                  fileStream = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None, 8192, true))
-                    {
-                        await contentStream.CopyToAsync(fileStream);
-                    }
+                    TCS.SetResult(true);
                 }
-                TCS.SetResult(true);
+                catch (Exception ex)
+                {
+                    LogError(ex);
+                    progressLogger.InvokeEvent(new ProgressLogging.ProgressUpdateEventArgs(0) { Note = "Error: " + ex.Message });
+                    spin.Stop();
+                    spin = null;
+                    TCS.SetResult(false);
+                    return;
+                }
+                spin.Stop();
+                spin = null;
             }
 
+            [CAspects.Logging]
             private static string GetConfirmationToken(string htmlContent)
             {
                 const string tokenMarker = "confirm=";
@@ -1259,9 +1380,17 @@ namespace Cat
             [CAspects.ConsumeException]
             internal static void UnzipFile(string zipFilePath, string extractPath)
             {
-                TCS = new();
-                ZipFile.ExtractToDirectory(zipFilePath, extractPath);
-                TCS.SetResult(true);
+                TCS = new TaskCompletionSource<bool>();
+                try
+                {
+                    ZipFile.ExtractToDirectory(zipFilePath, extractPath);
+                    TCS.SetResult(true);
+                }
+                catch (Exception ex)
+                {
+                    Log("Error: " + ex.Message);
+                    TCS.SetResult(false);
+                }
             }
         }
 

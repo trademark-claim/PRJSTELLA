@@ -145,7 +145,7 @@ namespace Cat
             /// <summary>
             /// The bubble object being shown
             /// </summary>
-            private static SpeechBubble? bubble;
+            internal static SpeechBubble? Bubble { get; private set; }
 
             /// <summary>
             /// The canvas object we're attached to
@@ -197,12 +197,12 @@ namespace Cat
             internal static async Task RunClara(Mode mode, Canvas canvas)
             {
                 ClaraHerself.canvas = canvas;
-                if (bubble != null && Catowo.inst != null && canvas != null)
+                if (Bubble != null && Catowo.inst != null && canvas != null)
                 {
                     num = 0;
                     Catowo.inst.PreviewKeyDown -= ProgressionKeydown;
-                    canvas.Children.Remove(bubble);
-                    bubble = null;
+                    canvas.Children.Remove(Bubble);
+                    Bubble = null;
                 }
 
                 switch (mode)
@@ -243,16 +243,16 @@ namespace Cat
                                             {
                                                 try
                                                 {
-                                                    if (bubble != null && Catowo.inst != null && canvas != null )
+                                                    if (Bubble != null && Catowo.inst != null && canvas != null )
                                                     {
-                                                        bubble.Opacity -= 0.015f;
-                                                        if (bubble.Opacity < 0.0f)
+                                                        Bubble.Opacity -= 0.015f;
+                                                        if (Bubble.Opacity < 0.0f)
                                                         {
-                                                            bubble.Opacity = 0.0f;
+                                                            Bubble.Opacity = 0.0f;
                                                             num = 0;
                                                             Catowo.inst.PreviewKeyDown -= ProgressionKeydown;
-                                                            canvas.Children.Remove(bubble);
-                                                            bubble = null;
+                                                            canvas.Children.Remove(Bubble);
+                                                            Bubble = null;
                                                             return;
                                                         }
                                                     }
@@ -272,12 +272,12 @@ namespace Cat
                         break;
                 }
                 // The first message
-                bubble = new();
+                Bubble = new();
                 Point location = new(Catowo.inst.Width - 30, Catowo.inst.Height - 30);
                 Logging.Log("Location", location);
-                bubble.LowerRightCornerFreeze = location;
-                bubble.Text = CurrentStory[num];
-                canvas.Children.Add(bubble);
+                Bubble.LowerRightCornerFreeze = location;
+                Bubble.Text = CurrentStory[num];
+                canvas.Children.Add(Bubble);
                 Catowo.inst.PreviewKeyDown += ProgressionKeydown;
                 return;
             }
@@ -286,10 +286,10 @@ namespace Cat
             {
                 num = 0;
                 Catowo.inst.PreviewKeyDown -= ProgressionKeydown;
-                if (bubble != null)
+                if (Bubble != null)
                 {
-                    canvas.Children.Remove(bubble);
-                    bubble = null;
+                    canvas.Children.Remove(Bubble);
+                    Bubble = null;
                 }
                 TCS.SetResult(true);
             }
@@ -320,15 +320,15 @@ namespace Cat
                                     if (HaveOverlay)
                                         OverlayRect.RemoveFromCanvas(canvas, overlay);
                                 }
-                                if (bubble != null)
+                                if (Bubble != null)
                                 {
-                                    canvas.Children.Remove(bubble);
-                                    bubble = null;
+                                    canvas.Children.Remove(Bubble);
+                                    Bubble = null;
                                 }
                                 return;
                             }
-                            if (bubble != null)
-                                bubble.Text = CurrentStory[num];
+                            if (Bubble != null)
+                                Bubble.Text = CurrentStory[num];
                             return;
                         }
                     if (e.Key == Key.Left)
@@ -336,8 +336,8 @@ namespace Cat
                         {
                             num--;
                             if (num >= 0)
-                                if (bubble != null)
-                                    bubble.Text = CurrentStory[num];
+                                if (Bubble != null)
+                                    Bubble.Text = CurrentStory[num];
                             return;
                         }
                     if (e.Key == Key.Down)
@@ -348,15 +348,16 @@ namespace Cat
                 if (e.Key == Key.Up)
                     if (canvas != null)
                     {
-                        TCS.SetResult(true);
+                        TCS.SetResult(false);
                         num = 0;
-                        Catowo.inst.MakeFunnyWindow();
+                        if (CleanUp)
+                            Catowo.inst.MakeFunnyWindow();
                         Catowo.inst.PreviewKeyDown -= ProgressionKeydown;
                         OverlayRect.RemoveFromCanvas(canvas, overlay);
-                        if (bubble != null)
+                        if (Bubble != null)
                         {
-                            canvas.Children.Remove(bubble);
-                            bubble = null;
+                            canvas.Children.Remove(Bubble);
+                            Bubble = null;
                         }
                         Fading = true;
                         FadeDelay = 1500;
@@ -371,9 +372,9 @@ namespace Cat
             /// <summary>
             /// Represents a speech bubble UI element.
             /// </summary>
-            private class SpeechBubble : Canvas
+            internal class SpeechBubble : Canvas
             {
-                private float _opacity = 0.7f;
+                private float _opacity = Environment.UserData.Opacity;
 
                 internal new float Opacity
                 { get => _opacity; set { _opacity = value; rectangle.Opacity = value; tail.Opacity = value; textBlock.Opacity = value; } }
@@ -492,7 +493,7 @@ namespace Cat
                     Children.Add(rectangle);
                     Children.Add(tail);
                     Children.Add(textBlock);
-                    FontSize = 20.0f;//UserData.FontSize;
+                    FontSize = UserData.FontSize;
 
                     SizeChanged += (s, e) => UpdateLayout();
                 }

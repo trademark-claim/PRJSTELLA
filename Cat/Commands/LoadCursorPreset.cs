@@ -1,4 +1,5 @@
 using Microsoft.VisualBasic;
+using NAudio.Utils;
 using System.IO;
 
 namespace Cat
@@ -141,6 +142,91 @@ namespace Cat
             }
             Interface.AddLog($"{entryN} cursor preset loaded!");
             return true;
+        }
+
+        [CAspects.Logging]
+        [CAspects.AsyncExceptionSwallower]
+        internal static async Task TLoadCursorPreset()
+        {
+            ClaraHerself.Fading = false;
+            ClaraHerself.HaveOverlay = false;
+            ClaraHerself.CleanUp = false;
+            ClaraHerself.Custom = [
+                "Command description:\n\""
+            + (string)Interface.
+                CommandProcessing
+                .Cmds[Interface
+                    .CommandProcessing
+                    .cmdmap["lcp"]
+                ]["desc"]
+            + "\"",
+            "This command takes in two parameters.",
+            "The former parameter is the preset to load, and the latter is a persistance flag.",
+            "Lets do the first parameter!"
+            ];
+            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
+            var b = await ClaraHerself.TCS.Task;
+            if (!b) return;
+            Interface.Input = "load cursor preset";
+            string dir = "cats";
+            if (Directory.GetDirectories(CursorsFilePath).Length < 1)
+            {
+                ClaraHerself.Custom = [
+                "It seems you dont have any presets made!",
+                "I'll download one for you -- one full of cat cursors!", 
+                "If you don't want me to do this, press the up arrow and use the 'add cursor preset' and 'add cursor to preset' commands to make a preset to load!, else, press the right arrow and I'll get right to it!"
+                ];
+                await ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
+                b = await ClaraHerself.TCS.Task;
+                if (!b)
+                    return;
+                string path = Path.Combine(ExternalDownloadsFolder, "cats.zip");
+                Helpers.ExternalDownloading.FromGDrive(GatoZip, path);
+                await Helpers.ExternalDownloading.TCS.Task;
+                Interface.AddLog("Unzipping...");
+                var spin = new Logging.ProgressLogging.SpinnyThing();
+                Helpers.ExternalDownloading.UnzipFile(path, CursorsFilePath);
+                await Helpers.ExternalDownloading.TCS.Task;
+                spin.Stop();
+                ClaraHerself.Custom = ["The cats have been created, moving on!"];
+                await ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
+                b = await ClaraHerself.TCS.Task;
+                if (!b)
+                    return;
+            }
+            else
+            {
+                ClaraHerself.Custom = [
+                    "Please select one of your existing presets!",
+                ];
+                await ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
+                b = await ClaraHerself.TCS.Task;
+                if (!b)
+                    return;
+                var bs = new Objects.BoxSelecter<string>([.. Directory.GetDirectories(CursorsFilePath).Select(item => item.Replace(CursorsFilePath, ""))], "Choose preset:");
+                bs.ShowDialog();
+                dir = bs.SelectedItem;
+            }
+            ClaraHerself.Custom = [
+                    $"So, the {dir} preset, perfect!",
+                    "Now we have to walk through the second parameter, persistance.",
+                    "This parameter is optional, and defaults to 'false'.",
+                    "It changes the registry linking for the cursors to the custom cursor file path in order to make the changes persist through system restarts",
+                    "Or, in simple talk: Your custom cursors stay activated even if you power off your computer",
+                    "But in order for this to work, you need to explicitly allow me to modify your registry by elevating my permissions (using the 'elevate perms' command) and changing my 'Allow registry edits' setting to true (using the 'change settings' command).",
+                    "For now though, we'll have them non-persistant, so we don't need to input the parameter!",
+                    $"Now, Lets load the {dir} preset using 'load cursor preset ;{dir}'"
+                ];
+            await ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
+            b = await ClaraHerself.TCS.Task;
+            if (!b) return;
+            Interface.Input = $"list cursor preset ;{dir}";
+            Interface.CommandProcessing.ProcessCommand();
+            ClaraHerself.Custom = [
+                    "Your cursors should now be the ones from within the preset, have fun!",
+                ];
+            await ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
+            await ClaraHerself.TCS.Task;
         }
     }
 }

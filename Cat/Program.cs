@@ -51,7 +51,7 @@ namespace Cat
                 AudioFolder,
                 NotesFolder,
                 UserFolder,
-                ExternalProcessesFolder,
+                ExternalDownloadsFolder,
                 CursorsFilePath
             ];
             foreach (string dir in dirs)
@@ -98,7 +98,7 @@ namespace Cat
                 catch (Exception e)
                 {
                     Logging.LogError(e);
-                    Logging.Log($"Failed to copy source ffmpeg.exe to destination {FFMPEGPath}, Please verify files, reinstall Kitty, or download 'ffmpeg-2024-03-20-git-e04c638f5f-full_build' and move 'bin/ffmpng.exe' to {ExternalProcessesFolder}.");
+                    Logging.Log($"Failed to copy source ffmpeg.exe to destination {FFMPEGPath}, Please verify files, reinstall Kitty, or download 'ffmpeg-2024-03-20-git-e04c638f5f-full_build' and move 'bin/ffmpng.exe' to {ExternalDownloadsFolder}.");
                     //System.Windows.MessageBox.Show($"Failed to move source FFMpeg binaries to destination! View logs for more details.", "Fatal Error -- Copying Error!", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);                    return;
                 }
                 finally

@@ -9,6 +9,7 @@ namespace Cat
         /// <remarks>
         /// Parses the setting name and value from the user input, validating against known settings and applying the change if valid.
         /// </remarks>
+        [CAspects.Logging]
         [CAspects.ConsumeException]
         internal static bool ChangeSettings()
         {
@@ -92,6 +93,42 @@ namespace Cat
                 Interface.AddTextLog("An unexpected error occurred, check logs for details.", RED);
                 return false;
             }
+        }
+
+        [CAspects.Logging]
+        [CAspects.AsyncExceptionSwallower]
+        internal static async Task TChangeSettings()
+        {
+            ClaraHerself.Fading = false;
+            ClaraHerself.HaveOverlay = false;
+            ClaraHerself.CleanUp = false;
+            ClaraHerself.Custom = [
+                "Command description:\n\""
+                    + (string)Interface.
+                        CommandProcessing
+                        .Cmds[Interface
+                            .CommandProcessing
+                            .cmdmap["change settings"]
+                        ]["desc"]
+                    + "\"",
+                    "This command takes two inputs: variablename{string}, and value{string}",
+                    "The former is the name of the setting you want to change\nThe latter being the value of that setting.",
+                    "The list of variables are as such:"
+            ];
+            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
+            var b = await ClaraHerself.TCS.Task;
+            if (!b) return;
+            Interface.CommandProcessing.ProcessCommand("view settings");
+            ClaraHerself.Custom = [
+                    "Lets change the font size to 15!",
+                    "Fontsize must be a floating point value between 1.0 and 50.0.",
+                    "We'll be using the command 'cs ;FontSize ;15' for this",
+            ];
+            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
+            b = await ClaraHerself.TCS.Task;
+            if (!b) return;
+            Interface.Input = "cs ;FontSize ;15";
+            Interface.CommandProcessing.ProcessCommand();
         }
     }
 }

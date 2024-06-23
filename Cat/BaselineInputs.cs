@@ -194,10 +194,13 @@ namespace Cat
 
         internal readonly record struct ExtendedInput(ushort Key, byte DownFor = 0, bool up = false);
 
+        internal static TaskCompletionSource<bool> KeyboardTCS { get; private set; }
+
         [CAspects.Logging]
         [CAspects.AsyncExceptionSwallower]
         internal static async Task SendKeyboardInput(int delayms, params ExtendedInput[] vks)
         {
+            KeyboardTCS = new();
             var lst = vks.ToList();
             List<(int, ExtendedInput)> eexis = new();
             for (int i = 0; i < vks.Length; i++)
@@ -215,7 +218,7 @@ namespace Cat
                 SendKeyboardInput(v.Key, v.DownFor > 0 ? false : v.up ? true : null);
                 await Task.Delay(TimeSpan.FromMilliseconds(delayms));
             }
-            
+            KeyboardTCS.SetResult(true);
         }
 
         /// <summary>
