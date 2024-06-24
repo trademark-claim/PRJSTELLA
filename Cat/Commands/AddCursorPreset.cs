@@ -13,10 +13,9 @@ namespace Cat
         internal static bool AddCursorPreset()
         {
             // Extracts first parameter
-            var para1 = commandstruct.Value.Parameters[0][0];
-            if (para1 == null)
+            if (commandstruct?.Parameters[0][0] is not string para1)
             {
-                Logging.Log("Expected string but parsing failed and returned either a null command struct or a null entry, please submit a bug report.");
+                Logging.Log(["Expected string but parsing failed and returned either a null command struct or a null entry, please submit a bug report."]);
                 Interface.AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
                 return false;
             }
@@ -24,16 +23,16 @@ namespace Cat
             string dir = Environment.CursorsFilePath + para1;
             if (Directory.Exists(dir))
             {
-                Logging.Log($"Cursor Directory {dir} alrady exists.");
+                Logging.Log([$"Cursor Directory {dir} alrady exists."]);
                 Interface.AddTextLog($"Preset with name {para1} found, names must be unqiue", RED);
                 return false;
             }
             // Creates the preset and preset file
             Directory.CreateDirectory(dir);
             string file = dir + "\\preset.CLF";
-            Logging.Log("Creating preset file");
+            Logging.Log(["Creating preset file"]);
             File.Create(file).Dispose();
-            Logging.Log("Created preset file");
+            Logging.Log(["Created preset file"]);
             Interface.AddLog($"Preset {para1} created");
             return true;
         }
@@ -52,7 +51,7 @@ namespace Cat
             StellaHerself.CleanUp = false;
             // Walk the user through the tutorial, each break meaning the tutorial is either inputting or expecting input
             StellaHerself.Custom = [
-                "This is the AddCursorPreset tutorial! (Press left and right arrows to navigate the next two, \nor press the key it asks for. \nPress the Up Arrow to cancel the tutorial.)",
+                "This is the AddCursorPreset tutorial!",
                 "Command description:\n\"" + Interface.CommandProcessing.Cmds[Interface.CommandProcessing.cmdmap["add cursor preset"]].desc + "\"",
                 "This tutorial will walk you through, letter by letter, on how to execute this command!",
                 "First, I'll type the base command in for you, here!"
@@ -75,7 +74,7 @@ namespace Cat
             StellaHerself.Custom = [
                 "Now the command has executed, and you can see the output in the UI.",
                 $"The preset can be found at {CursorsFilePath}, here, I'll open it for you!",
-                //x "Just gonna close the interface..."    
+                //x "Just gonna close STELLA's interface..."    
             ];
             StellaHerself.RunStella(StellaHerself.Mode.Custom, Catowo.inst.canvas);
             continu = await StellaHerself.TCS.Task;
@@ -87,7 +86,7 @@ namespace Cat
             await Task.Delay(200);
             // Do the fancy input instead of just boringly starting a new explorer process
             Console.WriteLine("I dont know why this line makes it work, but it does."); //? I swear it doesnt work without it????
-            var vks = ConvertStringToVKArray(CursorsFilePath);
+            var vks = StringToVKs(CursorsFilePath);
             List<ExtendedInput> extended_inputs = [new ExtendedInput(VK_LWIN, 1), new BaselineInputs.ExtendedInput(VK_R), ];
             extended_inputs.AddRange(vks.Select(k => new ExtendedInput(k, k == VK_LSHIFT ? (byte)1 : (byte)0)));
             extended_inputs.Add(new(VK_RETURN));
@@ -102,8 +101,8 @@ namespace Cat
             await StellaHerself.TCS.Task;
             try
             {
-                Logging.Log($"Focusing back to catowo canvas: {Catowo.inst.Focus()}");
-                Logging.Log($"Focusing back to Stella bubble: {StellaHerself.Bubble.Focus()}");
+                Logging.Log([$"Focusing back to catowo canvas: {Catowo.inst.Focus()}"]);
+                Logging.Log([$"Focusing back to Stella bubble: {StellaHerself.Bubble.Focus()}"]);
             }
             catch { }
             StellaHerself.CleanUp = true;

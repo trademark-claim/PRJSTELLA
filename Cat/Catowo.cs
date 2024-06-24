@@ -7,19 +7,9 @@
  *                        FILE NAME: Catowo.cs
  *  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *
- *  - File:        Catowo.CS
- *  - Authors:     Nexus
- *  - Created:     Not sure (fix)
- *  - Description: Main file for where all the commmands are defined and their logic is implemented
- *
- *  - Updates/Changes:
- *      > [Date] - [Change Description] - [Author if different]
- *
- *  - Notes:
- *      > This file will be continuously worked on throughout the project
- *
  ***************************************************************************************/
 
+// Static globals so I dont have to type out System.Windows.Shapes.Primitives.Rect or System.Windows.Media.Brushes every time
 global using static Cat.BaselineInputs;
 global using static Cat.Environment;
 global using static Cat.Objects;
@@ -60,9 +50,16 @@ using SWM = System.Windows.Media;
 using SWS = System.Windows.Shapes;
 using System.Windows.Media.Animation;
 using System.Windows.Forms;
+using System.Runtime.CompilerServices;
 
 namespace Cat
 {
+    /// <summary>
+    /// Main window for the whole program. 
+    /// </summary>
+    /// <remarks>
+    /// Don't ask why its named this, before STELLA the placeholder name was "Kitty"
+    /// </remarks>
     internal class Catowo : Window
     {
         /// <summary>
@@ -71,7 +68,7 @@ namespace Cat
         internal static Catowo inst;
 
         /// <summary>
-        /// Indicates whether the application is currently shutting down.
+        /// Indicates whether STELLA is currently shutting down.
         /// Used to handle shutdown logic gracefully.
         /// </summary>
         internal static bool ShuttingDown = false;
@@ -82,19 +79,22 @@ namespace Cat
         internal static IntPtr keyhook = IntPtr.Zero;
 
         /// <summary>
-        /// The main canvas used in the application's user interface.
+        /// The main canvas used
         /// </summary>
         internal readonly SWC.Canvas canvas = new SWC.Canvas();
 
         /// <summary>
-        /// Label used for displaying debug information within the application's UI.
+        /// Label used for displaying debug information
         /// </summary>
         internal readonly SWC.Label DebugLabel = new();
 
+        /// <summary>
+        /// Private reference to the pointer of the key hook used
+        /// </summary>
         private static IntPtr _keyboardHookID = IntPtr.Zero;
 
         /// <summary>
-        /// Stores the original window style prior to any modifications made by the application.
+        /// Stores the original window style prior to any modifications
         /// </summary>
         internal int originalStyle = 0;
 
@@ -111,30 +111,29 @@ namespace Cat
         /// <summary>
         /// Flag indicating whether the right shift key is currently pressed.
         /// </summary>
-        private bool RShifted = false,
+        private bool RShifted = false;
                 /// <summary>
                 /// Flag indicating whether the 'Q' key is currently pressed.
                 /// </summary>
-                Qd = false,
+        private bool Qd = false;
                 /// <summary>
                 /// Flag indicating whether the left shift key is currently pressed.
                 /// </summary>
-                LShifted = false,
+        private bool LShifted = false;
                 /// <summary>
                 /// Flag indicating the current cursor state, where true denotes the default cursor
                 /// and false denotes a custom or modified cursor state.
                 /// </summary>
-                isCursor = true,
+        private bool isCursor = true;
                 /// <summary>
                 /// Flag indicating whether the C key is down or nah
                 /// </summary>
-                Cd = false;
+        private bool Cd = false;
 
         #region Markers
 
         /// <summary>
-        /// Represents a debug marker as a white ellipse centered within its parent container.
-        /// Used for visual debugging to mark specific positions in the UI.
+        ///  debug marker
         /// </summary>
         private readonly SWS.Ellipse DEBUGMARKER = new()
         {
@@ -146,8 +145,7 @@ namespace Cat
         };
 
         /// <summary>
-        /// Represents a function (fun) marker as a green ellipse centered within its parent container.
-        /// Used for visually marking areas related to functions or features that are stable and safe to use.
+        /// a function (fun) mark related to functions or features.
         /// </summary>
         private readonly SWS.Ellipse FUNTMARKER = new()
         {
@@ -159,8 +157,7 @@ namespace Cat
         };
 
         /// <summary>
-        /// Represents a danger marker as a red ellipse centered within its parent container.
-        /// Used for visually marking areas that are critical, potentially dangerous, or require special attention.
+        ///  a danger marker as a red ellipse marking critical, potentially dangerous, or special stuff
         /// </summary>
         private readonly SWS.Ellipse DANGERMARKER = new()
         {
@@ -172,8 +169,7 @@ namespace Cat
         };
 
         /// <summary>
-        /// Represents a shortcuts marker as a blue ellipse centered within its parent container.
-        /// Used for visually marking keyboard shortcuts or areas providing direct access to functionality.
+        ///  a shortcuts marker for shortcut activation
         /// </summary>
         private readonly SWS.Ellipse SHORTCUTSMARKER = new()
         {
@@ -186,15 +182,18 @@ namespace Cat
 
         #endregion Markers
 
+        /// <summary>
+        /// BEING PHASED OUT mode of shortcuts
+        /// </summary>
         private Modes mode = Modes.None;
 
         /// <summary>
-        /// Gets or sets the current mode of the application. Setting this property triggers
+        /// Gets or sets the current mode of STELLA. Setting this property triggers
         /// several side effects including logging the new mode, and toggling the visibility
         /// of debug, functionality, danger, and shortcuts markers based on the current mode flags.
         /// </summary>
         /// <value>
-        /// The current mode of the application, represented by the <see cref="Modes"/> enumeration.
+        /// The current mode of STELLA, represented by the <see cref="Modes"/> enumeration.
         /// </value>
         /// <remarks>
         /// Setting this property logs the change, formats the log with both the numeric and
@@ -203,14 +202,14 @@ namespace Cat
         /// - FUNTMARKER visibility is toggled based on the Functionality flag.
         /// - DANGERMARKER visibility is toggled based on the DANGER flag.
         /// - SHORTCUTSMARKER visibility is toggled based on the Shortcuts flag.
-        /// This ensures that the UI elements are shown or hidden according to the application's current mode.
+        /// This ensures that the UI elements are shown or hidden according to STELLA's current mode.
         /// </remarks>
         private Modes Mode
         {
             get => mode; set
             {
                 mode = value;
-                Logging.Log($"Mode set to {((ushort)mode)} ({mode})");
+                Logging.Log([$"Mode set to {((ushort)mode)} ({mode})"]);
                 ToggleVis(DEBUGMARKER, mode.HasFlag(Modes.DEBUG));
                 ToggleVis(DebugLabel, mode.HasFlag(Modes.DEBUG));
                 ToggleVis(FUNTMARKER, mode.HasFlag(Modes.Functionality));
@@ -229,17 +228,17 @@ namespace Cat
         internal static int _Screen { get => _screen_; }
 
         /// <summary>
-        /// Gets or sets the index of the current screen used by the application within the array of all connected screens.
-        /// Changing the screen index updates the application's interface to match the dimensions and position of the selected screen.
+        /// Gets or sets the index of the current screen used by STELLA within the array of all connected screens.
+        /// Changing the screen index updates STELLA's interface to match the dimensions and position of the selected screen.
         /// </summary>
         /// <value>
         /// The index of the current screen. Must be a valid index within <see cref="System.Windows.Forms.Screen.AllScreens"/>.
         /// </value>
         /// <remarks>
         /// Setting this property to a new value checks if the value is different from the current screen index and
-        /// within the valid range of connected screens. If so, it triggers the interface toggle process, updates the
+        /// within the valid range of connected screens. If so, it triggers STELLA's interface toggle process, updates the
         /// application's dimensions and position based on the new screen's properties, and logs the new screen parameters.
-        /// This ensures the application is properly aligned and sized according to the selected screen's dimensions and working area.
+        /// This ensures STELLA is properly aligned and sized according to the selected screen's dimensions and working area.
         /// </remarks>
         internal int Screen
         {
@@ -256,6 +255,11 @@ namespace Cat
             }
         }
 
+        /// <summary>
+        /// Handles the changing of STELLA's interface to another screen
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
         private async Task ChangeScreen(int value)
         {
             ToggleInterface(true);
@@ -268,7 +272,7 @@ namespace Cat
             Left = screen.Bounds.Left;
             Width = width;
             Height = height;
-            Logging.Log("New Screen Params: ", Top, Left, Width, Height);
+            Logging.Log(["New Screen Params: ", Top, Left, Width, Height]);
             ToggleInterface(true);
             await UIToggleTCS.Task;
             return;
@@ -276,29 +280,56 @@ namespace Cat
 
         #region Low Levels
 
-
+        /// <summary>
+        /// Handles the key hooking (and maybe mouse sometime)
+        /// </summary>
         internal static class Hooking
         {
+            /// <summary>
+            /// Mirror Property
+            /// </summary>
             private static bool Qd { get => inst.Qd; set => Catowo.inst.Qd = value; }
+            /// <summary>
+            /// Mirror Property
+            /// </summary>
             private static bool RShifted { get => inst.RShifted; set => inst.RShifted = value; }
+            /// <summary>
+            /// Mirror Property
+            /// </summary>
             private static bool LShifted { get => inst.LShifted; set => inst.LShifted = value; }
+            /// <summary>
+            /// Mirror Property
+            /// </summary>
             private static Label DebugLabel { get => inst.DebugLabel;  }
+            /// <summary>
+            /// Mirror Property
+            /// </summary>
             private static Modes mode { get => inst.mode; set => inst.mode = value; }
+            /// <summary>
+            /// Mirror Property
+            /// </summary>
             private static bool Cd { get => inst.Cd; set => inst.Cd = value; }
+            /// <summary>
+            /// Mirror Property
+            /// </summary>
             private static bool isCursor { get => inst.isCursor; set => inst.isCursor = value; }
-
+            /// <summary>
+            /// Mirror Property
+            /// </summary>
             private static Modes Mode { get => inst.Mode; set => inst.Mode = value; }
-
+            /// <summary>
+            /// Mirror Property
+            /// </summary>
             private static List<int> SeekKey = [];
 
+            /// <summary>
+            /// Changes the state of 'key seeking', being the forcing of the user to input one or more specified keys and blocking all else
+            /// </summary>
             internal static void ChangeSeeking(int vkCode, bool? state)
             {
-                if (state == null)
-                    SeekKey.Clear();
-                else if (state == true)
-                    SeekKey.Add(vkCode);
-                else
-                    SeekKey.Remove(vkCode);
+                if (state == null) SeekKey.Clear();
+                else if (state == true) SeekKey.Add(vkCode);
+                else SeekKey.Remove(vkCode);
             }
 
             /// <summary>
@@ -310,13 +341,14 @@ namespace Cat
             /// hooking and the associated hook ID. The hook ID is then stored for future reference and unhooking if necessary.
             /// </remarks>
             [CAspects.Logging]
+            [CAspects.ConsumeException]
             internal static void InitKeyHook()
             {
-                Logging.Log("Setting key hook protocal...");
+                Logging.Log(["Setting key hook protocal..."]);
                 _keyboardProc = KeyboardProc;
-                Logging.Log("hooking...");
+                Logging.Log(["hooking..."]);
                 _keyboardHookID = SetKeyboardHook(_keyboardProc);
-                Logging.Log($"Hooking protocal {_keyboardProc} hooked with nint {_keyboardHookID}");
+                Logging.Log([$"Hooking protocal {_keyboardProc} hooked with nint {_keyboardHookID}"]);
                 keyhook = _keyboardHookID;
             }
 
@@ -330,16 +362,17 @@ namespace Cat
             /// </remarks>
 
             [CAspects.Logging]
+            [CAspects.ConsumeException]
             internal static void DestroyKeyHook()
             {
-                Logging.Log("Unhooking key hook...");
+                Logging.Log(["Unhooking key hook..."]);
                 if (_keyboardHookID == IntPtr.Zero)
                 {
-                    Logging.Log("Key hook is default, exiting.");
+                    Logging.Log(["Key hook is default, exiting."]);
                     return;
                 }
                 bool b = UnhookWindowsHookExWrapper(_keyboardHookID);
-                Logging.Log($"Unhooking successful: {b}");
+                Logging.Log([$"Unhooking successful: {b}"]);
                 if (b)
                     keyhook = IntPtr.Zero;
             }
@@ -357,11 +390,11 @@ namespace Cat
             [CAspects.Logging]
             internal static IntPtr SetKeyboardHook(LowLevelProc proc)
             {
-                Logging.Log("Initing Keyboard hook...");
+                Logging.Log(["Initing Keyboard hook..."]);
                 using (Process curProcess = Process.GetCurrentProcess())
                 using (ProcessModule curModule = curProcess.MainModule)
                 {
-                    Logging.Log("Hook initiated, setting...");
+                    Logging.Log(["Hook initiated, setting..."]);
                     return SetWindowsHookExWrapper(WH_KEYBOARD_LL, proc, GetModuleHandleWrapper(curModule.ModuleName), 0);
                 }
             }
@@ -379,17 +412,18 @@ namespace Cat
             /// </returns>
             /// <remarks>
             /// This method checks for specific key combinations (e.g., Q, RShift, LShift) and performs actions based on the current
-            /// application mode and the keys pressed. Actions can include shutting down the application, toggling modes, showing or hiding
+            /// application mode and the keys pressed. Actions can include shutting down STELLA, toggling modes, showing or hiding
             /// the cursor, and more. It logs each key event with its details.
             /// </remarks>
             [CAspects.Logging]
+            [MethodImpl(MethodImplOptions.AggressiveOptimization)]
             internal static IntPtr KeyboardProc(int nCode, IntPtr wParam, IntPtr lParam)
             {
                 int vkCode = Marshal.ReadInt32(lParam);
                 bool isKeyDown = nCode >= 0 && wParam == WM_KEYDOWN;
                 bool isKeyUp = nCode >= 0 && wParam == WM_KEYUP;
                 string log = $"Key{(isKeyDown ? "KeyDown" : "KeyUp")}: {(Keys)vkCode} ({vkCode})" + (RShifted ? " (rshifted) " : "") + (LShifted ? " (Lshifted) " : "") + (Qd ? " (q) " : "");
-                Logging.Log(log);
+                Logging.Log([log]);
                 if (isKeyDown)
                 {
                     if (SeekKey.Count > 0)
@@ -436,7 +470,7 @@ namespace Cat
 
                                 case >= VK_1 and <= VK_9:
                                     string item = vkCodeToCharMap[vkCode].Item1.ToString();
-                                    Logging.Log(item);
+                                    Logging.Log([item]);
                                     BaselineInputs.Cursor.LoadPresetByIndex(int.Parse(item));
                                     break;
 
@@ -583,22 +617,22 @@ namespace Cat
         #region Catowo Creation and Init
 
         /// <summary>
-        /// Constructs a new instance of the Catowo window, setting up the application's environment, initializing key hooks, and configuring the initial mode.
+        /// Constructs a new instance of the Catowo window, setting up STELLA's environment, initializing key hooks, and configuring the initial mode.
         /// </summary>
         /// <remarks>
-        /// This constructor logs the creation process, closes any existing instance, initializes the window and visible objects, sets up key hooks, and logs the completion of the window creation. It initializes the application mode to 'None'.
+        /// This constructor logs the creation process, closes any existing instance, initializes the window and visible objects, sets up key hooks, and logs the completion of the window creation. It initializes STELLA mode to 'None'.
         /// </remarks>
         public Catowo()
         {
-            Logging.Log("Creating Catowo Window...");
+            Logging.Log(["Creating Catowo Window..."]);
             inst?.Close();
             inst = this;
-            Logging.Log("Initialising objects...");
+            Logging.Log(["Initialising objects..."]);
             InitializeWindow();
             CreateVisibleObjects();
-            Logging.Log("Objects Initialised");
+            Logging.Log(["Objects Initialised"]);
             InitKeyHook();
-            Logging.Log("Catowo Window created!");
+            Logging.Log(["Catowo Window created!"]);
             Mode = Modes.None;
         }
 
@@ -611,9 +645,9 @@ namespace Cat
 
         ~Catowo()
         {
-            Logging.Log("Cleaning up Catowo...");
+            Logging.Log(["Cleaning up Catowo..."]);
             DestroyKeyHook();
-            Logging.Log("Catowo Destroyed.");
+            Logging.Log(["Catowo Destroyed."]);
         }
 
         /// <summary>
@@ -621,7 +655,7 @@ namespace Cat
         /// </summary>
         /// <returns>The <see cref="Screen"/> object for the current or primary screen.</returns>
         /// <remarks>
-        /// Attempts to return the screen at the index specified by the internal screen index. If this operation fails, for example, due to an invalid index, the primary screen is returned instead. This method uses exception handling to manage any errors during this process.
+        /// Attempts to return the screen at the index specified by the internal screen index. If this operation fails, for example, due to an invalid index, the primary screen is returned instead.
         /// </remarks>
         [CAspects.Logging]
         internal static Screen GetScreen()
@@ -637,7 +671,7 @@ namespace Cat
         }
 
         /// <summary>
-        /// Initializes the main window of the application, setting its appearance and configuring its initial position and size based on the primary screen.
+        /// Initializes the main window of STELLA, setting its appearance and configuring its initial position and size based on the primary screen.
         /// </summary>
         /// <remarks>
         /// Sets window properties to enable transparency, remove the standard window style, and ensure it stays on top and is not activated by default. The method also calculates the window's initial dimensions based on the primary screen's resolution and adjusts the window's extended style to support these features. It logs the window's width and height upon completion.
@@ -656,26 +690,27 @@ namespace Cat
             var scre = GetScreen();
             Width = scre.Bounds.Width;
             Height = scre.Bounds.Height;
-            Logging.Log($"Width: {Width}", $"Height: {Height}");
+            Logging.Log([$"Width: {Width}", $"Height: {Height}"]);
             //x System.Windows.MessageBox.Show($"{_screen_}, {Width}, {Height}");
 
+            // Runs config that has to be run AFTER the window has been loaded
             Loaded += (sender, e) =>
             {
                 hwnd = new WindowInteropHelper(this).Handle;
                 originalStyle = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
                 SetWindowLongWrapper(hwnd, GWL_EXSTYLE, originalStyle | WS_EX_TRANSPARENT | WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE);
                 editedstyle = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
-                Logging.Log($"Set Win Style of Handle {hwnd} from {originalStyle:X} ({originalStyle:B}) [{originalStyle}] to {editedstyle:X} ({editedstyle:B}) [{editedstyle}]");
+                Logging.Log([$"Set Win Style of Handle {hwnd} from {originalStyle:X} ({originalStyle:B}) [{originalStyle}] to {editedstyle:X} ({editedstyle:B}) [{editedstyle}]"]);
                 if (!Program.hadUserData)
-                    Objects.StellaHerself.RunStella(StellaHerself.Mode.Introduction, canvas);
+                    StellaHerself.RunStella(StellaHerself.Mode.Introduction, canvas);
             };
         }
 
         /// <summary>
-        /// Creates and adds visual elements to the application's main canvas, setting their initial properties and positions.
+        /// Part of the debugging process: Creates and adds visual elements to STELLA's main canvas, setting their initial properties and positions.
         /// </summary>
         /// <remarks>
-        /// Adds debug, functionality, shortcuts, and danger markers to the canvas, adjusting their positions accordingly. It also configures and adds a debug label with a specific foreground color. This method is part of the window initialization process and sets the application's content to the prepared canvas.
+        /// Adds debug, functionality, shortcuts, and danger markers to the canvas, adjusting their positions accordingly. It also configures and adds a debug label with a specific foreground color. This method is part of the window initialization process and sets STELLA's content to the prepared canvas.
         /// </remarks>
         private void CreateVisibleObjects()
         {
@@ -692,6 +727,9 @@ namespace Cat
             Content = canvas;
         }
 
+        /// <summary>
+        /// The current mode of the app
+        /// </summary>
         [Flags]
         private enum Modes : sbyte
         {
@@ -706,14 +744,17 @@ namespace Cat
 
         #region Interface
 
+        /// <summary>
+        /// TCS for the alertion of when the animation for the toggling of the UI is done
+        /// </summary>
         internal TaskCompletionSource<bool> UIToggleTCS { get; private set; }
 
         /// <summary>
-        /// Toggles the visibility and functionality of the application's interface.
+        /// Toggles the visibility and functionality of STELLA's interface.
         /// </summary>
-        /// <returns>A boolean indicating the visibility state of the interface after the toggle operation. <c>true</c> if the interface is now visible, otherwise <c>false</c>.</returns>
+        /// <returns>A boolean indicating the visibility state of STELLA's interface after the toggle operation. <c>true</c> if STELLA's interface is now visible, otherwise <c>false</c>.</returns>
         /// <remarks>
-        /// If the interface is currently visible, this method clears it and resets the window style to its edited state, logging the change. If the interface is not visible, it sets the window style to include layering and tool window properties, adds a new interface instance to the canvas, and logs the update. In both cases, the method adjusts key hooking accordingly.
+        /// If STELLA's interface is currently visible, this method clears it and resets the window style to its edited state, logging the change. If STELLA's interface is not visible, it sets the window style to include layering and tool window properties, adds a new interface instance to the canvas, and logs the update. In both cases, the method adjusts key hooking accordingly.
         /// </remarks>
         [CAspects.Logging]
         [CAspects.ConsumeException]
@@ -760,42 +801,75 @@ namespace Cat
             }
         }
 
+        /// <summary>
+        /// Removes the special state of the window; the pass through and key hooking and transparency
+        /// </summary>
         [CAspects.Logging]
         internal void MakeNormalWindow()
         {
-            Logging.Log($"Changing WinStyle of HWND {hwnd}");
+            Logging.Log([$"Changing WinStyle of HWND {hwnd}"]);
             int os = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
             SetWindowLongWrapper(hwnd, GWL_EXSTYLE, originalStyle | WS_EX_LAYERED | WS_EX_TOOLWINDOW);
             int es = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
-            Logging.Log($"Set WinStyle of HWND {hwnd} from {os:X} ({os:B}) [{os}] to {es:X} ({es:B}) [{es}]");
+            Logging.Log([$"Set WinStyle of HWND {hwnd} from {os:X} ({os:B}) [{os}] to {es:X} ({es:B}) [{es}]"]);
             DestroyKeyHook();
         }
 
+        /// <summary>
+        /// Makes the window special again; transparency, passthough, hooking, etc
+        /// </summary>
         [CAspects.Logging]
         internal void MakeFunnyWindow()
         {
-            Logging.Log($"Changing WinStyle of HWND {hwnd}");
+            Logging.Log([$"Changing WinStyle of HWND {hwnd}"]);
             int os = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
             SetWindowLongWrapper(hwnd, GWL_EXSTYLE, editedstyle);
             int es = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
-            Logging.Log($"Set WinStyle of HWND {hwnd} from {os:X} ({os:B}) [{os}] to {es:X} ({es:B}) [{es}]");
+            Logging.Log([$"Set WinStyle of HWND {hwnd} from {os:X} ({os:B}) [{os}] to {es:X} ({es:B}) [{es}]"]);
             InitKeyHook();
         }
 
+        /// <summary>
+        /// The main UI for STELLA
+        /// </summary>
         internal class Interface : Canvas
         {
+            /// <summary>
+            ///  The background overlay
+            /// </summary>
             internal SWS.Rectangle Backg { get; set; }
+            /// <summary>
+            /// the command input box
+            /// </summary>
             internal SWC.TextBox inputTextBox { get; private set; }
 
+            /// <summary>
+            /// Mirror property because its so much nicer to just type <b><i><c>Interface.Input</c></i></b> than it is to type <b><i><c>Interface.inst.inputTextBox.Text</c></i></b>
+            /// </summary>
             internal static string Input { get => inst.inputTextBox.Text; set => inst.inputTextBox.Text = value; }
 
+            /// <summary>
+            /// The UI Output
+            /// </summary>
+            /// <remarks>
+            /// Static so that it can be updated while the UI is closed, and it keeps the text through reopening STELLA's interface
+            /// </remarks>
             internal static LogListBox logListBox = new();
+            /// <summary>
+            /// Singleton instance of STELLA's interface
+            /// </summary>
             internal static Interface? inst = null;
+            /// <summary>
+            /// The parent STELLA's interface is connected to, for now this is always <b><i><c><see cref="Catowo"/>.<see cref="Catowo.canvas"/></c></i></b>
+            /// </summary>
             internal Canvas parent;
+            /// <summary>
+            /// The scroll viewer of the UI, for auto scrolling when new outputs appear
+            /// </summary>
             private static ScrollViewer _scrollViewer;
 
             /// <summary>
-            /// Represents the graphical user interface layer of the application, providing methods and properties to manage its visibility and interactions.
+            /// Represents the graphical user interface layer of STELLA, providing methods and properties to manage its visibility and interactions.
             /// </summary>
             internal Interface(Canvas parent)
             {
@@ -816,16 +890,16 @@ namespace Cat
             }
 
             /// <summary>
-            /// Initializes the background rectangle for the interface, setting its dimensions and opacity.
+            /// Initializes the background rectangle for STELLA's interface, setting its dimensions and opacity.
             /// </summary>
-            /// <returns>A rectangle that serves as the background for the interface.</returns>
+            /// <returns>A rectangle that serves as the background for STELLA's interface.</returns>
             private SWS.Rectangle InitBackg()
             {
                 var scre = GetScreen();
                 var (screenWidth, screenHeight, _) = Helpers.ScreenSizing.GetAdjustedScreenSize(scre);
                 Backg = new SWS.Rectangle { Width = screenWidth, Height = screenHeight, Fill = new SWM.SolidColorBrush(SWM.Colors.Gray), Opacity = UserData.Opacity };
-                Logging.Log($"{Catowo.inst.Screen}, {Backg.Width} {Backg.Height}");
-#if CrashWary
+                Logging.Log([$"{Catowo.inst.Screen}, {Backg.Width} {Backg.Height}"]);
+#if CrashWary // This just makes it so that it leaves a small margin for me to still interact with the windows behind it when STELLA crashes
                 rect.Height = rect.Height - 50;
                 SetTop<double>(rect, 50);
 #else
@@ -836,6 +910,9 @@ namespace Cat
                 return Backg;
             }
 
+            /// <summary>
+            /// Method that initialises the visual components of the UI
+            /// </summary>
             [CAspects.Logging]
             [CAspects.ConsumeException]
             [CAspects.UpsetStomach]
@@ -862,7 +939,7 @@ namespace Cat
 
                 inputTextBox.PreviewKeyDown += (s, e) =>
                 {
-                    Logging.Log(((int)e.Key));
+                    Logging.Log([((int)e.Key)]);
                     switch (e.Key)
                     {
                         case Key.Enter:
@@ -907,6 +984,9 @@ namespace Cat
                 inputTextBox.Focus();
             }
 
+            /// <summary>
+            /// Updates the UI's visuals
+            /// </summary>
             internal void UpdateInterface()
             {
                 Screen screen = GetScreen();
@@ -926,29 +1006,29 @@ namespace Cat
             }
 
             /// <summary>
-            /// Asynchronously hides the interface, setting its visibility to collapsed and ensuring the UI updates immediately.
+            /// Thread-Safely hides STELLA's interface, setting its visibility to collapsed and ensuring the UI updates immediately.
             /// </summary>
             internal async Task Hide()
             {
-                Logging.Log("Hiding interface...");
+                Logging.Log(["Hiding interface..."]);
                 Dispatcher.Invoke(() => { Visibility = Visibility.Collapsed; }, DispatcherPriority.Render);
                 await Task.Delay(500);
-                Logging.Log("Interface hidden");
+                Logging.Log(["Interface hidden"]);
             }
 
             /// <summary>
-            /// Makes the interface visible.
+            /// Makes STELLA's interface visible.
             /// </summary>
             internal void Show()
             {
-                Logging.Log("Showing interface...");
+                Logging.Log(["Showing interface..."]);
                 Visibility = Visibility.Visible;
                 inputTextBox.Focus();
-                Logging.Log("Interface Shown");
+                Logging.Log(["Interface Shown"]);
             }
 
             /// <summary>
-            /// Adds a log message to the interface's log list box.
+            /// Adds a log message to STELLA's interface's log list box.
             /// </summary>
             /// <param name="logMessage">The message to log.</param>
             /// <returns>An integer representing the position of the newly added log message in the log list box.</returns>
@@ -966,7 +1046,7 @@ namespace Cat
             }
 
             /// <summary>
-            /// Edits a log message in the interface's log list box at a specified index.
+            /// Edits a log message in STELLA's interface's log list box at a specified index.
             /// </summary>
             /// <param name="message">The new log message.</param>
             /// <param name="id">The index of the log message to edit.</param>
@@ -976,6 +1056,7 @@ namespace Cat
             {
                 Interface? instance = inst;
                 if (instance == null) return -2;
+                // Log each log
                 foreach (string log in logs)
                     instance.Dispatcher.Invoke(() => logListBox.AddItem(log));
                 if (_scrollViewer != null)
@@ -986,7 +1067,7 @@ namespace Cat
             }
 
             /// <summary>
-            /// Edits a log message in the interface's log list box at a specified index.
+            /// Edits a log message in STELLA's interface's log list box at a specified index.
             /// </summary>
             /// <param name="message">The new log message.</param>
             /// <param name="id">The index of the log message to edit.</param>
@@ -996,6 +1077,7 @@ namespace Cat
             {
                 Interface? instance = inst;
                 if (instance == null) return;
+                // Find the index of the item
                 int itemnum = fromEnd ? ((logListBox.Items.Count - 1) - (id - 1)) : id;
                 var item = logListBox.Items[itemnum];
                 switch (item)
@@ -1008,6 +1090,7 @@ namespace Cat
                         instance.Dispatcher.Invoke(() => logListBox.Items[itemnum] = message);
                         break;
                 }
+                // Immedietely flag the ui for visual update
                 instance.InvalidateVisual();
                 if (_scrollViewer != null)
                     _scrollViewer.ScrollToEnd();
@@ -1016,7 +1099,7 @@ namespace Cat
             }
 
             /// <summary>
-            /// Adds a textual log message to the interface's log list box with specified text color.
+            /// Adds a log message to STELLA's interface's log list box with specified text color.
             /// </summary>
             /// <param name="logMessage">The log message to add.</param>
             /// <param name="color">The color of the text.</param>
@@ -1035,6 +1118,12 @@ namespace Cat
                 return value;
             }
 
+            /// <summary>
+            /// Same as <b><i><c><see cref="Catowo.Interface"/>.<see cref="Interface.AddTextLog(string, SolidColorBrush)"/></c></i></b> but it returns the index of the log AND the log item itself as a <b><i><c><see cref="Tuple"/>(<see cref="int"/>, <see cref="TextBlock"/>)</c></i></b>            
+            /// </summary>
+            /// <param name="logMessage"></param>
+            /// <param name="brush"></param>
+            /// <returns></returns>
             [CAspects.ConsumeException]
             internal static (int, TextBlock) AddTextLogR(string logMessage, SolidColorBrush brush = null)
             {
@@ -1050,6 +1139,12 @@ namespace Cat
                 return (value, block);
             }
 
+            /// <summary>
+            /// Same as <b><i><c><see cref="Catowo.Interface"/>.<see cref="Interface.AddTextLog(string, SolidColorBrush)"/></c></i></b> but it takes in a <b><i><c><see cref="SolidColorBrush"/></c></i></b> instead of a <b><i><c><see cref="Color"/></c></i></b>
+            /// </summary>
+            /// <param name="logMessage"></param>
+            /// <param name="brush"></param>
+            /// <returns></returns>
             [CAspects.ConsumeException]
             internal static int AddTextLog(string logMessage, SolidColorBrush brush)
             {
@@ -1063,6 +1158,9 @@ namespace Cat
                 return value;
             }
 
+            /// <summary>
+            /// Animated the interface to move up
+            /// </summary>
             internal void AnimateUp()
             {
                 TranslateTransform trans = new TranslateTransform();
@@ -1087,6 +1185,10 @@ namespace Cat
                 storyboard.Begin(this, true);
             }
 
+            /// <summary>
+            /// Closing animation
+            /// </summary>
+            /// <param name="complete"></param>
             internal async void ShrinkAndDisappear(Action complete)
             {
                 var sc = Catowo.GetScreen().Bounds;
@@ -1140,23 +1242,35 @@ namespace Cat
                 // Animation begins
                 storyboard.Begin(this, true);
                 await Task.Delay(TimeSpan.FromSeconds(duration + 0.1)); 
-                Logging.Log("Shrink animation complete by async delay.");
+                Logging.Log(["Shrink animation complete by async delay."]);
                 complete?.Invoke();
             }
 
-
-
-
             /// <summary>
-            /// Provides methods for processing user commands input into the interface, including executing specific actions based on command identifiers and managing command history.
+            /// Provides methods for processing user commands input into STELLA's interface, including executing specific actions based on command identifiers and managing command history.
             /// </summary>
             internal static class CommandProcessing
             {
+                /// <summary>
+                /// Interface instance reference
+                /// </summary>
                 internal static Interface @interface { get => Commands.@interface; set => Commands.@interface = value; }
+                /// <summary>
+                /// Schema built for the executing command
+                /// </summary>
                 private static Command? commandstruct;
+                /// <summary>
+                /// Command history, stores the past 10 commands (backwards, need to fix ^^;)
+                /// </summary>
                 private static readonly FixedQueue<string> History = new(10);
+                /// <summary>
+                /// The raw command text
+                /// </summary>
                 private static string cmdtext;
 
+                /// <summary>
+                /// Reference map of command aliases to their actual functional index
+                /// </summary>
                 internal static Dictionary<string, int> cmdmap { get; } = new()
                 {
                     { "shutdown", 0 },
@@ -1376,7 +1490,7 @@ namespace Cat
                 };
 
                 /// <summary>
-                /// Defines a dictionary mapping command identifiers to their descriptions, parameters, associated functions, and shortcuts.
+                /// Defines mapping command identifiers to their descriptions, parameters, associated functions, and shortcuts.
                 /// </summary>
                 /// <remarks>
                 /// Each command is identified by an integer key and contains a dictionary with the following keys:
@@ -1384,8 +1498,11 @@ namespace Cat
                 /// - <c>params</c>: A string detailing the parameters the command accepts, with types and optionality.
                 /// - <c>function</c>: A delegate to the function that implements the command's functionality.
                 /// - <c>shortcut</c>: A string representing the keyboard shortcut associated with the command, if any.
-                /// Commands are used throughout the application to implement functionality accessible through the user interface or keyboard shortcuts.
+                /// Commands are used throughout STELLA to implement functionality accessible through the user interface or keyboard shortcuts.
                 /// </remarks>
+                /// <example>
+                /// a regal PAIN in the ass to refactor
+                /// </example>
                 internal static Dictionary<int, CommandSchema> Cmds { get; } = new()
                 {
                     {
@@ -1400,7 +1517,7 @@ namespace Cat
                     },
                     {
                         1, new CommandSchema(
-                            "Closes the interface, the shortcut will open it.",
+                            "Closes STELLA's interface, the shortcut will open it.",
                             "",
                             (() => { return Catowo.inst.ToggleInterface(); }),
                             null,
@@ -1410,7 +1527,7 @@ namespace Cat
                     },
                     {
                         2, new CommandSchema(
-                            "Shifts the interface screen to another monitor, takes in a number corresponding to the monitor you want it to shift to (1 being primary)",
+                            "Shifts STELLA's interface screen to another monitor, takes in a number corresponding to the monitor you want it to shift to (1 being primary)",
                             "screennum{int}",
                             Cat.Commands.ChangeScreen,
                             Commands.TChangeScreen,
@@ -1420,7 +1537,7 @@ namespace Cat
                     },
                     {
                         3, new CommandSchema(
-                            "Takes a screenshot of the screen, without the interface. -2 for a stitched image of all screens, -1 for individual screen pics, (number) for an individual screen, leave empty for the current screen Kitty is running on.\nE.g: screenshot ;-2",
+                            "Takes a screenshot of the screen, without STELLA's interface. -2 for a stitched image of all screens, -1 for individual screen pics, (number) for an individual screen, leave empty for the current screen Kitty is running on.\nE.g: screenshot ;-2",
                             "[mode{int}]",
                             (Func<Task<bool>>)Cat.Commands.Screenshot,
                             Commands.TScreenshot,
@@ -1430,7 +1547,7 @@ namespace Cat
                     },
                     {
                         4, new CommandSchema(
-                            "Begins capturing screen as a video, multi-monitor support coming soon. Closes the interface when run.",
+                            "Begins capturing screen as a video, multi-monitor support coming soon. Closes STELLA's interface when run.",
                             "",
                             Cat.Commands.StartRecording,
                             null,
@@ -1630,7 +1747,7 @@ namespace Cat
                     },
                     {
                         25, new CommandSchema(
-                            "Prints the interface element details",
+                            "Prints STELLA's interface element details",
                             "",
                             Cat.Commands.PrintElementDetails,
                             null,
@@ -1740,7 +1857,7 @@ namespace Cat
                     },
                     {
                         36, new CommandSchema(
-                            "Restarts the application asking for elevation (admin)",
+                            "Restarts STELLA asking for elevation (admin)",
                             "",
                             Cat.Commands.KillMyselfAndGetGodPowers,
                             Commands.TKillMyselfAndGetGodPowers,
@@ -1892,35 +2009,42 @@ namespace Cat
                 /// Extracts the command from the input text box, logs the command input, and attempts to find and execute the command using the command map.
                 /// If the command is successfully found and parsed, it executes the associated action or function.
                 /// If the command execution involves an asynchronous operation, it waits for the operation to complete.
-                /// Logs an error and updates the interface with feedback if the command cannot be found, fails to parse, or if the associated action or function cannot be executed.
+                /// Logs an error and updates STELLA's interface with feedback if the command cannot be found, fails to parse, or if the associated action or function cannot be executed.
                 /// Clears the input text box upon completion.
                 /// </remarks>
                 [CAspects.Logging]
+                [MethodImpl(MethodImplOptions.AggressiveOptimization)]
                 internal static async void ProcessCommand(string non_interface_text = null)
                 {
                     commandstruct = null;
                     Commands.commandstruct = null;
-                    if (non_interface_text == null && @interface != null)
-                        cmdtext = @interface.inputTextBox.Text.Trim().ToLower();
-                    else
-                        cmdtext = non_interface_text;
+                    // Determine to use inputted text or inserted text
+                    if (non_interface_text == null && @interface != null) cmdtext = @interface.inputTextBox.Text.Trim().ToLower();
+                    else cmdtext = non_interface_text;
+                    // queue the raw text
                     History.Enqueue(cmdtext);
+                    // Get the call of the command (the name of the command being invoked, no parameters)
                     string call = cmdtext.Split(";")[0].Trim();
-                    Logging.Log($"Processing Interface Command, Input: {cmdtext}");
+                    Logging.Log([$"Processing Interface Command, Input: {cmdtext}"]);
+
+                    // Check if call is valid
                     if (cmdmap.TryGetValue(call, out int value))
                     {
+                        // Get the call's functional index
                         int index = value;
+                        // Get the metadata linked to the index
                         CommandSchema metadata = Cmds[index];
+                        // Split the cmdtext parameters
                         var parts = cmdtext.Split(';');
+                        // Check for any parameters
                         if (parts.Length > 1)
                         {
                             var parametersToLog = string.Join(";", parts.Skip(1));
-                            Logging.Log($"Executing command {call}, index {index} with entered parameters {parametersToLog}");
+                            Logging.Log([$"Executing command {call}, index {index} with entered parameters {parametersToLog}"]);
                         }
-                        else
-                        {
-                            Logging.Log($"Executing command {call}, index {index} with no entered parameters");
-                        }
+                        else Logging.Log([$"Executing command {call}, index {index} with no entered parameters"]);
+
+                        // Parse the command
                         bool parsestate = ParameterParsing.ParseCommand(cmdtext, value, out Command? commandstruct2, out string? error_message);
                         if (commandstruct2 != commandstruct && commandstruct2 != null)
                         {
@@ -1930,7 +2054,7 @@ namespace Cat
 
                         if (!parsestate)
                         {
-                            Logging.Log("Failed to parse command.");
+                            Logging.Log(["Failed to parse command."]);
                             Interface.AddTextLog("Execution terminated.", RED);
                             return;
                         }
@@ -1938,22 +2062,23 @@ namespace Cat
                             Interface.AddTextLog(error_message, RED);
 
                         bool? result = null;
+                        // Execute the function
                         if (metadata.function is Func<bool> func)
                             result = func();
                         else if (metadata.function is Func<Task<bool>> tfunc)
                             result = await tfunc();
                         else
                         {
-                            Logging.Log(">>>ERROR<<< Action nor TFunct not found for the given command ID.");
+                            Logging.Log([">>>ERROR<<< Action nor TFunct not found for the given command ID."]);
                             Interface.AddTextLog($"Action nor TFunct object not found for command {call}, stopping command execution.\nThis... shouldn't happen. hm.", SWM.Color.FromRgb(200, 0, 40));
                         }
                         if (result == false)
                             Interface.AddTextLog($"Something went wrong executing {cmdtext}", RED);
-                        Logging.Log($"Finished Processing command {call}");
+                        Logging.Log([$"Finished Processing command {call}"]);
                     }
                     else
                     {
-                        Logging.Log("Command Not Found");
+                        Logging.Log(["Command Not Found"]);
                         Interface.AddLog($"No recognisable command '{call}', please use 'help ;commands' for a list of commands!");
                     }
                     if (@interface != null && non_interface_text == null)
@@ -1966,21 +2091,29 @@ namespace Cat
                 /// </summary>
                 private static class ParameterParsing
                 {
+                    /// <summary>
+                    /// Main method for command parsing 
+                    /// </summary>
                     [CAspects.ConsumeException]
                     [CAspects.Logging]
-                    internal static bool ParseCommand(in string raw, in int num, out Command? command, out string? error_message)
+                    [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+                    internal static bool ParseCommand(
+                        in string raw, 
+                        in int num, 
+                        out Command? command, 
+                        out string? error_message)
                     {
                         //!! I'm going to leave comments here because this will probably be rather complex :p
-                        // First, get the different sequences of expected parameters
+
                         command = null;
                         error_message = "";
-                        string metadata = CommandProcessing.Cmds[num].parameters as string;
                         string call = raw.Split(";")[0].Trim();
+                        // First, get the different sequences of expected parameters
                         // If metadata is null then something's gone wrong with extracting it from the
                         // Commands dictionary... which is really bad.
-                        if (metadata == null)
+                        if (CommandProcessing.Cmds[num].parameters is not string metadata)
                         {
-                            Logging.Log("[CRITICAL ERROR] Metadata was unresolved, command cannot be processed. You'll have to make a bug report (attach this log) so this can be fixed in the code behind, apologies for the inconvenience.");
+                            Logging.Log(["[CRITICAL ERROR] Metadata was unresolved, command cannot be processed. You'll have to make a bug report (attach this log) so this can be fixed in the code behind, apologies for the inconvenience."]);
                             error_message = "Metadata resolve error, please see logs for details.";
                             return false;
                         }
@@ -1988,21 +2121,24 @@ namespace Cat
                         // The command doesn't accept parameters, so skip parsing them and execute.
                         if (metadata == string.Empty || metadata == "")
                         {
-                            Logging.Log("Command accepts no parameters, skipping parse.");
+                            Logging.Log(["Command accepts no parameters, skipping parse."]);
                             command = new(call, raw);
                             return true;
                         }
-
+                        // split parameters
                         var linputs = raw.Split(";").ToList();
                         linputs.RemoveAt(0);
                         string[] inputs = linputs.ToArray();
-                        // Split the metadata into every expected sequence
-                        string[] optionals = metadata.Contains('|') ? metadata.Split('|') : [metadata,];
-                        Logging.Log("Optionals", optionals);
-                        //List<string> couldbes = new(optionals.Length);
-                        foreach (string sequence in optionals)
+                        // Split the metadata into every accepted pattern (patterns seperated by | )
+                        string[] patterns = metadata.Contains('|') ? metadata.Split('|') : [metadata,];
+                        Logging.Log(["Optionals", patterns]);
+                        //x List<string> couldbes = new(optionals.Length);
+
+                        // Check the input against each pattern
+                        foreach (string pattern in patterns)
                         {
-                            bool? status = ParseSequence(inputs, sequence, out error_message, out object[][]? parsedparams);
+                            // Parse the pattern
+                            bool? status = ParsePattern(inputs, pattern, out error_message, out object[][]? parsedparams);
                             if (status == false && (error_message != null && error_message != ""))
                                 return false;
                             if (status == null)
@@ -2013,57 +2149,68 @@ namespace Cat
                                 return true;
                             }
                         }
-                        Logging.Log($"[PARSE FAILED] No matching sequence to input found. Please use 'help ;{call}' to see expected command parameters.");
+                        Logging.Log([$"[PARSE FAILED] No matching sequence to input found. Please use 'help ;{call}' to see expected command parameters."]);
                         error_message = "Unrecognised arguments / argument pattern." + (error_message != "" && error_message != null ? "Additional Error(s): " + error_message : "");
                         Interface.AddTextLog(error_message, Colors.Red);
                         return false;
                     }
 
+                    /// <summary>
+                    /// Submodule for parsing individual patterns
+                    /// </summary>
+                    /// <param name="inputs"></param>
+                    /// <param name="sequence"></param>
+                    /// <param name="error_message"></param>
+                    /// <param name="parsedparams"></param>
+                    /// <returns></returns>
                     [CAspects.ConsumeException]
                     [CAspects.Logging]
-                    internal static bool? ParseSequence(string[] inputs, string sequence, out string? error_message, out object[][]? parsedparams)
+                    internal static bool? ParsePattern(string[] inputs, string sequence, out string? error_message, out object[][]? parsedparams)
                     {
                         error_message = null;
                         parsedparams = null;
-                        int all = sequence.Count(c => c == '{');
-                        int flex = sequence.Count(c => c == '[');
-                        int fix = all - flex;
-                        Logging.Log($"All: {all}", $"Flex: {flex}", $"Fixed: {fix}");
+                        int all = sequence.Count(c => c == '{'); // count all placeholders
+                        int flex = sequence.Count(c => c == '['); // count optional placeholders
+                        int fix = all - flex; // fixed placeholders
+                        Logging.Log([$"All: {all}", $"Flex: {flex}", $"Fixed: {fix}"]);
+
                         if (fix == 0 && inputs.Length == 0)
                         {
-                            Logging.Log("Sequence only accepts optionals and there were no given inputs. End of Parse");
-                            return null;
+                            Logging.Log(["Sequence only accepts optionals and there were no given inputs. End of Parse"]);
+                            return null; // early exit for only optional placeholders and no inputs
                         }
 
                         if (fix > inputs.Length)
                         {
                             string mes = "[PARSE ERROR] Inputs were less than sequence expected";
-                            Logging.Log(mes);
-                            return false;
+                            Logging.Log([mes]);
+                            return false; // not enough inputs
                         }
                         if (inputs.Length > all)
                         {
-                            Logging.Log("More inputs than expected, exiting sequence");
-                            return false;
+                            Logging.Log(["More inputs than expected, exiting sequence"]);
+                            return false; // too many inputs
                         }
+
                         string[]? results;
                         if (Helpers.BackendHelping.ExtractStringGroups(sequence, "{", "}", out results))
                         {
                             if (results == null)
                             {
-                                Logging.Log("[CRITICAL ERROR] Metadata grouping resulted null, command cannot be processed. You'll have to make a bug report (attach this log) so this can be fixed in the code behind, apologies for the inconvenience.");
+                                Logging.Log(["[CRITICAL ERROR] Metadata grouping resulted null, command cannot be processed. You'll have to make a bug report (attach this log) so this can be fixed in the code behind, apologies for the inconvenience."]);
                                 error_message = "Metadata resolve error, please see logs for details.";
-                                return false;
+                                return false; // critical error
                             }
+
                             List<object> flexparams = new(flex), fixparams = new(fix);
                             for (int i = 0; i < results.Length; i++)
                             {
-                                if (i > inputs.Length - 1)
-                                    break;
-                                //Logging.Log(i, all - i, flex, fix, "");
+                                if (i > inputs.Length - 1) break; // break if more placeholders than inputs
+
                                 string[] types = results[i].Split('/');
-                                Logging.Log("Types: ", types);
+                                Logging.Log(["Types: ", types]);
                                 bool isValid = false;
+
                                 foreach (string type in types)
                                 {
                                     switch (type)
@@ -2071,60 +2218,61 @@ namespace Cat
                                         case "int":
                                             if (int.TryParse(inputs[i], out int result))
                                             {
-                                                Logging.Log($"Successfully cast input #{i}, {inputs[i]} to int.");
+                                                Logging.Log([$"Successfully cast input #{i}, {inputs[i]} to int."]);
                                                 isValid = true;
                                                 if (all - i + 1 < flex)
-                                                    flexparams.Add(result);
+                                                    flexparams.Add(result); // add to flexparams
                                                 else
-                                                    fixparams.Add(result);
+                                                    fixparams.Add(result); // add to fixparams
                                             }
-                                            else Logging.Log($"Failed to cast input #{i}, {inputs[i]} to int.");
+                                            else Logging.Log([$"Failed to cast input #{i}, {inputs[i]} to int."]);
                                             break;
 
                                         case "bool":
                                             if (bool.TryParse(inputs[i], out bool bresult))
                                             {
-                                                Logging.Log($"Successfully cast input #{i}, {inputs[i]} to bool.");
+                                                Logging.Log([$"Successfully cast input #{i}, {inputs[i]} to bool."]);
                                                 isValid = true;
                                                 if (all - (i + 1) < flex)
-                                                    flexparams.Add(bresult);
+                                                    flexparams.Add(bresult); // add to flexparams
                                                 else
-                                                    fixparams.Add(bresult);
+                                                    fixparams.Add(bresult); // add to fixparams
                                             }
-                                            else Logging.Log($"Failed to cast input #{i}, {inputs[i]} to bool.");
+                                            else Logging.Log([$"Failed to cast input #{i}, {inputs[i]} to bool."]);
                                             break;
 
                                         case "string":
                                             isValid = true;
                                             if (all - (i + 1) < flex)
-                                                flexparams.Add(inputs[i].Trim().ToLower());
+                                                flexparams.Add(inputs[i].Trim().ToLower()); // add to flexparams
                                             else
-                                                fixparams.Add(inputs[i].Trim().ToLower());
+                                                fixparams.Add(inputs[i].Trim().ToLower()); // add to fixparams
                                             break;
                                     }
-                                    if (isValid) break;
+                                    if (isValid) break; // exit loop if valid
                                 }
                                 if (!isValid)
                                 {
-                                    Logging.Log($"Expected {results[i]}, not whatever was inputted.");
-                                    return false;
+                                    Logging.Log([$"Expected {results[i]}, not whatever was inputted."]);
+                                    return false; // invalid input
                                 }
                             }
-                            parsedparams = [fixparams.ToArray(), flexparams.ToArray()];
-                            Logging.Log("Parsed Params object:", parsedparams);
-                            return true;
+                            parsedparams = [fixparams.ToArray(), flexparams.ToArray()]; // set parsed params
+                            Logging.Log(["Parsed Params object:", parsedparams]);
+                            return true; // successful parse
                         }
                         else
                         {
-                            Logging.Log("[PARSE ERROR] Failed to extract string groupings! This shouldn't happen... please send a bug report and attach this log, thanks!");
-                            return false;
+                            Logging.Log(["[PARSE ERROR] Failed to extract string groupings! This shouldn't happen... please send a bug report and attach this log, thanks!"]);
+                            return false; // extraction error
                         }
                     }
+
                 }
             }
 
             /// <summary>
-            /// A custom ListBox control designed to display log messages within the application. It supports virtualization for performance optimization with large numbers of log entries.
+            /// A custom ListBox control designed to display log messages within STELLA. It supports virtualization for performance optimization with large numbers of log entries.
             /// </summary>
             internal class LogListBox : SWC.ListBox
             {

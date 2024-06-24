@@ -35,6 +35,9 @@ csharp_space_around_binary_operators = before_and_after
 # IDE0059: Unnecessary assignment of a value
 dotnet_diagnostic.IDE0059.severity = silent
 
+# IDE0079: Remove unnecessary suppression
+dotnet_diagnostic.IDE0079.severity = silent
+
 [*.{cs,vb}]
 #### Naming styles ####
 

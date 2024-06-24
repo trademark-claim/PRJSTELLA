@@ -2,19 +2,35 @@ namespace Cat
 {
     internal static partial class Commands
     {
+        /// <summary>
+        /// List of currently open process managers
+        /// </summary>
         private static List<Objects.ProcessManager> pms = [];
+        /// <summary>
+        /// Abstraction property for <c><see cref="pms"/></c>
+        /// </summary>
         internal static List<Objects.ProcessManager> PMs => pms;
 
+        /// <summary>
+        /// Command to start tracking a process
+        /// </summary>
+        /// <returns></returns>
         [CAspects.Logging]
         [CAspects.ConsumeException]
         internal static bool StartProcessMeasuring()
         {
             var ps = new Objects.ProcessSelector();
             ps.ShowDialog();
-            new Objects.ProcessManager(ps.SelectedProcessId).Show();
+            var pm = new ProcessManager(ps.SelectedProcessId);
+            pms.Add(pm);
+            pm.Show();
             return true;
         }
 
+        /// <summary>
+        /// Tutorial for the SPM command
+        /// </summary>
+        /// <returns></returns>
         [CAspects.Logging]
         [CAspects.AsyncExceptionSwallower]
         internal static async Task TStartProcessMeasuring()
@@ -25,7 +41,7 @@ namespace Cat
                 CommandProcessing
                 .Cmds[Interface
                     .CommandProcessing
-                    .cmdmap["close log editor"]
+                    .cmdmap["spm"]
                 ].desc
             + "\"",
             "This command opens a new process measurer, just run it and it'll prompt you to enter the process you want to being measuing, and it'll automatically begin!",

@@ -20,7 +20,7 @@ namespace Cat
         {
             if (commandstruct.Value.Parameters[0][1].ToString() is not string para1 || commandstruct.Value.Parameters[0][0] is not string file)
             {
-                Logging.Log("Expected int or string but parsing failed and returned either a null command struct or a null entry, please submit a bug report.");
+                Logging.Log(["Expected int or string but parsing failed and returned either a null command struct or a null entry, please submit a bug report."]);
                 Interface.AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
                 return false;
             }
@@ -42,14 +42,14 @@ namespace Cat
                 if (!success || index == -1)
                 {
                     Interface.AddLog($"No object with name '{para1}' found");
-                    Logging.Log($"No object with name '{para1}' found");
+                    Logging.Log([$"No object with name '{para1}' found"]);
                     return false;
                 }
                 items = bfh.ExtractObjectAtIndex(index);
                 de_cereal = bfh.DeserialiseObject(items);
             }
-            Logging.Log("Data: ");
-            Logging.Log(items);
+            Logging.Log(["Data: "]);
+            Logging.Log([items]);
             Interface.AddLog("Data:");
             foreach (var kvp in de_cereal)
                 Interface.AddLog($"{kvp.Key}: {Logging.ProcessMessage(kvp.Value)}");

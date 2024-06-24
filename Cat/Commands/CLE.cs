@@ -11,7 +11,7 @@
         {
             editor?.Close();
             Interface.AddLog("Closed!");
-            Logging.Log("Editor closed!");
+            Logging.Log(["Editor closed!"]);
             return true;
         }
 

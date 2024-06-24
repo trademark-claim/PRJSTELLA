@@ -18,7 +18,7 @@ namespace Cat
         {
             if (commandstruct?.Parameters[0][0] is not string para1)
             {
-                Logging.Log("Expected string but parsing failed and returned either a null command struct or a null entry, please submit a bug report.");
+                Logging.Log(["Expected string but parsing failed and returned either a null command struct or a null entry, please submit a bug report."]);
                 Interface.AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
                 return false;
             }
@@ -26,19 +26,19 @@ namespace Cat
             {
                 if (string.IsNullOrWhiteSpace(para1) || !ValidateFile(para1))
                 {
-                    Logging.Log($"Invalid or inaccessible file path: {para1}");
+                    Logging.Log([$"Invalid or inaccessible file path: {para1}"]);
                     Interface.AddTextLog($"Invalid or inaccessible file path: {para1}", RED);
                     return false;
                 }
-                Logging.Log($"Attempting to play audio file: {para1}");
+                Logging.Log([$"Attempting to play audio file: {para1}"]);
 
                 if (WavePlayer != null)
                 {
-                    Logging.Log("An audio file is already playing. Stopping current audio.");
+                    Logging.Log(["An audio file is already playing. Stopping current audio."]);
                     Interface.AddLog("An audio file is already playing. Stopping current audio...");
                     StopAudio();
                 }
-                Logging.Log("Creating Waveout and Audio file reader objects...");
+                Logging.Log(["Creating Waveout and Audio file reader objects..."]);
                 WavePlayer = new WaveOut();
                 AFR = new AudioFileReader(para1);
                 WavePlayer.Init(AFR);
@@ -47,25 +47,25 @@ namespace Cat
                 {
                     if (e.Exception != null)
                     {
-                        Logging.Log($"Playback stopped due to an exception.");
+                        Logging.Log([$"Playback stopped due to an exception."]);
                         Logging.LogError(e.Exception);
                     }
                     else
                     {
-                        Logging.Log("Playback stopped without any exception.");
+                        Logging.Log(["Playback stopped without any exception."]);
                     }
                     StopAudio();
                 };
-                Logging.Log("Objects created successfully.");
+                Logging.Log(["Objects created successfully."]);
 
                 WavePlayer.Play();
 
-                Logging.Log("Audio playback started successfully.");
+                Logging.Log(["Audio playback started successfully."]);
                 Interface.AddLog($"Playing {para1}");
             }
             catch (Exception ex)
             {
-                Logging.Log($"Error while attempting to play audio:");
+                Logging.Log([$"Error while attempting to play audio:"]);
                 Logging.LogError(ex);
                 return false;
             }

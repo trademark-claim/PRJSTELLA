@@ -21,7 +21,7 @@ namespace Cat
             string para1 = (string)(commandstruct?.Parameters[0][0]);
             if (para1 == null || string.IsNullOrWhiteSpace(para1))
             {
-                Logging.Log("Expected int but parsing failed and returned either a null command struct or a null entry, please submit a bug report.");
+                Logging.Log(["Expected int but parsing failed and returned either a null command struct or a null entry, please submit a bug report."]);
                 Interface.AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
                 return false;
             }
@@ -37,7 +37,7 @@ namespace Cat
                                 }
                                 catch (Exception e)
                                 {
-                                    Logging.Log("Error in setting text to clipboard");
+                                    Logging.Log(["Error in setting text to clipboard"]);
                                     Logging.LogError(e);
                                 }
 #endif
@@ -64,7 +64,7 @@ namespace Cat
                         }
                         catch (Exception e)
                         {
-                            Logging.Log("Failed to parse synonyms");
+                            Logging.Log(["Failed to parse synonyms"]);
                             Logging.LogError(e);
                         }
                         try
@@ -77,7 +77,7 @@ namespace Cat
                         }
                         catch (Exception e)
                         {
-                            Logging.Log("Failed to parse antonyms");
+                            Logging.Log(["Failed to parse antonyms"]);
                             Logging.LogError(e);
                         }
                         sb.AppendLine();
@@ -89,7 +89,7 @@ namespace Cat
             {
                 if (d["data"].Count < 1 || !d["found"])
                 {
-                    Logging.Log("Error: Dynamic to UrAPIDef casting failed while DefineWord returned true. (Or !def.found)");
+                    Logging.Log(["Error: Dynamic to UrAPIDef casting failed while DefineWord returned true. (Or !def.found)"]);
                     return false;
                 }
                 StringBuilder sb = new StringBuilder($"<t>{d["term"]}</t>   <q>No Phonetic</q>\n<s>Meanings</s>")

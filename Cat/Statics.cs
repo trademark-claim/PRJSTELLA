@@ -15,7 +15,7 @@
 // <notes>
 //     This file is designed to support various UI and file handling operations,
 //     facilitating easier management of visibility, positioning, and validation
-//     within the application's user interface components.
+//     within STELLA's user interface components.
 // </notes>
 //-------------------------------------------------------------------------------------
 
@@ -120,7 +120,7 @@ namespace Cat
         /// <returns>The position value.</returns>
         internal static T SetLeft<T>(UIElement obj, T where)
         {
-            Logging.Log($"Setting {obj.GetType().FullName}'s left position to {where}");
+            Logging.Log([$"Setting {obj.GetType().FullName}'s left position to {where}"]);
             var here = where is int ? where as int? : where is double ? where as double? : where is float ? where as float? : null;
             if (here != null)
                 Canvas.SetLeft(obj, (double)here);
@@ -136,7 +136,7 @@ namespace Cat
         /// <returns>The position value.</returns>
         internal static T SetTop<T>(UIElement obj, T where)
         {
-            Logging.Log($"Setting {obj.GetType().FullName}'s top position to {where}");
+            Logging.Log([$"Setting {obj.GetType().FullName}'s top position to {where}"]);
             var here = where is int ? where as int? : where is double ? where as double? : where is float ? where as float? : null;
             if (here != null)
                 Canvas.SetTop(obj, (double)here);
@@ -150,15 +150,15 @@ namespace Cat
         /// <returns>True if the element is now visible; otherwise, false.</returns>
         internal static bool ToggleVis(UIElement obj)
         {
-            Logging.Log($"Toggling Visibility of {obj.GetType().FullName}...");
+            Logging.Log([$"Toggling Visibility of {obj.GetType().FullName}..."]);
             if (obj.Visibility == Visibility.Visible)
             {
                 obj.Visibility = Visibility.Collapsed;
-                Logging.Log($"{obj.GetType().FullName} collapsed.");
+                Logging.Log([$"{obj.GetType().FullName} collapsed."]);
                 return false;
             }
             obj.Visibility = Visibility.Visible;
-            Logging.Log($"{obj.GetType().FullName} made visible");
+            Logging.Log([$"{obj.GetType().FullName} made visible"]);
             return true;
         }
 
@@ -169,9 +169,9 @@ namespace Cat
         /// <param name="isVisible">Determines the visibility state.</param>
         internal static void ToggleVis(UIElement obj, bool isVisible)
         {
-            Logging.Log($"Changing Visibility of {obj.GetType().FullName} to {isVisible}");
+            Logging.Log([$"Changing Visibility of {obj.GetType().FullName} to {isVisible}"]);
             obj.Visibility = isVisible ? Visibility.Visible : Visibility.Collapsed;
-            Logging.Log($"Visibility changed.");
+            Logging.Log([$"Visibility changed."]);
         }
 
         /// <summary>
@@ -181,18 +181,18 @@ namespace Cat
         /// <returns>True if the file is accessible; otherwise, false.</returns>
         internal static bool ValidateFile(string path)
         {
-            Logging.Log("Validating " + path);
+            Logging.Log(["Validating " + path]);
             try
             {
                 using (var fs = File.OpenRead(path)) ;
             }
             catch (Exception ex)
             {
-                Logging.Log("Error occured while opening " + path + ", returning false.");
+                Logging.Log(["Error occured while opening " + path + ", returning false."]);
                 Logging.LogError(ex);
                 return false;
             }
-            Logging.Log("File " + path + " opened successfully, returning true.");
+            Logging.Log(["File " + path + " opened successfully, returning true."]);
             return true;
         }
 
@@ -205,7 +205,7 @@ namespace Cat
         [CAspects.ConsumeException]
         internal static ScrollViewer GetScrollViewer(DependencyObject depObj)
         {
-            Logging.Log("Getting Scroll viewer dependacny object from object: " + depObj.GetType().FullName);
+            Logging.Log(["Getting Scroll viewer dependacny object from object: " + depObj.GetType().FullName]);
             if (depObj is ScrollViewer)
                 return depObj as ScrollViewer;
 

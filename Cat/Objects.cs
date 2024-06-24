@@ -64,7 +64,7 @@ namespace Cat
         /// Creates an overlay for the current screen at the user's set opacity but set grey colour.
         /// </summary>
         /// <remarks>
-        /// Need to merge this with the interface's back ground for continuity
+        /// Need to merge this with STELLA's interface's back ground for continuity
         /// </remarks>
         internal static class OverlayRect
         {
@@ -130,7 +130,7 @@ namespace Cat
                 "Hey! It's me, Stella! (Made by Nexus) \nIt seems this is the first time you've opened me (or I've been updated).\nIf you want to skip this, press the up arrow. \nIf you want to view the changelog, press the down arrow (not working)'\nIf you want to run through the introduction, just press the right arrow key!",
                 "So you wanna do the introduction again... sweet!\nI'm Stella, the Smart Technology for Enhanced Lifestyle and Living Assistance! \nMy sole purpose is to automate, optimize and otherwise improve your computer experience.\n You can press the left arrow key to move through parts.",
                 "There are two (at the moment) main modes to this program: Background and Interface.\nInterface is where there's an overlay with a textbox and an output box, where you can enter commands.\n   Key shortcuts won't work here, but this is where most of the functionality is.\nBackground is where there... is no main overlay (you're currently in background mode!).\n   This is what the app will be in 99% of the time.",
-                "To open the interface:\n  Hold both shifts (both th left and right one),\n  Then press and hold Q,\n  then press I!\n  (LShift + RShift + Q + I). \n To close the interface run the 'close' command.\nTo view the help page, run 'help'",
+                "To open STELLA's interface:\n  Hold both shifts (both th left and right one),\n  Then press and hold Q,\n  then press I!\n  (LShift + RShift + Q + I). \n To close STELLA's interface run the 'close' command.\nTo view the help page, run 'help'",
                 "This program is in a pre-pre-pre-pre-alpha stage, and there will be bugs and stuff.\nYou can send logs to me (Discord: _dissociation_) (Gmail: brainjuice.work23@gmail.com) with bug reports and feedback and stuff. Enjoy!",
                 "Hmmm.. is there anything else..?\nOh right! Local data is stored at C:\\ProgramData\\Kitty\\Cat\\\nHave fun, I hope you enjoy this app! o/"
             ];
@@ -217,7 +217,7 @@ namespace Cat
                     case Mode.Custom:
                         TCS = new TaskCompletionSource<bool>();
                         CurrentStory = Custom;
-                        Logging.Log("Custom Stella Speech: ", CurrentStory);
+                        Logging.Log(["Custom Stella Speech: ", CurrentStory]);
                         if (fadeCancellationTokenSource != null && !fadeCancellationTokenSource.IsCancellationRequested)
                         {
                             fadeCancellationTokenSource.Cancel();
@@ -274,7 +274,7 @@ namespace Cat
                 // The first message
                 Bubble = new();
                 Point location = new(Catowo.inst.Width - 30, Catowo.inst.Height - 30);
-                Logging.Log("Location", location);
+                Logging.Log(["Location", location]);
                 Bubble.LowerRightCornerFreeze = location;
                 Bubble.Text = CurrentStory[num];
                 canvas.Children.Add(Bubble);
@@ -578,7 +578,7 @@ namespace Cat
                     var originalStyle = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
                     SetWindowLongWrapper(hwnd, GWL_EXSTYLE, originalStyle | WS_EX_TRANSPARENT | WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE);
                     var editedstyle = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
-                    Logging.Log($"Set Win Style of Handle {hwnd} from {originalStyle:X} ({originalStyle:B}) [{originalStyle}] to {editedstyle:X} ({editedstyle:B}) [{editedstyle}]");
+                    Logging.Log([$"Set Win Style of Handle {hwnd} from {originalStyle:X} ({originalStyle:B}) [{originalStyle}] to {editedstyle:X} ({editedstyle:B}) [{editedstyle}]"]);
                 };
                 Particles.LineTrail.Init();
             }
@@ -620,14 +620,14 @@ namespace Cat
             [CAspects.Logging]
             internal static void DestroyKeyHook()
             {
-                Logging.Log("Unhooking key hook...");
+                Logging.Log(["Unhooking key hook..."]);
                 if (_hookID == IntPtr.Zero)
                 {
-                    Logging.Log("Key hook is default, exiting.");
+                    Logging.Log(["Key hook is default, exiting."]);
                     return;
                 }
                 bool b = UnhookWindowsHookExWrapper(_hookID);
-                Logging.Log($"Unhooking successful: {b}");
+                Logging.Log([$"Unhooking successful: {b}"]);
             }
 
             [CAspects.Logging]
@@ -1270,36 +1270,36 @@ namespace Cat
                     Speechrecogmap = Helpers.JSONManager.ReadFromJsonFile<Dictionary<string, string>>("speechrecogmap.json");
                 }
                 recognizer = new SpeechRecognitionEngine(new System.Globalization.CultureInfo("en-US"));
-                Logging.Log("Engine created");
-                Logging.Log("Loading Grammer...");
+                Logging.Log(["Engine created"]);
+                Logging.Log(["Loading Grammer..."]);
                 recognizer.LoadGrammar(new DictationGrammar());
-                Logging.Log("Created Grammer.");
+                Logging.Log(["Created Grammer."]);
                 recognizer.SpeechRecognized += (s, e) =>
                 {
                     var result = e.Result;
-                    Logging.Log("Transcription: " + result.Text);
+                    Logging.Log(["Transcription: " + result.Text]);
                     Commands.ProcessVoiceCommand(result.Text);
                 };
 #if A
                 recognizer.SpeechRecognitionRejected += (s, e) =>
                 {
-                    Logging.Log("Speech recognition failed.");
+                    Logging.Log(["Speech recognition failed."]);
                     Interface.AddLog("Speech recognition failed.");
                 };
 #endif
 #if B
                 recognizer.RecognizeCompleted += (s, e) =>
                 {
-                    Logging.Log("Recognition completed.");
+                    Logging.Log(["Recognition completed."]);
                 };
 #endif
 #if C
                 recognizer.SpeechDetected += (s, e) =>
                 {
-                    Logging.Log("Speech detected.");
+                    Logging.Log(["Speech detected."]);
                 };
 #endif
-                Logging.Log("Events attached");
+                Logging.Log(["Events attached"]);
                 recognizer.SetInputToDefaultAudioDevice();
             }
 
@@ -1483,7 +1483,7 @@ namespace Cat
                 {
                     if (active != null)
                     {
-                        Logging.Log("Mouse up on SLB element");
+                        Logging.Log(["Mouse up on SLB element"]);
                         active.PreviewMouseMove += moving;
                         active.diff = new();
                         active.Background = Brushes.Transparent;
@@ -1493,7 +1493,7 @@ namespace Cat
                 };
                 PreviewMouseLeftButtonUp += (s, e) =>
                 {
-                    Logging.Log("Mouse up on SLB element");
+                    Logging.Log(["Mouse up on SLB element"]);
                     if (active != null)
                     {
                         active.PreviewMouseMove -= moving;
@@ -1518,7 +1518,7 @@ namespace Cat
                 Point p2 = e.GetPosition(active);
                 Point p3 = new(p2.X - active.diff.X, p2.Y - active.diff.Y);
                 Point p4 = new(p1.X + p3.X, p1.Y + p3.Y);
-                Logging.Log($"Original Position: {p1}", $"Relative Mouse Position: {p2}", $"Difference: {p3}", $"New Position: {p4}");
+                Logging.Log([$"Original Position: {p1}", $"Relative Mouse Position: {p2}", $"Difference: {p3}", $"New Position: {p4}"]);
                 Canvas.SetTop(active, p4.Y);
                 Canvas.SetLeft(active, p4.X);
             }
@@ -1559,7 +1559,7 @@ namespace Cat
                 var networkInterfaces = NetworkInterface.GetAllNetworkInterfaces();
                 foreach (var iface in networkInterfaces) 
                 {
-                    Logging.Log(iface.Name);
+                    Logging.Log([iface.Name]);
                 }
                 //Logging.FullFlush();
                 //await Task.Delay(1000);
@@ -1659,15 +1659,15 @@ namespace Cat
                     PreviewMouseLeftButtonDown += (s, e) =>
                     {
                         parent.active = this;
-                        Logging.Log("Mouse down on SLB element, moving?");
+                        Logging.Log(["Mouse down on SLB element, moving?"]);
                         diff = e.GetPosition(this);
                         PreviewMouseMove += parent.moving;
-                        Logging.Log($"Diff: {diff}");
+                        Logging.Log([$"Diff: {diff}"]);
                         Background = new SolidColorBrush(Color.FromArgb(0xAA, 0x0, 0x0, 0x0));
                     };
                     PreviewMouseLeftButtonUp += (s, e) =>
                     {
-                        Logging.Log("Mouse up on SLB element");
+                        Logging.Log(["Mouse up on SLB element"]);
                         PreviewMouseMove -= parent.moving;
                         diff = new();
                         Background = Brushes.Transparent;

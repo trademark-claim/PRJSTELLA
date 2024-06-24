@@ -15,7 +15,7 @@ namespace Cat
         {
             if (commandstruct == null || commandstruct?.Parameters[1].Length < 1)
             {
-                Logging.Log("Displaying all connected screens' information...");
+                Logging.Log(["Displaying all connected screens' information..."]);
                 for (int i = 0; i < Screen.AllScreens.Length; i++)
                 {
                     Screen screen = Screen.AllScreens[i];
@@ -31,7 +31,7 @@ namespace Cat
                 int? para1 = (int?)(commandstruct?.Parameters[1][0]);
                 if (para1 == null)
                 {
-                    Logging.Log("Expected int but parsing failed and returned either a null command struct or a null entry, please submit a bug report.");
+                    Logging.Log(["Expected int but parsing failed and returned either a null command struct or a null entry, please submit a bug report."]);
                     Interface.AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
                     return false;
                 }
@@ -43,7 +43,7 @@ namespace Cat
                 }
                 else
                 {
-                    Logging.Log("Specified index was outside the bounds of the screen array");
+                    Logging.Log(["Specified index was outside the bounds of the screen array"]);
                     Interface.AddTextLog("Please select a valid screen index.", LIGHTRED);
                     return false;
                 }

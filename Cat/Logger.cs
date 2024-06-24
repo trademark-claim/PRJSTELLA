@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using SharpCompress.Common;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -6,6 +7,7 @@ using System.IO;
 using System.Management;
 using System.Net.NetworkInformation;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Security.Principal;
 using System.Text;
 using System.Windows;
@@ -16,7 +18,7 @@ using System.Windows.Threading;
 namespace Cat
 {
     /// <summary>
-    /// Provides logging functionalities for the application.
+    /// Provides logging functionalities for STELLA.
     /// </summary>
     internal static class Logging
     {
@@ -31,10 +33,10 @@ namespace Cat
         /// <returns>The opened logger window.</returns>
         internal static Window ShowLogger()
         {
-            Log("Showing Live Logger...");
+            Log(["Showing Live Logger..."]);
             inst = new LogWindow();
             inst.Show();
-            Log("Live logger opened");
+            Log(["Live logger opened"]);
             return inst;
         }
 
@@ -43,17 +45,34 @@ namespace Cat
         /// </summary>
         internal static void HideLogger()
         {
-            Log("Closing Live logger...");
+            Log(["Closing Live logger..."]);
             inst?.Close();
             inst = null;
-            Log("Live logger closed.");
+            Log(["Live logger closed."]);
         }
 
-        internal static async void LogError(Exception exc, bool initial = true, bool logshow = false)
+        /// <summary>
+        /// Logs an error gracefully
+        /// </summary>
+        internal static async void LogError(
+            Exception exc, 
+            bool initial = true, 
+            bool logshow = false,
+            bool extendedinfo = true,
+            [CallerMemberName] string memberName = "",
+            [CallerFilePath] string filePath = "",
+            [CallerLineNumber] int lineNumber = 0
+        )
         {
             var logEntry = new StringBuilder();
             var guid = GUIDRegex().Replace(Guid.NewGuid().ToString(), "");
             logEntry.AppendLine($">>>ERROR {guid} START<<<");
+            if (UserData.ExtendedLogging && extendedinfo)
+            {
+                logEntry.AppendLine($"Called from file {filePath}");
+                logEntry.AppendLine($"By member: {memberName}");
+                logEntry.AppendLine($"At line: {lineNumber}");
+            }
             logEntry.AppendLine($"[{DateTime.Now:HH:mm:ss:fff}] Message: {exc.Message}");
             logEntry.AppendLine($"[{DateTime.Now:HH:mm:ss:fff}] Source: {exc.Source}");
             logEntry.AppendLine($"[{DateTime.Now:HH:mm:ss:fff}] Method Base: {exc.TargetSite?.Module}.{exc.TargetSite?.DeclaringType}.{exc.TargetSite?.Name} ({exc.TargetSite})");
@@ -62,7 +81,7 @@ namespace Cat
             logEntry.AppendLine($"[{DateTime.Now:HH:mm:ss:fff}] HLink: {exc.HelpLink}");
             logEntry.AppendLine($"[{DateTime.Now:HH:mm:ss:fff}] HResult: {exc.HResult}");
             logEntry.AppendLine($"[{DateTime.Now:HH:mm:ss:fff}] >>>END OF ERROR {guid}<<<");
-            Log(logshow, logEntry.ToString());
+            Log([logshow, logEntry.ToString()], false);
 
             if (exc.InnerException != null)
             {
@@ -75,16 +94,27 @@ namespace Cat
             }
         }
 
+        /// <summary>
+        ///  Main logging command, at full functionality can log date time, execution time, exact caller location and more.
+        /// </summary>
         [SuppressMessage("WarningCategory", "CS4014", Justification = "The call is fire-and-forget intentionally.")]
-        internal static async Task Log(params object[] messages)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static async Task Log(
+            object[] messages,
+            bool showExtension = true,
+            [CallerMemberName] string memberName = "",
+            [CallerFilePath] string filePath = "",
+            [CallerLineNumber] int lineNumber = 0
+        )
         {
+            var tmstmp = $"{DateTime.Now:HH: mm: ss: fff}";
             foreach (var message in messages)
             {
                 string[] str = ProcessMessage(message);
                 foreach (string str2 in str)
                     if (!string.IsNullOrWhiteSpace(str2))
                     {
-                        logQueue.Enqueue($"[{DateTime.Now:HH:mm:ss:fff}] {str2}");
+                        logQueue.Enqueue((UserData.ExtendedLogging && showExtension ? $"Called from {filePath} by {memberName} at line #{lineNumber}: " : "") + $"[{tmstmp}] {str2}");
                         LogWindow.AddLog(str2);
                     }
             }
@@ -93,7 +123,7 @@ namespace Cat
                 await FullFlush();
             }
         }
-
+        /*x Keeping this here incase I do need it :p
         [SuppressMessage("WarningCategory", "CS4014", Justification = "The call is fire-and-forget intentionally.")]
         internal static async Task Log(bool ignore_show, params object[] messages)
         {
@@ -103,7 +133,7 @@ namespace Cat
                 foreach (string str2 in str)
                     if (!string.IsNullOrWhiteSpace(str2))
                     {
-                        logQueue.Enqueue($"[{DateTime.Now:HH:mm:ss:fff}] {str2}");
+                        logQueue.Enqueue((UserData.ExtendedLogging ? $"Called from {filePath} by {memberName} at line #{lineNumber}: " : "") +  $"[{DateTime.Now:HH:mm:ss:fff}] {str2}");
                         if (!ignore_show) LogWindow.AddLog(str2);
                     }
             }
@@ -112,10 +142,17 @@ namespace Cat
                 await FullFlush();
             }
         }
+        */
 
+        /// <summary>
+        /// Serialises objects so I can see what they're made of instead of being given an assembly or a memory address
+        /// </summary>
+        /// <param name="message"></param>
+        /// <returns></returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal static string[] ProcessMessage(object message)
         {
-            if (message is IEnumerable enumerable && !(message is string))
+            if (message is IEnumerable enumerable && message is not string)
             {
                 var sb = new StringBuilder();
                 foreach (var item in enumerable)
@@ -129,6 +166,9 @@ namespace Cat
             return [message?.ToString() ?? string.Empty,];
         }
 
+        /// <summary>
+        /// Fully flushes the log queue to the log file for the session
+        /// </summary>
         internal static async Task FullFlush(bool end = false)
         {
             await fileWriteSemaphore.WaitAsync();
@@ -167,7 +207,7 @@ namespace Cat
             /// </summary>
             public LogWindow()
             {
-                Log("Creating Log Window...");
+                Log(["Creating Log Window..."]);
                 inst?.Close();
                 inst = this;
                 Title = "Log Viewer";
@@ -193,7 +233,7 @@ namespace Cat
                 _listBox.ItemsPanel = new ItemsPanelTemplate(new FrameworkElementFactory(typeof(VirtualizingStackPanel)));
                 _scrollViewer = GetScrollViewer(_listBox);
                 Content = _listBox;
-                Log("Logging Window Created");
+                Log(["Logging Window Created"]);
             }
 
             /// <summary>
@@ -445,7 +485,7 @@ namespace Cat
         }
 
         /// <summary>
-        /// Gathers command line arguments passed to the application.
+        /// Gathers command line arguments passed to STELLA.
         /// </summary>
         /// <returns>A string containing the command line arguments.</returns>
         private static string GCLI()
@@ -599,9 +639,9 @@ namespace Cat
                 OnProgressUpdate += (puea) =>
                 {
                     progress = puea.NewProgress;
-                    Log(title + "Progress: " + progress + "%");
+                    Log([title + "Progress: " + progress + "%"]);
                     if (puea.Note != null)
-                        Log("Note: " + puea.Note);
+                        Log(["Note: " + puea.Note]);
                     if (@interface)
                     {
                         string bar = title + " [" + string.Concat(Enumerable.Repeat("|", progress)) + string.Concat(Enumerable.Repeat("-", 100 - progress)) + "]";
@@ -611,7 +651,7 @@ namespace Cat
                     }
                     if (progress == 100)
                     {
-                        Log(title + "Complete!");
+                        Log([title + "Complete!"]);
                         if (@interface)
                             Catowo.Interface.AddLog(title + " Compelte!");
                         block = null;
@@ -625,7 +665,7 @@ namespace Cat
             /// <param name="e">The progress update event arguments containing the new progress value and an optional note.</param>
             internal void InvokeEvent(ProgressUpdateEventArgs e)
             {
-                Logging.Log("Progress Invocation");
+                Logging.Log(["Progress Invocation"]);
                 OnProgressUpdate?.Invoke(e);
             }
 

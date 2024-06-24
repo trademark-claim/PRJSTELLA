@@ -12,15 +12,15 @@ namespace Cat
         {
             if (commandstruct?.Parameters[0][0] is not string para1)
             {
-                Logging.Log("Expected string but parsing failed and returned either a null command struct or a null entry, please submit a bug report.");
+                Logging.Log(["Expected string but parsing failed and returned either a null command struct or a null entry, please submit a bug report."]);
                 Interface.AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
                 return false;
             }
             switch (para1)
             {
                 case "ffmpeg":
-                    _ = new Helpers.EPManagement(Helpers.EPManagement.Processes.FFmpeg);
-                    Logging.Log("DEP Execution Complete");
+                    Interface.AddLog("This download is unsupported as of 0.0.5A, stay tuned for me to re-add it (with working video support)");
+                    Logging.Log(["DEP Execution Complete"]);
                     break;
                 case "cat cursor" or "cat single":
                     Helpers.ExternalDownloading.FromGDrive(SingleCat, System.IO.Path.Combine(ExternalDownloadsFolder, "cat.ani"));
@@ -80,7 +80,7 @@ namespace Cat
             Catowo.inst.ToggleInterface(true, false);
             await Catowo.inst.UIToggleTCS.Task;
             await Task.Delay(200);
-            var virtual_keys = ConvertStringToVKArray(ExternalDownloadsFolder);
+            var virtual_keys = StringToVKs(ExternalDownloadsFolder);
             List<ExtendedInput> xtended_inputs = [new ExtendedInput(VK_LWIN, 1), new BaselineInputs.ExtendedInput(VK_R),];
             xtended_inputs.AddRange(virtual_keys.Select(k => new ExtendedInput(k, k == VK_LSHIFT ? (byte)1 : (byte)0)));
             xtended_inputs.Add(new(VK_RETURN));
@@ -93,8 +93,8 @@ namespace Cat
             StellaHerself.RunStella(StellaHerself.Mode.Custom, Catowo.inst.canvas);
             try
             {
-                Logging.Log($"Focusing back to catowo canvas: {Catowo.inst.Focus()}");
-                Logging.Log($"Focusing back to Stella bubble: {StellaHerself.Bubble.Focus()}");
+                Logging.Log([$"Focusing back to catowo canvas: {Catowo.inst.Focus()}"]);
+                Logging.Log([$"Focusing back to Stella bubble: {StellaHerself.Bubble.Focus()}"]);
             }
             catch { }
             await StellaHerself.TCS.Task;

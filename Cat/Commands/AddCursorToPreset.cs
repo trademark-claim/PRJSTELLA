@@ -16,12 +16,9 @@ namespace Cat
             ///<summary>
             /// Input parameters being the preset, cur id and file path to use
             /// </summary>
-            string para1 = commandstruct.Value.Parameters[0][0] as string,
-                para2 = commandstruct.Value.Parameters[0][1] as string,
-                para3 = commandstruct.Value.Parameters[0][2] as string;
-            if (para1 == null || para2 == null || para3 == null)
+            if (commandstruct.Value.Parameters[0][0] is not string para1 || commandstruct.Value.Parameters[0][1] is not string para2 || commandstruct.Value.Parameters[0][2] is not string para3)
             {
-                Logging.Log("Expected string but parsing failed and returned either a null command struct or a null entry, please submit a bug report.");
+                Logging.Log(["Expected string but parsing failed and returned either a null command struct or a null entry, please submit a bug report."]);
                 Catowo.Interface.AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
                 return false;
             }
@@ -33,27 +30,27 @@ namespace Cat
             // Ensuring validity of inputs
             if (!Directory.Exists(dir))
             {
-                Logging.Log($"Directory {dir} not found.");
+                Logging.Log([$"Directory {dir} not found."]);
                 Catowo.Interface.AddTextLog($"No preset with name {para1} found", RED);
                 return false;
             }
             string file = Path.Combine(dir, "preset.CLF");
-            Logging.Log("Preset file: " + file);
+            Logging.Log(["Preset file: " + file]);
             if (!File.Exists(file))
             {
-                Logging.Log($"Cursor Preset file ({file}) not found! This shouldn't happen unless someone manually removed it.");
+                Logging.Log([$"Cursor Preset file ({file}) not found! This shouldn't happen unless someone manually removed it."]);
                 Catowo.Interface.AddTextLog("Preset file not found, try re-creating this preset! (Remove the currently existing one though).", RED);
                 return false;
             }
             if (!File.Exists(para3))
             {
-                Logging.Log($"Requested file {para3} not found.");
+                Logging.Log([$"Requested file {para3} not found."]);
                 Catowo.Interface.AddTextLog($"Requested file {para3} not found! Please verify your file and provide a full, absolute file path.", RED);
                 return false;
             }
             if (!para3.EndsWith(".ani") && !para3.EndsWith(".cur"))
             {
-                Logging.Log($"Requested file {para3} not a .ani or .cur file.");
+                Logging.Log([$"Requested file {para3} not a .ani or .cur file."]);
                 Catowo.Interface.AddTextLog($"Requested file {para3} was not a supported cursor file! (.ani / .cur).", RED);
                 return false;
             }
@@ -64,14 +61,14 @@ namespace Cat
                   para2 == "OCR_SIZENESW" || para2 == "OCR_SIZENS" || para2 == "OCR_SIZENWSE" || para2 == "OCR_SIZEWE" ||
                   para2 == "OCR_UP" || para2 == "OCR_WAIT"))
             {
-                Logging.Log($"Expected a cursor id constant name, but got {para2}");
+                Logging.Log([$"Expected a cursor id constant name, but got {para2}"]);
                 Catowo.Interface.AddTextLog("Error: Expected a cursor constant name from the below list:", RED);
                 Interface.AddLog(string.Join("\n", BaselineInputs.Cursor.validEntries.Select(entry => $"- {entry.Item1}: {entry.Item2}")));
                 return false;
             }
             // Completing command
             string finalpath = Path.Combine(dir, $"{para2}_csr.{(animated ? "ani" : "cur")}");
-            Logging.Log($"Final path: {finalpath}");
+            Logging.Log([$"Final path: {finalpath}"]);
             try
             {
                 File.Copy(para3, finalpath, true);
@@ -80,7 +77,7 @@ namespace Cat
             catch (Exception e)
             {
                 Interface.AddTextLog("Failed to cut file to local path! See logs for error.", RED);
-                Logging.Log($"Failed to copy and delete {para3}, see below exception.");
+                Logging.Log([$"Failed to copy and delete {para3}, see below exception."]);
                 Logging.LogError(e);
                 return false;
             }
@@ -105,7 +102,7 @@ namespace Cat
             StellaHerself.HaveOverlay = false;
             StellaHerself.CleanUp = false;
             StellaHerself.Custom = [
-                "This is the AddCursorToPreset tutorial! (Press left and right arrows to navigate the next two, \nor press the key it asks for. \nPress the Up Arrow to cancel the tutorial.)",
+                "This is the AddCursorToPreset tutorial!",
                 "Command description:\n\"" + Interface.CommandProcessing.Cmds[Interface.CommandProcessing.cmdmap["add cursor to preset"]].desc + "\"",
                 "This tutorial will walk you through on how to execute this command!",
                 "Firstly, we need a cursor to actually add -- I'll download one for you!\nYou like cats.. right? :3c",
@@ -171,7 +168,7 @@ namespace Cat
             StellaHerself.Custom = [
                 $"Now we've done the first parameter, the preset we're adding to!\nWe'll be adding to the {dir} preset.",
                 "Next, we have to input the ID of the cursor we want to change. These are the names of the cursors defined by windows.",
-                "Here, I'll provide a reference to what each cursor id is and what it represents, look at the interface console! Please choose one!",
+                "Here, I'll provide a reference to what each cursor id is and what it represents, look at STELLA's interface console! Please choose one!",
             ];
             StellaHerself.RunStella(StellaHerself.Mode.Custom, Catowo.inst.canvas);
             can = await StellaHerself.TCS.Task;
@@ -199,7 +196,7 @@ namespace Cat
             Catowo.inst.ToggleInterface(true, false);
             await Catowo.inst.UIToggleTCS.Task;
             await Task.Delay(200);
-            var vks = ConvertStringToVKArray(Path.Combine(CursorsFilePath, dir));
+            var vks = StringToVKs(Path.Combine(CursorsFilePath, dir));
             List<ExtendedInput> exis = [new ExtendedInput(VK_LWIN, 1), new BaselineInputs.ExtendedInput(VK_R),];
             exis.AddRange(vks.Select(k => new ExtendedInput(k, k == VK_LSHIFT ? (byte)1 : (byte)0)));
             exis.Add(new(VK_RETURN));
@@ -213,8 +210,8 @@ namespace Cat
             StellaHerself.RunStella(StellaHerself.Mode.Custom, Catowo.inst.canvas);
             try
             {
-                Logging.Log($"Focusing back to catowo canvas: {Catowo.inst.Focus()}");
-                Logging.Log($"Focusing back to Stella bubble: {StellaHerself.Bubble.Focus()}");
+                Logging.Log([$"Focusing back to catowo canvas: {Catowo.inst.Focus()}"]);
+                Logging.Log([$"Focusing back to Stella bubble: {StellaHerself.Bubble.Focus()}"]);
             }
             catch { }
             await StellaHerself.TCS.Task;

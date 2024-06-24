@@ -3,11 +3,11 @@ namespace Cat
     internal static partial class Commands
     {
         /// <summary>
-        /// Changes the current screen to the one specified by the user, updating the application's interface accordingly.
+        /// Changes the current screen to the one specified by the user, updating STELLA's interface accordingly.
         /// </summary>
         /// <returns>True if the screen change is successful, false otherwise.</returns>
         /// <remarks>
-        /// Validates the provided screen index against the available screens and, if valid, moves the application's interface to the specified screen.
+        /// Validates the provided screen index against the available screens and, if valid, moves STELLA's interface to the specified screen.
         /// </remarks>
         [CAspects.ConsumeException]
         internal static bool ChangeScreen()
@@ -15,19 +15,19 @@ namespace Cat
             int? para1 = (int?)(commandstruct?.Parameters[0][0]);
             if (para1 == null)
             {
-                Logging.Log("Expected string but parsing failed and returned either a null command struct or a null entry, please submit a bug report.");
+                Logging.Log(["Expected string but parsing failed and returned either a null command struct or a null entry, please submit a bug report."]);
                 Interface.AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
                 return false;
             }
             if (para1 >= 0 && para1 < System.Windows.Forms.Screen.AllScreens.Length)
             {
-                Logging.Log($"Changing screen to Screen #{para1}");
+                Logging.Log([$"Changing screen to Screen #{para1}"]);
                 Catowo.inst.Screen = para1.Value;
                 return true;
             }
             else
             {
-                Logging.Log("Screen index out of bounds of array.");
+                Logging.Log(["Screen index out of bounds of array."]);
                 Interface.AddLog($"Failed to find screen with index: {para1}");
                 return false;
             }

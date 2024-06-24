@@ -36,7 +36,7 @@ namespace Cat
                 CommandProcessing
                 .Cmds[Interface
                     .CommandProcessing
-                    .cmdmap["close log editor"]
+                    .cmdmap["flush logs"]
                 ].desc
             + "\"",
             "There's nothing much to this command, just run it and it'll flush all volatile logs to the log file for this session. Plain and simple.",

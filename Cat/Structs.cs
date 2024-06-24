@@ -4,20 +4,6 @@
 //     Contains structures used for simulating input events for keyboard, mouse,
 //     and hardware devices.
 // </summary>
-//
-// <author>Nexus</author>
-// <date>2024-04-10</date>
-// <copyright>
-//     Copyright (c) 2024 Nexus.
-//     All rights reserved.
-// </copyright>
-//
-// <notes>
-//     This file is part of the Cat application, designed to facilitate direct
-//     interfacing with low-level system input functionalities. It defines
-//     essential structures for creating and processing simulated input events,
-//     enabling automated interactions with the system.
-// </notes>
 //-------------------------------------------------------------------------------------
 
 using System.Runtime.InteropServices;

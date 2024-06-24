@@ -51,7 +51,7 @@ namespace Cat
         /// Tells the program that, when listening for a voice command, does it need the 'Hey Stella' prefix or not.
         /// If true, no prefix is needed.
         /// </summary>
-        private const bool NoCall = true;
+        private static bool NoCall => UserData.RequireNameCallForVoiceCommands;
 
         /// <summary>
         /// The command to execute
@@ -240,7 +240,7 @@ namespace Cat
                             {
                                 // The next word is the word to define
                                 string word = split[defloc + 1];
-                                Logging.Log($"Defining word: {word}");
+                                Logging.Log([$"Defining word: {word}"]);
                                 // Use the dict apis to get the definition as a dynamic dictionary.
                                 (bool? b, Dictionary<string, dynamic>? d) = await Helpers.HTMLStuff.DefineWord(word);
                                 // if it failed to get the word or the dictionary is null, it exits as an invalid attempt
@@ -257,7 +257,7 @@ namespace Cat
                                 }
                                 catch (Exception e)
                                 {
-                                    Logging.Log("Error in setting text to clipboard");
+                                    Logging.Log(["Error in setting text to clipboard"]);
                                     Logging.LogError(e);
                                 }
 #endif
@@ -285,7 +285,7 @@ namespace Cat
                                             }
                                             catch (Exception e)
                                             {
-                                                Logging.Log("Failed to parse synonyms");
+                                                Logging.Log(["Failed to parse synonyms"]);
                                                 Logging.LogError(e);
                                             }
                                             try
@@ -298,7 +298,7 @@ namespace Cat
                                             }
                                             catch (Exception e)
                                             {
-                                                Logging.Log("Failed to parse antonyms");
+                                                Logging.Log(["Failed to parse antonyms"]);
                                                 Logging.LogError(e);
                                             }
                                             sb.AppendLine();
@@ -311,7 +311,7 @@ namespace Cat
                                 {
                                     if (d["data"].Count < 1 || !d["found"])
                                     {
-                                        Logging.Log("Error: Dynamic to UrAPIDef casting failed while DefineWord returned true. (Or !def.found)");
+                                        Logging.Log(["Error: Dynamic to UrAPIDef casting failed while DefineWord returned true. (Or !def.found)"]);
                                         return;
                                     }
                                     StringBuilder sb = new StringBuilder($"<t>{d["term"]}</t>   <q>No Phonetic</q>\n<s>Meanings</s>")
@@ -346,7 +346,7 @@ namespace Cat
             }
 
             string audio = JSONSubbing(" " + audioi.ToLower().Trim() + " ");
-            Logging.Log("Subbed Audio: " + audio);
+            Logging.Log(["Subbed Audio: " + audio]);
             if (!audio.Contains("Stella") && !VoiceCommandHandler.WasCalled && !NoCall)
                 return;
             audio = audio.Replace("hey Stella", "").Replace("Stella", "");
@@ -381,7 +381,7 @@ namespace Cat
                 mess = null;
             }
             else if (failure)
-                Logging.Log("Unrecognised command");
+                Logging.Log(["Unrecognised command"]);
             VoiceCommandHandler.WasCalled = false;
             command = null;
             mess = null;

@@ -3,7 +3,7 @@ namespace Cat
     internal static partial class Commands
     {
         /// <summary>
-        /// Updates a specific setting based on user input, affecting the application's configuration.
+        /// Updates a specific setting based on user input, affecting STELLA's configuration.
         /// </summary>
         /// <returns>True if the setting is updated successfully, false if the setting name is invalid or the value is not appropriate.</returns>
         /// <remarks>
@@ -15,13 +15,10 @@ namespace Cat
         {
             try
             {
-                var para1 = commandstruct?.Parameters[0][0] as string;
-                var para2 = commandstruct?.Parameters[0][1] as string;
-
-                if (para1 == null || para2 == null)
+                if (commandstruct?.Parameters[0][0] is not string para1 || commandstruct?.Parameters[0][1] is not string para2)
                 {
                     var message = "Expected string but parsing failed, command struct or entry was null.";
-                    Logging.Log(message);
+                    Logging.Log([message]);
                     Interface.AddTextLog($"Execution Failed: {message}", RED);
                     return false;
                 }
@@ -29,7 +26,7 @@ namespace Cat
                 var normalizedKey = para1.ToLower().Trim();
                 var data = Helpers.IniParsing.GetStructure(UserDataFile);
 
-                Logging.Log("Processing NM:", para1, para2);
+                Logging.Log(["Processing NM:", para1, para2]);
 
                 foreach (var section in data.Keys)
                 {
@@ -40,7 +37,7 @@ namespace Cat
                         {
                             if (!Helpers.IniParsing.validation.ContainsKey(kvp.Key))
                             {
-                                Logging.Log($"Validation for {kvp.Key} not found.");
+                                Logging.Log([$"Validation for {kvp.Key} not found."]);
                                 continue;
                             }
 

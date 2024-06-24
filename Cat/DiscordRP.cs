@@ -2,6 +2,31 @@
 
 namespace Cat
 {
+
+
+
+
+
+
+
+
+
+    /* 
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     !!! Not gonna comment all this since it doesnt work and has minimal interaction with the app, ignore it.
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    */
+
+
+
+
+
+
+
+
+
+
+    [Obsolete("Doesnt work, stupid discord didnt help fix it either :(", false)]
     internal static class DiscordRP
     {
         private static readonly Discord.Discord discord = new(DCID, (UInt64)Discord.CreateFlags.Default);
@@ -47,27 +72,27 @@ namespace Cat
         [CAspects.Logging]
         internal static void SetActivity(Discord.Activity activity)
         {
-            discord.GetActivityManager().UpdateActivity(activity, (result) => { Logging.Log("==DISCORD LOG== " + result); });
+            discord.GetActivityManager().UpdateActivity(activity, (result) => { Logging.Log(["==DISCORD LOG== " + result]); });
             discord.RunCallbacks();
         }
 
         [CAspects.Logging]
         internal static void Init()
         {
-            discord.SetLogHook(LogLevel.Debug, (l, m) => Logging.Log($"==DISCORD LOG== ({l}): {m}"));
+            discord.SetLogHook(LogLevel.Debug, (l, m) => Logging.Log([$"==DISCORD LOG== ({l}): {m}"]));
             var am = discord.GetActivityManager();
             am.OnActivityJoinRequest += (ref Discord.User user) =>
             {
-                Logging.Log($"==DISCORD LOG== User {user.Username} ({user.Id}) has clicked the 'Ask to Join' button!");
+                Logging.Log([$"==DISCORD LOG== User {user.Username} ({user.Id}) has clicked the 'Ask to Join' button!"]);
                 am.SendInvite(user.Id, Discord.ActivityActionType.Join, "DM Nexus if you're interested in the Project!", (result) =>
                 {
                     if (result == Discord.Result.Ok)
                     {
-                        Logging.Log("==DISCORD LOG== Invite message successful!");
+                        Logging.Log(["==DISCORD LOG== Invite message successful!"]);
                     }
                     else
                     {
-                        Logging.Log("==DISCORD LOG== Invite message unsuccessful!");
+                        Logging.Log(["==DISCORD LOG== Invite message unsuccessful!"]);
                     }
                 });
             };

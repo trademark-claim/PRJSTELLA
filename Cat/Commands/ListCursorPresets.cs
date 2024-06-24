@@ -20,14 +20,14 @@ namespace Cat
                 if (dir == null)
                 {
                     var message = "Expected string but parsing failed, command struct or entry was null.";
-                    Logging.Log(message);
+                    Logging.Log([message]);
                     Interface.AddTextLog($"Execution Failed: {message}", RED);
                     return false;
                 }
                 string fulldir = Path.Combine(CursorsFilePath, dir);
                 if (!Directory.Exists(fulldir))
                 {
-                    Logging.Log($"Requested Directory \"{fulldir}\" does not exist");
+                    Logging.Log([$"Requested Directory \"{fulldir}\" does not exist"]);
                     Interface.AddLog("Preset does not exist.");
                     return false;
                 }

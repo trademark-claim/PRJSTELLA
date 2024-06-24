@@ -16,22 +16,22 @@ namespace Cat
         {
             if (commandstruct.Value.Parameters[0][0] is not string para1)
             {
-                Logging.Log("Expected string but parsing failed and returned either a null command struct or a null entry, please submit a bug report.");
+                Logging.Log(["Expected string but parsing failed and returned either a null command struct or a null entry, please submit a bug report."]);
                 Interface.AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
                 return false;
             }
             string dir = Environment.CursorsFilePath + para1;
             if (!Directory.Exists(dir))
             {
-                Logging.Log($"Directory {dir} not found.");
+                Logging.Log([$"Directory {dir} not found."]);
                 Interface.AddTextLog($"No preset with name {para1} found", RED);
                 return false;
             }
             string file = dir + "\\preset.CLF";
-            Logging.Log("Preset file: " + file);
+            Logging.Log(["Preset file: " + file]);
             if (!File.Exists(file))
             {
-                Logging.Log($"Cursor Preset file ({file}) not found! This shouldn't happen unless someone manually removed it.");
+                Logging.Log([$"Cursor Preset file ({file}) not found! This shouldn't happen unless someone manually removed it."]);
                 Interface.AddTextLog("Preset file not found, try re-creating this preset! (Remove the currently existing one though).", RED);
                 return false;
             }
@@ -43,7 +43,7 @@ namespace Cat
                 {
                     Interface.AddLog("For persistant cursor changes (cursors remain custom through computer restarts), please change the AllowRegistryEdits to true!");
                     Interface.AddLog("Loading preset without persistence.");
-                    Logging.Log("Requested registry edit without permissions.");
+                    Logging.Log(["Requested registry edit without permissions."]);
                     persistant = false;
                 }
                 else if (persistant == true && !Helpers.BackendHelping.CheckIfAdmin())
@@ -53,7 +53,7 @@ namespace Cat
                 }
             }
             string[] content = File.ReadAllLines(file);
-            Logging.Log(content);
+            Logging.Log([content]);
             foreach (string line in content)
             {
                 uint id = 0;
@@ -118,7 +118,7 @@ namespace Cat
                         break;
 
                     default:
-                        Logging.Log($"Unknown cursor name in preset.CLF: {cursorname}, skipping and moving to next cursor.");
+                        Logging.Log([$"Unknown cursor name in preset.CLF: {cursorname}, skipping and moving to next cursor."]);
                         Interface.AddTextLog($"Unknown cursor name in preset.CLF: {cursorname}, skipping and moving to next cursor.", HOTPINK);
                         continue;
                 }
@@ -127,7 +127,7 @@ namespace Cat
                     string path = split[1].Trim();
                     if (!File.Exists(path))
                     {
-                        Logging.Log($"Cursor at {path} does not exist! Skipping.");
+                        Logging.Log([$"Cursor at {path} does not exist! Skipping."]);
                         Interface.AddTextLog($"Cursor path assigned to {cursorname} returned non-existence, skipping.", HOTPINK);
                         continue;
                     }
@@ -136,7 +136,7 @@ namespace Cat
                         Interface.AddTextLog($"Something went wrong loading the cursor for {cursorname}! Check logs for details.\nSkipping cursor for {cursorname}...", HOTPINK);
                         continue;
                     }
-                    Logging.Log($"Cursor for {cursorname} successfully changed!");
+                    Logging.Log([$"Cursor for {cursorname} successfully changed!"]);
                 }
             }
             Interface.AddLog($"{para1} cursor preset loaded!");

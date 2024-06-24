@@ -16,13 +16,13 @@ namespace Cat
             if (para1 == null)
             {
                 var message = "Expected string but parsing failed, command struct or entry was null.";
-                Logging.Log(message);
+                Logging.Log([message]);
                 Interface.AddTextLog($"Execution Failed: {message}", RED);
                 return false;
             }
             if (!File.Exists(para1) || (!para1.EndsWith(".ani") && !para1.EndsWith(".cur")))
             {
-                Logging.Log($"{para1} does not exist / could not be found as a file");
+                Logging.Log([$"{para1} does not exist / could not be found as a file"]);
                 Interface.AddTextLog("Please input a valid filepath! (.ani, .cur)", RED);
                 return false;
             }

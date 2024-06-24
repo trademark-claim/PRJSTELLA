@@ -5,7 +5,7 @@ namespace Cat
     internal static partial class Commands
     {
         /// <summary>
-        /// Logs the details of key interface elements to the application's log display, including dimensions and positions.
+        /// Logs the details of key interface elements to STELLA's log display, including dimensions and positions.
         /// </summary>
         /// <returns>Always returns true, indicating the method completed its execution.</returns>
         /// <remarks>

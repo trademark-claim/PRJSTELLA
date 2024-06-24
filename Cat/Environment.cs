@@ -1,12 +1,13 @@
 ﻿// -----------------------------------------------------------------------
 // Environment.cs
 // Contains definitions for environment settings, paths, and utility methods
-// for the application's runtime environment.
+// for STELLA's runtime environment.
 // Author: Nexus
 // -----------------------------------------------------------------------
 
 #pragma warning disable CS4014
 
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 
 namespace Cat
@@ -16,7 +17,7 @@ namespace Cat
     /// </summary>
     internal static partial class Environment
     {
-        /// <summary>Path to the application's running directory.</summary>
+        /// <summary>Path to STELLA's running directory.</summary>
         internal static readonly string RunningPath = AppDomain.CurrentDomain.BaseDirectory;
 
         /// <summary>Path to the custom black cursor file.</summary>
@@ -28,7 +29,7 @@ namespace Cat
         /// <summary>Path for the current log file, generated dynamically.</summary>
         internal static readonly string LogPath = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\Logs\\L" + GUIDRegex().Replace(Guid.NewGuid().ToString(), "") + ".LOG";
 
-        // Paths to various folders used by the application
+        // Paths to various folders used by STELLA
         internal static string Downloads { get => System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile) + @"\Downloads"; }
         internal const string LogFolder = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\Logs\\";
         internal const string AudioFolder = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU\\Audio\\";
@@ -208,6 +209,9 @@ namespace Cat
 
         };
 
+        /// <summary>
+        /// Maps characters to the vks needed to input to generate them
+        /// </summary>
         private static readonly Dictionary<char, int[]> vkMap = new Dictionary<char, int[]>
         {
             {'A', new int[] {VK_A}}, {'B', new int[] {VK_B}}, {'C', new int[] {VK_C}},
@@ -236,10 +240,15 @@ namespace Cat
         };
 
 
-
+        /// <summary>
+        /// Converts a string to a sequence of VKs
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns></returns>
         [CAspects.Logging]
         [CAspects.ConsumeException]
-        internal static List<ushort> ConvertStringToVKArray(string input)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal static List<ushort> StringToVKs(string input)
         {
             List<ushort> vkArray = new List<ushort>();
 
@@ -376,6 +385,11 @@ namespace Cat
             /// <summary>Enables or disables full logging.</summary>
             internal static bool FullLogging = true;
 
+            /// <summary>
+            /// Provides even more logging information, now including Caller name, path and location.
+            /// </summary>
+            internal static bool ExtendedLogging = true;
+
             /// <summary>Enables or disables assembly information logging.</summary>
             internal static bool AssemblyInformation = false;
 
@@ -385,7 +399,7 @@ namespace Cat
             /// <summary>Enables or disables timing of all methods.</summary>
             internal static bool TimeAll = false;
 
-            /// <summary>Indicates whether the application should start automatically.</summary>
+            /// <summary>Indicates whether STELLA should start automatically.</summary>
             internal static bool Startup = true;
 
             /// <summary>
@@ -394,7 +408,7 @@ namespace Cat
             internal static bool StartWithVoice = false;
 
             /// <summary>
-            /// If true, the program will start with the interface opened
+            /// If true, the program will start with STELLA's interface opened
             /// </summary>
             internal static bool StartWithInterface = false;
 
@@ -417,6 +431,11 @@ namespace Cat
             /// Allows Stella to query the unofficial urban dictionary api for word definitions
             /// </summary>
             internal static bool AllowUrbanDictionaryDefinitionsWhenWordNotFound = false;
+
+            /// <summary>
+            /// See <c><see cref="Commands.NoCall"/></c>
+            /// </summary>
+            internal static bool RequireNameCallForVoiceCommands = true;
 
             /// <summary>Default screen brightness setting.</summary>
             internal static float Brightness = 0.7f;
@@ -511,8 +530,12 @@ namespace Cat
                         AllowUrbanDictionaryDefinitionsWhenWordNotFound = bool.Parse(value);
                         break;
 
+                    case nameof(ExtendedLogging):
+                        ExtendedLogging = bool.Parse(value);
+                        break;
+
                     default:
-                        Logging.Log($"Unknown key in INI file: {key}");
+                        Logging.Log([$"Unknown key in INI file: {key}"]);
                         break;
                 }
             }

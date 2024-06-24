@@ -20,7 +20,7 @@ namespace Cat
         {
             if (commandstruct.Value.Parameters[0][0].ToString() is not string para1)
             {
-                Logging.Log("Expected int or string but parsing failed and returned either a null command struct or a null entry, please submit a bug report.");
+                Logging.Log(["Expected int or string but parsing failed and returned either a null command struct or a null entry, please submit a bug report."]);
                 Interface.AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
                 return false;
             }
@@ -36,7 +36,7 @@ namespace Cat
             }
             var output = Helpers.BinaryFileHandler.ReturnRawBinary(para1);
             Interface.AddLog(output);
-            Logging.Log(output);
+            Logging.Log([output]);
             return true;
         }
     }

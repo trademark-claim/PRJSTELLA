@@ -11,34 +11,42 @@ using AspectInjector.Broker;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
 
 namespace Cat
 {
+    #pragma warning disable CA1822
+    /// <summary>
+    /// Holds all of the Custom Aspects, mostly to do with IL Injection.
+    /// </summary>
     internal static class CAspects
     {
         /// <summary>
-        /// Marks methods for which exceptions should trigger an urgent logging flush.
+        /// Marks methods that are solely used for debugging purposes
         /// </summary>
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
         public class CDebug : Attribute;
 
 
         /// <summary>
-        /// Marks methods for which exceptions should trigger an urgent logging flush.
+        /// Marks methods that are still in development (often having mere stubs of their envisioned selves)
         /// </summary>
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
         public class InDev : Attribute;
 
         /// <summary>
-        /// Aspect for logging method entry, exit, and execution time if specified.
+        /// Aspect for the logging of entry and exit of commands, supplying metadata and togglable information. 
         /// </summary>
         [Aspect(Scope.Global)]
         [AttributeUsage(AttributeTargets.Method | AttributeTargets.Constructor, AllowMultiple = false)]
         [Injection(typeof(Logging))]
         public class Logging : Attribute
         {
-            private static readonly ConcurrentDictionary<string, Stopwatch> Timers = new ConcurrentDictionary<string, Stopwatch>();
+            /// <summary>
+            /// Threadsafe dictionary that holds the timers for commands that are being timed. 
+            /// </summary>
+            private static readonly ConcurrentDictionary<string, Stopwatch> Timers = new();
 
             /// <summary>
             /// Invoked before the target method execution starts, logging the entry and starting a timer if needed.
@@ -57,8 +65,8 @@ namespace Cat
                         var stopwatch = Stopwatch.StartNew();
                         Timers[key] = stopwatch;
                     }
-                    Cat.Logging.Log($"Entering {(instance == null ? "static" : "instance")} method {method.DeclaringType?.FullName?.Replace('+', '.')}.{method.Name}");
-                    Cat.Logging.Log($"Arguments:", arguments);
+                    Cat.Logging.Log([$"Entering {(instance == null ? "static" : "instance")} method {method.DeclaringType?.FullName?.Replace('+', '.')}.{method.Name}"], false);
+                    Cat.Logging.Log([$"Arguments:", arguments], false);
                 }
             }
 
@@ -80,23 +88,30 @@ namespace Cat
                         if (Timers.TryRemove(key, out var stopwatch))
                         {
                             stopwatch.Stop();
-                            Cat.Logging.Log($"Exiting method {method.DeclaringType?.FullName?.Replace('+', '.')}.{method.Name}. Execution time: {stopwatch.Elapsed.Seconds}s {stopwatch.Elapsed.Milliseconds}ms {stopwatch.Elapsed.Microseconds}µs {stopwatch.Elapsed.Nanoseconds}ns Return Value: {string.Join(" - ", Cat.Logging.ProcessMessage(returnValue))} of type {returnType.FullName}");
+                            Cat.Logging.Log([$"Exiting method {method.DeclaringType?.FullName?.Replace('+', '.')}.{method.Name}. Execution time: {stopwatch.Elapsed.Seconds}s {stopwatch.Elapsed.Milliseconds}ms {stopwatch.Elapsed.Microseconds}µs {stopwatch.Elapsed.Nanoseconds}ns Return Value: {string.Join(" - ", Cat.Logging.ProcessMessage(returnValue))} of type {returnType.FullName}"], false);
                         }
                     }
-                    else Cat.Logging.Log($"Exiting method {method.DeclaringType?.FullName?.Replace('+', '.')}.{method.Name}. Return Value: {string.Join(" - ", Cat.Logging.ProcessMessage(returnValue))} of type {returnType.FullName}");
+                    else Cat.Logging.Log([$"Exiting method {method.DeclaringType?.FullName?.Replace('+', '.')}.{method.Name}. Return Value: {string.Join(" - ", Cat.Logging.ProcessMessage(returnValue))} of type {returnType.FullName}"], false);
                 }
             }
 
-            private static string GetUniqueKey(MethodBase method, object instance)
+            /// <summary>
+            /// Helper function to generate unique keys to link timers to method executions
+            /// </summary>
+            /// <param name="method">The method object thats being executed</param>
+            /// <param name="instance">The instance of the method (if any, else <c>null</c>)</param>
+            /// <returns></returns>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private string GetUniqueKey(MethodBase method, object instance)
             {
-                var threadId = Thread.CurrentThread.ManagedThreadId;
+                var threadId = System.Environment.CurrentManagedThreadId;
                 var instanceId = instance?.GetHashCode() ?? 0;
                 return $"{method.DeclaringType?.FullName?.Replace('+', '.')}.{method.Name}-{instanceId}-{threadId}";
             }
         }
 
         /// <summary>
-        /// Aspect for handling exceptions by logging them and optionally providing a user notification.
+        /// Aspect that 'swallows' exceptions -- stops them from propagating up the stack so the app doesnt crash. Instead it gracefully logs the error and removes it from existence.
         /// </summary>
         [Aspect(Scope.Global)]
         [AttributeUsage(AttributeTargets.Method | AttributeTargets.Constructor, AllowMultiple = false)]
@@ -104,7 +119,7 @@ namespace Cat
         public class ConsumeException : Attribute
         {
             /// <summary>
-            /// Wraps the target method execution to catch and handle exceptions.
+            /// Wraps around, so not before and not after, but during, target method execution to catch and handle exceptions.
             /// </summary>
             [Advice(Kind.Around, Targets = Target.Method)]
             public object Around([Argument(Source.Metadata)] MethodBase method,
@@ -118,8 +133,8 @@ namespace Cat
                 }
                 catch (Exception ex)
                 {
-                    Cat.Logging.Log($"Error while executing command {target.Method.DeclaringType?.FullName?.Replace('+', '.')}.{target.Method.Name}");
-                    Cat.Logging.LogError(ex);
+                    Cat.Logging.Log([$"Error while executing command {target.Method.DeclaringType?.FullName?.Replace('+', '.')}.{target.Method.Name}"], false);
+                    Cat.Logging.LogError(ex, extendedinfo: false);
                     if (method.IsDefined(typeof(InterfaceNotice), false))
                         Catowo.Interface.AddTextLogR($"Error caught while executing {target.Method.DeclaringType?.FullName?.Replace('+', '.')}.{target.Method.Name}", RED);
                     if (method.IsDefined(typeof(UpsetStomach), false))
@@ -136,7 +151,7 @@ namespace Cat
         }
 
         /// <summary>
-        /// Marks methods for which exceptions should trigger an urgent logging flush.
+        /// Aspect to mark methods to still crash stella when an exception is thrown and it has an exception swallower
         /// </summary>
         [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
         public class UpsetStomach : Attribute;
@@ -144,17 +159,17 @@ namespace Cat
         /// <summary>
         /// Marks methods for logging execution time.
         /// </summary>
-        [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
+        [AttributeUsage(AttributeTargets.Method | AttributeTargets.Constructor, AllowMultiple = false)]
         public class RecordTime : Attribute;
 
         /// <summary>
-        /// Marks methods for logging execution time.
+        /// Marks methods for printing the error statement to STELLA's interface
         /// </summary>
         [AttributeUsage(AttributeTargets.Method | AttributeTargets.Constructor, AllowMultiple = false)]
         public class InterfaceNotice : Attribute;
 
         /// <summary>
-        /// Aspect for swallowing exceptions in asynchronous methods without unhandled exceptions propagating.
+        /// Aspect for swallowing exceptions in asynchronous methods without unhandled exceptions propagating and thus causing tyjhe whole thing to crash
         /// </summary>
         [Aspect(Scope.Global)]
         [Injection(typeof(AsyncExceptionSwallower))]
@@ -191,7 +206,7 @@ namespace Cat
                 }
                 else
                 {
-                    Cat.Logging.Log("[CRITICALLY FATAL ERROR] Asynchronous Exception Swallower attached to a non-async method. Please submit a bug report and attach this log!");
+                    Cat.Logging.Log(["[CRITICALLY FATAL ERROR] Asynchronous Exception Swallower attached to a non-async method. Please submit a bug report and attach this log!"], false);
                     Task.Run(async () => await Cat.Logging.FullFlush()).GetAwaiter().GetResult();
                     throw new InvalidOperationException("Asynchronous Exception Swallower attached to a non-async method.");
                 }
@@ -260,7 +275,7 @@ namespace Cat
             private static object HandleException(Exception ex, MethodBase method, Type returnType)
             {
                 var capturedException = ExceptionDispatchInfo.Capture(ex);
-                Cat.Logging.LogError(ex);
+                Cat.Logging.LogError(ex, extendedinfo: false);
                 if (method.IsDefined(typeof(InterfaceNotice), false))
                 {
                     Catowo.Interface.AddTextLogR($"Error caught while executing {method.DeclaringType?.FullName?.Replace('+', '.')}.{method.Name}", RED);
@@ -284,7 +299,7 @@ namespace Cat
                 }
                 else
                 {
-                    Cat.Logging.Log("[CRITICALLY FATAL ERROR] Asynchronous Exception Swallower tried to consume unexpected return type... this should never happen... please make a bug report and submit this log.");
+                    Cat.Logging.Log(["[CRITICALLY FATAL ERROR] Asynchronous Exception Swallower tried to consume unexpected return type... this should never happen... please make a bug report and submit this log."], false);
                     Task.Run(async () => await Cat.Logging.FullFlush()).GetAwaiter().GetResult();
                     throw new InvalidOperationException("Unexpected return type for async method.");
                 }
@@ -311,4 +326,5 @@ namespace Cat
             }
         }
     }
+    #pragma warning restore CA1822
 }
