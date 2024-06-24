@@ -16,8 +16,7 @@ namespace Cat
         [CAspects.ConsumeException]
         internal static bool PlayAudio()
         {
-            string entry = commandstruct?.Parameters[0][0] as string;
-            if (entry == null)
+            if (commandstruct?.Parameters[0][0] is not string para1)
             {
                 Logging.Log("Expected string but parsing failed and returned either a null command struct or a null entry, please submit a bug report.");
                 Interface.AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
@@ -25,13 +24,13 @@ namespace Cat
             }
             try
             {
-                if (string.IsNullOrWhiteSpace(entry) || !ValidateFile(entry))
+                if (string.IsNullOrWhiteSpace(para1) || !ValidateFile(para1))
                 {
-                    Logging.Log($"Invalid or inaccessible file path: {entry}");
-                    Interface.AddTextLog($"Invalid or inaccessible file path: {entry}", RED);
+                    Logging.Log($"Invalid or inaccessible file path: {para1}");
+                    Interface.AddTextLog($"Invalid or inaccessible file path: {para1}", RED);
                     return false;
                 }
-                Logging.Log($"Attempting to play audio file: {entry}");
+                Logging.Log($"Attempting to play audio file: {para1}");
 
                 if (WavePlayer != null)
                 {
@@ -41,7 +40,7 @@ namespace Cat
                 }
                 Logging.Log("Creating Waveout and Audio file reader objects...");
                 WavePlayer = new WaveOut();
-                AFR = new AudioFileReader(entry);
+                AFR = new AudioFileReader(para1);
                 WavePlayer.Init(AFR);
 
                 WavePlayer.PlaybackStopped += (s, e) =>
@@ -62,7 +61,7 @@ namespace Cat
                 WavePlayer.Play();
 
                 Logging.Log("Audio playback started successfully.");
-                Interface.AddLog($"Playing {entry}");
+                Interface.AddLog($"Playing {para1}");
             }
             catch (Exception ex)
             {
@@ -73,39 +72,43 @@ namespace Cat
             return true;
         }
 
+        /// <summary>
+        /// Tutorial for the play audio command
+        /// </summary>
+        /// <returns></returns>
         [CAspects.Logging]
         [CAspects.AsyncExceptionSwallower]
         internal static async Task TPlayAudio()
         {
-            ClaraHerself.Fading = false;
-            ClaraHerself.HaveOverlay = false;
-            ClaraHerself.CleanUp = false;
-            ClaraHerself.Custom = [
+            StellaHerself.Fading = false;
+            StellaHerself.HaveOverlay = false;
+            StellaHerself.CleanUp = false;
+            StellaHerself.Custom = [
                 "Command description:\n\""
-            + (string)Interface.
+            + Interface.
                 CommandProcessing
                 .Cmds[Interface
                     .CommandProcessing
                     .cmdmap["play audio"]
-                ]["desc"]
+                ].desc
             + "\"",
             "This command plays an audio file on your system (yes, there are no ads :p). It will be expanded for looping, on the spot changing, overlaying and marco-binding, but those come later.",
             "For now, lets show you how to use it!\nI'll download a song, I mean audio sample for us to try it with, please hold..."
             ];
-            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
-            var b = await ClaraHerself.TCS.Task;
-            if (!b) return;
+            StellaHerself.RunStella(StellaHerself.Mode.Custom, Catowo.inst.canvas);
+            var continu = await StellaHerself.TCS.Task;
+            if (!continu) return;
             string path = Path.Combine(ExternalDownloadsFolder, "copied_city.mp3");
             Helpers.ExternalDownloading.FromGDrive(CopiedCityMP3, path);
             await Helpers.ExternalDownloading.TCS.Task;
-            ClaraHerself.Custom = [
+            StellaHerself.Custom = [
             "Alright sweet, you now have a copy of the 'Copied City' theme from NieR: Automata, a great game you should try~",
             $"It's been downloaded to {path}",
             $"Lets play it by running 'play audio ;{path}'"
             ];
-            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
-            b = await ClaraHerself.TCS.Task;
-            if (!b) return;
+            StellaHerself.RunStella(StellaHerself.Mode.Custom, Catowo.inst.canvas);
+            continu = await StellaHerself.TCS.Task;
+            if (!continu) return;
             Interface.CommandProcessing.ProcessCommand($"play audio ;{path}");
         }
     }

@@ -10,24 +10,25 @@ namespace Cat
 {
     internal static partial class Commands
     {
+        /// <summary>
+        /// Even if you were eaten, there will still be a two way out.
+        /// </summary>
+        /// <returns></returns>
+        [CAspects.Logging]
+        [CAspects.ConsumeException]
         internal static bool Define()
         {
-            string entry = (string)(commandstruct?.Parameters[0][0]);
-            if (entry == null || string.IsNullOrWhiteSpace(entry))
+            string para1 = (string)(commandstruct?.Parameters[0][0]);
+            if (para1 == null || string.IsNullOrWhiteSpace(para1))
             {
                 Logging.Log("Expected int but parsing failed and returned either a null command struct or a null entry, please submit a bug report.");
                 Interface.AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
                 return false;
             }
-            (bool? b, Dictionary<string, dynamic>? d) = Task.Run(async () => await Helpers.HTMLStuff.DefineWord(entry)).Result;
-            if (b == false)
-            {
+            (bool? b, Dictionary<string, dynamic>? d) = Task.Run(async () => await Helpers.HTMLStuff.DefineWord(para1)).Result;
+            if (b == false || d == null)
                 return false;
-            }
-            if (d == null)
-            {
-                return false;
-            }
+            // Debugging stuff for getting the raw processed value in case it crashed for further analysis of the issue
 #if SAVETOCLIPBOARD
                                 string deser = Newtonsoft.Json.JsonConvert.SerializeObject(d, Formatting.Indented);
                                 try
@@ -41,6 +42,7 @@ namespace Cat
                                 }
 #endif
             string message;
+            // If there was a successful return from the API, format it nicely and display it
             if (b == true)
             {
                 StringBuilder sb = new($"<t>{d["word"]}</t>  (<q>{(d.TryGetValue("phonetic", out _) ? d["phonetic"] : "Phonetic unavailable")}</q>)\n<s>Meanings</s>\n");
@@ -98,29 +100,33 @@ namespace Cat
             return true;
         }
 
+        /// <summary>
+        /// Tutorial for the define command
+        /// </summary>
+        /// <returns></returns>
         [CAspects.Logging]
         [CAspects.AsyncExceptionSwallower]
         internal static async Task TDefine()
         {
-            ClaraHerself.Fading = false;
-            ClaraHerself.HaveOverlay = false;
-            ClaraHerself.CleanUp = false;
-            ClaraHerself.Custom = [
+            StellaHerself.Fading = false;
+            StellaHerself.HaveOverlay = false;
+            StellaHerself.CleanUp = false;
+            StellaHerself.Custom = [
                 "Command description:\n\""
-                    + (string)Interface.
+                    + Interface.
                         CommandProcessing
                         .Cmds[Interface
                             .CommandProcessing
                             .cmdmap["define"]
-                        ]["desc"]
+                        ].desc
                     + "\"",
                     "This command gives you the full definition of an inputted word.",
                     "If you have the Urban Dictionary option on (see 'change settings'), it'll use that if the word isnt found in a proper english dictionary.",
                     "I'll show you how to use it: here's what running 'define ;absquatulate' returns..."
             ];
-            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
-            var b = await ClaraHerself.TCS.Task;
-            if (!b) return;
+            StellaHerself.RunStella(StellaHerself.Mode.Custom, Catowo.inst.canvas);
+            var continu = await StellaHerself.TCS.Task;
+            if (!continu) return;
             Interface.CommandProcessing.ProcessCommand("define ;absquatulate");
 
         }

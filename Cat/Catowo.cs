@@ -256,18 +256,22 @@ namespace Cat
             }
         }
 
-        private void ChangeScreen(int value)
+        private async Task ChangeScreen(int value)
         {
-            ToggleInterface(false);
+            ToggleInterface(true);
+            await UIToggleTCS.Task;
             Screen screen = System.Windows.Forms.Screen.AllScreens[value];
+            _screen_ = value;
+            await Task.Delay(100);
             var (width, height, _) = Helpers.ScreenSizing.GetAdjustedScreenSize(screen);
             Top = screen.Bounds.Top;
             Left = screen.Bounds.Left;
             Width = width;
             Height = height;
             Logging.Log("New Screen Params: ", Top, Left, Width, Height);
-            ToggleInterface(false);
-            _screen_ = value;
+            ToggleInterface(true);
+            await UIToggleTCS.Task;
+            return;
         }
 
         #region Low Levels
@@ -663,7 +667,7 @@ namespace Cat
                 editedstyle = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
                 Logging.Log($"Set Win Style of Handle {hwnd} from {originalStyle:X} ({originalStyle:B}) [{originalStyle}] to {editedstyle:X} ({editedstyle:B}) [{editedstyle}]");
                 if (!Program.hadUserData)
-                    Objects.ClaraHerself.RunClara(ClaraHerself.Mode.Introduction, canvas);
+                    Objects.StellaHerself.RunStella(StellaHerself.Mode.Introduction, canvas);
             };
         }
 
@@ -806,6 +810,7 @@ namespace Cat
                 Backg = InitBackg();
                 InitializeComponents();
                 AnimateUp();
+                Loaded += (_, _) => inputTextBox?.Focus();
                 //SetBottom(this, 0);
                 //MouseMove += (s, e) => Catowo.inst.ToggleInterface();
             }
@@ -1381,461 +1386,465 @@ namespace Cat
                 /// - <c>shortcut</c>: A string representing the keyboard shortcut associated with the command, if any.
                 /// Commands are used throughout the application to implement functionality accessible through the user interface or keyboard shortcuts.
                 /// </remarks>
-                internal static Dictionary<int, Dictionary<string, object>> Cmds { get; } = new()
+                internal static Dictionary<int, CommandSchema> Cmds { get; } = new()
                 {
                     {
-                        0, new Dictionary<string, object>
-                        {
-                            { "desc", "Shuts down the entire program" },
-                            { "params", "" },
-                            { "function", (Func<Task<bool>>)Cat.Commands.Shutdown },
-                            { "shortcut", "Shift Q E"},
-                            { "type", 0 }
-                        }
+                        0, new CommandSchema(
+                            "Shuts down the entire program",
+                            "",
+                            (Func<Task<bool>>)Cat.Commands.Shutdown,
+                            Commands.TShutdown,
+                            "Shift Q E",
+                            0
+                        )
                     },
                     {
-                        1, new Dictionary<string, object>
-                        {
-                            { "desc", "Closes the interface, the shortcut will open it." },
-                            { "params", "" },
-                            { "function", (Func<bool>)(() => { return Catowo.inst.ToggleInterface(); }) },
-                            { "shortcut", "Shift Q I"},
-                            { "type", 0 }
-                        }
+                        1, new CommandSchema(
+                            "Closes the interface, the shortcut will open it.",
+                            "",
+                            (() => { return Catowo.inst.ToggleInterface(); }),
+                            null,
+                            "Shift Q I",
+                            0
+                        )
                     },
                     {
-                        2, new Dictionary<string, object>
-                        {
-                            { "desc", "Shifts the interface screen to another monitor, takes in a number corresponding to the monitor you want it to shift to (1 being primary)" },
-                            { "params", "screennum{int}" },
-                            { "function", (Func<bool>)Cat.Commands.ChangeScreen },
-                            { "shortcut", "Shifts Q (number)"},
-                            { "type", 0 }
-                        }
+                        2, new CommandSchema(
+                            "Shifts the interface screen to another monitor, takes in a number corresponding to the monitor you want it to shift to (1 being primary)",
+                            "screennum{int}",
+                            Cat.Commands.ChangeScreen,
+                            Commands.TChangeScreen,
+                            "Shift Q (number)",
+                            0
+                        )
                     },
                     {
-                        3, new Dictionary<string, object>
-                        {
-                            { "desc", "Takes a screenshot of the screen, without the interface. -2 for a stiched image of all screens, -1 for individual screen pics, (number) for an individual screen, leave empty for the current screen Kitty is running on.\nE.g: screenshot ;-2" },
-                            { "params", "[mode{int}]" },
-                            { "function", (Func<Task<bool>>)Cat.Commands.Screenshot },
-                            { "tutorial", (Func<Task>)Commands.TScreenshot },
-                            { "shortcut", "Shifts Q S"},
-                            { "type", 0 }
-                        }
+                        3, new CommandSchema(
+                            "Takes a screenshot of the screen, without the interface. -2 for a stitched image of all screens, -1 for individual screen pics, (number) for an individual screen, leave empty for the current screen Kitty is running on.\nE.g: screenshot ;-2",
+                            "[mode{int}]",
+                            (Func<Task<bool>>)Cat.Commands.Screenshot,
+                            Commands.TScreenshot,
+                            "Shift Q S",
+                            0
+                        )
                     },
                     {
-                        4, new Dictionary<string, object>
-                         {
-                            { "desc", "Begins capturing screen as a video, mutlimonitor support coming soon. Closes the interface when ran." },
-                            { "params", "" },
-                            { "function", (Func<bool>)Cat.Commands.StartRecording },
-                            { "shortcut", "Shifts Q R"},
-                            { "type", 2 }
-                         }
+                        4, new CommandSchema(
+                            "Begins capturing screen as a video, multi-monitor support coming soon. Closes the interface when run.",
+                            "",
+                            Cat.Commands.StartRecording,
+                            null,
+                            "Shift Q R",
+                            2
+                        )
                     },
                     {
-                        5, new Dictionary<string, object>
-                        {
-                            { "desc", "Starts capturing system audio, with optional audio input (0/exclusive, 1/inclusive).\n- Exclusive means only audio input, inclusive means audio input and system audio\nE.g: capture audio ;exclusive\nE.g: capture audio ;1" },
-                            { "params", "[mode{int/string}]" },
-                            { "function", (Func<bool>)Cat.Commands.StartAudioRecording },
-                            { "shortcut", ""},
-                            { "type", 2 }
-                        }
+                        5, new CommandSchema(
+                            "Starts capturing system audio, with optional audio input (0/exclusive, 1/inclusive).\n- Exclusive means only audio input, inclusive means audio input and system audio\nE.g: capture audio ;exclusive\nE.g: capture audio ;1",
+                            "[mode{int/string}]",
+                            Cat.Commands.StartAudioRecording,
+                            null,
+                            "",
+                            2
+                        )
                     },
                     {
-                        6, new Dictionary<string, object>
-                        {
-                            { "desc", "Stops a currently running recording session, with an optional opening of the recording location after saving (true)\nE.g: stop recording ;true" },
-                            { "params", "" },
-                            { "function", (Func<bool>)Cat.Commands.StopRecording },
-                            { "shortcut", "Shifts Q D"},
-                            { "type", 2 }
-                        }
+                        6, new CommandSchema(
+                            "Stops a currently running recording session, with an optional opening of the recording location after saving (true)\nE.g: stop recording ;true",
+                            "",
+                            Cat.Commands.StopRecording,
+                            null,
+                            "Shift Q D",
+                            2
+                        )
                     },
                     {
-                        7, new Dictionary<string, object>
-                        {
-                            { "desc", "Stops a currently running audio session, with optional opening of the file location after saving.\nE.g: stop audio ;true" },
-                            { "params", "" },
-                            { "function", (Func<bool>)Cat.Commands.StopAudioRecording },
-                            { "shortcut", ""},
-                            { "type", 2 }
-                        }
+                        7, new CommandSchema(
+                            "Stops a currently running audio session, with optional opening of the file location after saving.\nE.g: stop audio ;true",
+                            "",
+                            Cat.Commands.StopAudioRecording,
+                            null,
+                            "",
+                            2
+                        )
                     },
                     {
-                        8, new Dictionary<string, object>
-                        {
-                            { "desc", "Plays an audio file, present the filepath as an argument with optional looping.\nE.g: play audio ;C:/Downloads/Sussyaudio.mp4 ;true" },
-                            { "params", "filepath{str}, [looping{bool}]" },
-                            { "function", (Func<bool>)Cat.Commands.PlayAudio },
-                            { "shortcut", ""},
-                            { "type", 0 }
-                        }
+                        8, new CommandSchema(
+                            "Plays an audio file, present the filepath as an argument with optional looping.\nE.g: play audio ;C:/Downloads/Sussyaudio.mp4 ;true",
+                            "filepath{str}, [looping{bool}]",
+                            Cat.Commands.PlayAudio,
+                            Commands.TPlayAudio,
+                            "",
+                            0
+                        )
                     },
                     {
-                        9, new Dictionary<string, object>
-                        {
-                            { "desc", "Changes a control setting, you must specify the \nE.g: change setting ;LogAssemblies ;true\nE.g: change setting ;background ;green" },
-                            { "params", "variablename{string}, value{string}" },
-                            { "function", (Func<bool>)Cat.Commands.ChangeSettings },
-                            { "shortcut", ""},
-                            { "type", 0 }
-                        }
+                        9, new CommandSchema(
+                            "Changes a control setting, you must specify the \nE.g: change setting ;LogAssemblies ;true\nE.g: change setting ;background ;green",
+                            "variablename{string}, value{string}",
+                            Cat.Commands.ChangeSettings,
+                            Commands.TChangeSettings,
+                            "",
+                            0
+                        )
                     },
                     {
-                        10, new Dictionary<string, object>
-                        {
-                            { "desc", "Takes a 'snapshot' of a specified process and shows information like it's memory usage, cpu usage, etc.\nE.g: take process snapshot ;devenv\nE.g: take process snapshot ;9926381232" },
-                            { "params", "process{string/int}" },
-                            { "function", (Func<bool>)Cat.Commands.TakeProcessSnapshot },
-                            { "shortcut", "Shifts Q T"},
-                            { "type", 2 }
-                        }
+                        10, new CommandSchema(
+                            "Takes a 'snapshot' of a specified process and shows information like its memory usage, CPU usage, etc.\nE.g: take process snapshot ;devenv\nE.g: take process snapshot ;9926381232",
+                            "process{string/int}",
+                            Cat.Commands.TakeProcessSnapshot,
+                            null,
+                            "Shift Q T",
+                            2
+                        )
                     },
                     {
-                        11, new Dictionary<string, object>
-                        {
-                            { "desc", "Starts measuring a processes's information until stopped.\nE.g: start measuring process ;devenv" },
-                            { "params", "" },
-                            { "function", (Func<bool>)Cat.Commands.StartProcessMeasuring },
-                            { "shortcut", "Shifts Q X"},
-                            { "type", 0 }
-                        }
+                        11, new CommandSchema(
+                            "Starts measuring a process's information until stopped.\nE.g: start measuring process ;devenv",
+                            "",
+                            Cat.Commands.StartProcessMeasuring,
+                            Commands.TStartProcessMeasuring,
+                            "Shift Q X",
+                            0
+                        )
                     },
                     {
-                        12, new Dictionary<string, object>
-                        {
-                            { "desc", "Stops a currently running process measuring session, with an optional saving of the data.\nE.g: stop measuring process ;false" },
-                            { "params", "[savedata{bool}]" },
-                            { "function", (Func<bool>)Cat.Commands.StopProcessMeasuring },
-                            { "shortcut", "Shifts Q C"},
-                            { "type", 2 }
-                        }
+                        12, new CommandSchema(
+                            "Stops a currently running process measuring session, with an optional saving of the data.\nE.g: stop measuring process ;false",
+                            "[savedata{bool}]",
+                            Cat.Commands.StopProcessMeasuring,
+                            null,
+                            "Shift Q C",
+                            2
+                        )
                     },
                     {
-                        13, new Dictionary<string, object>
-                        {
-                            { "desc", "Opens the logs folder.\nE.g: open logs" },
-                            { "params", "" },
-                            { "function", (Func<bool>)Cat.Commands.OpenLogs },
-                            { "shortcut", ""},
-                            { "type", 0 }
-                        }
+                        13, new CommandSchema(
+                            "Opens the logs folder.\nE.g: open logs",
+                            "",
+                            Cat.Commands.OpenLogs,
+                            Commands.TOpenLogs,
+                            "",
+                            0
+                        )
                     },
                     {
-                        15, new Dictionary<string, object>
-                        {
-                            { "desc", "(Attempts to) Changes the cursor to the specified cursor file, specifying file path.\nE.g: change cursor ;the/path/to/your/.cur/file" },
-                            { "params", "path{string}" },
-                            { "function", (Func<bool>)Cat.Commands.ChangeCursor },
-                            { "shortcut", ""},
-                            { "type", 0 },
-                            { "tutorial", (Func<Task>)Commands.TChangeCursor }
-                        }
+                        15, new CommandSchema(
+                            "(Attempts to) Changes the cursor to the specified cursor file, specifying file path.\nE.g: change cursor ;the/path/to/your/.cur/file",
+                            "path{string}",
+                            Cat.Commands.ChangeCursor,
+                            Commands.TChangeCursor,
+                            "",
+                            0
+                        )
                     },
                     {
-                        16, new Dictionary<string, object>
-                        {
-                            { "desc", "Resets all system cursors" },
-                            { "params", "" },
-                            { "function", (Func<bool>)Cat.Commands.ResetCursor },
-                            { "shortcut", ""},
-                            { "type", 0 }
-                        }
+                        16, new CommandSchema(
+                            "Resets all system cursors",
+                            "",
+                            Cat.Commands.ResetCursor,
+                            Commands.TResetCursor,
+                            "",
+                            0
+                        )
                     },
                     {
-                        17, new Dictionary<string, object>
-                        {
-                            { "desc", "Plots a set of data, specifying file path(s) or data in the format: ;int, int, int, ... int ;int, int, int, ... int (two sets of data).\nE.g: plot ;path/to/a/csv/with/two/lines/of/data\nE.g: plot ;path/to/csv/with/x_axis/data ;path/to/2nd/csv/with/y_axis/data\nE.g: plot ;1, 2, 3, 4, 5, 6 ;66, 33, 231, 53242, 564345" },
-                            { "params", "filepath{string} | filepath1{string} filepath2{string} | data1{int[]} data2{int[]}" },
-                            { "function", (Func<bool>)Cat.Commands.Plot },
-                            { "shortcut", ""},
-                            { "type", 2 }
-                        }
+                        17, new CommandSchema(
+                            "Plots a set of data, specifying file path(s) or data in the format: ;int, int, int, ... int ;int, int, int, ... int (two sets of data).\nE.g: plot ;path/to/a/csv/with/two/lines/of/data\nE.g: plot ;path/to/csv/with/x_axis/data ;path/to/2nd/csv/with/y_axis/data\nE.g: plot ;1, 2, 3, 4, 5, 6 ;66, 33, 231, 53242, 564345",
+                            "filepath{string} | filepath1{string} filepath2{string} | data1{int[]} data2{int[]}",
+                            Cat.Commands.Plot,
+                            null,
+                            "",
+                            2
+                        )
                     },
                     {
-                        18, new Dictionary<string, object>
-                        {
-                            { "desc", "Saves a currently open plot (Plot must be open) to a file.\nE.g: save plot" },
-                            { "params", "" },
-                            { "function", (Func<bool>)Cat.Commands.SavePlot },
-                            { "shortcut", ""},
-                            { "type", 2 }
-                        }
+                        18, new CommandSchema(
+                            "Saves a currently open plot (Plot must be open) to a file.\nE.g: save plot",
+                            "",
+                            Cat.Commands.SavePlot,
+                            null,
+                            "",
+                            2
+                        )
                     },
                     {
-                        19, new Dictionary<string, object>
-                        {
-                            { "desc", "Shows a random kitty :3" },
-                            { "params", "" },
-                            { "function", (Func<bool>)Cat.Commands.RandomCatPicture },
-                            { "shortcut", "Shifts Q K"},
-                            { "type", 0 }
-                        }
+                        19, new CommandSchema(
+                            "Shows a random kitty :3",
+                            "",
+                            Cat.Commands.RandomCatPicture,
+                            Commands.TRandomCatPicture,
+                            "Shift Q K",
+                            0
+                        )
                     },
                     {
-                        20, new Dictionary<string, object>
-                        {
-                            { "desc", "Shows a list of commands, specific command info or general info.\nE.g: help\nE.g: help ;commands\nE.g:help ;plot" },
-                            { "params", "[cmdname{string}]" },
-                            { "function", (Func<bool>)Cat.Commands.Help },
-                            { "shortcut", ""},
-                            { "type", 0 }
-                        }
+                        20, new CommandSchema(
+                            "Shows a list of commands, specific command info or general info.\nE.g: help\nE.g: help ;commands\nE.g:help ;plot",
+                            "[cmdname{string}]",
+                            Cat.Commands.Help,
+                            Commands.THelp,
+                            "",
+                            0
+                        )
                     },
                     {
-                        21, new Dictionary<string, object>
-                        {
-                            { "desc", "Displays either all screen information, or just a specified one.\ndsi ;1" },
-                            { "params", "[screennumber{int}]" },
-                            { "function", (Func<bool>)Cat.Commands.DisplayScreenInformation },
-                            { "shortcut", ""},
-                            { "type", 1 }
-                        }
+                        21, new CommandSchema(
+                            "Displays either all screen information, or just a specified one.\ndsi ;1",
+                            "[screennumber{int}]",
+                            Cat.Commands.DisplayScreenInformation,
+                            Commands.TDSI,
+                            "",
+                            1
+                        )
                     },
                     {
-                        22, new Dictionary<string, object>
-                        {
-                            { "desc", "Opens the live logger. \nE.g:sll" },
-                            { "params", "" },
-                            { "function", (Func<bool>)Cat.Commands.OpenLogger},
-                            { "shortcut", "Shifts Q ,"},
-                            { "type", 0 }
-                        }
+                        22, new CommandSchema(
+                            "Opens the live logger. \nE.g:sll",
+                            "",
+                            Cat.Commands.OpenLogger,
+                            Commands.TOpenLogger,
+                            "Shift Q ,",
+                            0
+                        )
                     },
                     {
-                        23, new Dictionary<string, object>
-                        {
-                            { "desc", "Closes an open live logger\nE.g: cll" },
-                            { "params", "" },
-                            { "function", (Func<bool>)Cat.Commands.CloseLogger },
-                            { "shortcut", "Shifts Q ."},
-                            { "type", 0 }
-                        }
+                        23, new CommandSchema(
+                            "Closes an open live logger\nE.g: cll",
+                            "",
+                            Cat.Commands.CloseLogger,
+                            Commands.TCloseLogger,
+                            "Shift Q .",
+                            0
+                        )
                     },
                     {
-                        24, new Dictionary<string, object>
-                        {
-                            { "desc", "Aborts a currently playing audio file." },
-                            { "params", "" },
-                            { "function", (Func<bool>)Cat.Commands.StopAudio },
-                            { "shortcut", "Shifts Q V"},
-                            { "type", 0 }
-                        }
+                        24, new CommandSchema(
+                            "Aborts a currently playing audio file.",
+                            "",
+                            Cat.Commands.StopAudio,
+                            Commands.TStopAudio,
+                            "Shift Q V",
+                            0
+                        )
                     },
                     {
-                        25, new Dictionary<string, object>
-                        {
-                            { "desc", "Prints the interface element details" },
-                            { "params", "" },
-                            { "function", (Func<bool>)Cat.Commands.PrintElementDetails },
-                            { "shortcut", ""},
-                            { "type", 1 }
-                        }
+                        25, new CommandSchema(
+                            "Prints the interface element details",
+                            "",
+                            Cat.Commands.PrintElementDetails,
+                            null,
+                            "",
+                            1
+                        )
                     },
                     {
-                        26, new Dictionary<string, object>
-                        {
-                            { "desc", "Forces a logging flush" },
-                            { "params", "" },
-                            { "function", (Func<Task<bool>>)Cat.Commands.FML },
-                            { "shortcut", "Shifts Q F"},
-                            { "type", 0 }
-                        }
+                        26, new CommandSchema(
+                            "Forces a logging flush",
+                            "",
+                            (Func<Task<bool>>)Cat.Commands.FML,
+                            Commands.TFlushLogs,
+                            "Shift Q F",
+                            0
+                        )
                     },
                     {
-                        27, new Dictionary<string, object>
-                        {
-                            { "desc", "Downloads exprs" },
-                            { "params", "processname{string}" },
-                            { "function", (Func<Task<bool>>)Cat.Commands.DEP },
-                            { "shortcut", ""},
-                            { "type", 0 }
-                        }
+                        27, new CommandSchema(
+                            "Downloads exprs",
+                            "processname{string}",
+                            (Func<Task<bool>>)Cat.Commands.DEP,
+                            Commands.TDEP,
+                            "",
+                            0
+                        )
                     },
                     {
-                        28, new Dictionary<string, object>
-                        {
-                            { "desc", "Generates a progress bar test" },
-                            { "params", "" },
-                            { "function", (Func<bool>)Cat.Commands.GPT },
-                            { "shortcut", ""},
-                            { "type", 1 }
-                        }
+                        28, new CommandSchema(
+                            "Generates a progress bar test",
+                            "",
+                            Cat.Commands.GPT,
+                            null,
+                            "",
+                            1
+                        )
                     },
                     {
-                        29, new Dictionary<string, object>
-                        {
-                            { "desc", "Prints all user settings in the format:\n[Section]\n  [Key]: [Value]" },
-                            { "params", "" },
-                            { "function", (Func<bool>)Cat.Commands.ShowSettings },
-                            { "shortcut", ""},
-                            { "type", 0 }
-                        }
+                        29, new CommandSchema(
+                            "Prints all user settings in the format:\n[Section]\n  [Key]: [Value]",
+                            "",
+                            Cat.Commands.ShowSettings,
+                            Commands.TShowSettings,
+                            "",
+                            0
+                        )
                     },
                     {
-                        30, new Dictionary<string, object>
-                        {
-                            { "desc", "Loads a specified cursor preset" },
-                            { "params", "listname{string}, [persistent{bool}]" },
-                            { "function", (Func<bool>)Cat.Commands.LoadCursorPreset },
-                            { "shortcut", ""},
-                            { "type", 0 }
-                        }
+                        30, new CommandSchema(
+                            "Loads a specified cursor preset",
+                            "listname{string}, [persistent{bool}]",
+                            Cat.Commands.LoadCursorPreset,
+                            Commands.TLoadCursorPreset,
+                            "",
+                            0
+                        )
                     },
                     {
-                        31, new Dictionary<string, object>
-                        {
-                            { "desc", "Creates a new cursor preset" },
-                            { "params", "listname{string}" },
-                            { "function", (Func<bool>)Cat.Commands.AddCursorPreset },
-                            { "shortcut", ""},
-                            { "type", 0 },
-                            { "tutorial", (Func<Task>)Commands.TAddCursorPreset}
-                        }
+                        31, new CommandSchema(
+                            "Creates a new cursor preset",
+                            "listname{string}",
+                            Cat.Commands.AddCursorPreset,
+                            Commands.TAddCursorPreset,
+                            "",
+                            0
+                        )
                     },
                     {
-                        32, new Dictionary<string, object>
-                        {
-                            { "desc", "Adds a cursor to a preset" },
-                            { "params", "preset{string}, cursorid{string}, filepath{string}" },
-                            { "function", (Func<bool>)Cat.Commands.AddCursorToPreset },
-                            { "shortcut", ""},
-                            { "type", 0 },
-                            { "tutorial", (Func<Task>)Commands.TAddCursorToPreset}
-                        }
+                        32, new CommandSchema(
+                            "Adds a cursor to a preset",
+                            "preset{string}, cursorid{string}, filepath{string}",
+                            Cat.Commands.AddCursorToPreset,
+                            Commands.TAddCursorToPreset,
+                            "",
+                            0
+                        )
                     },
                     {
-                        33, new Dictionary<string, object>
-                        {
-                            { "desc", "Removes a cursor from a preset" },
-                            { "params", "preset{string}, cursorid{string}" },
-                            { "function", (Func<bool>)Cat.Commands.RemoveCursorFromPreset },
-                            { "shortcut", ""},
-                            { "type", 0 }
-                        }
+                        33, new CommandSchema(
+                            "Removes a cursor from a preset",
+                            "preset{string}, cursorid{string}",
+                            Cat.Commands.RemoveCursorFromPreset,
+                            null,
+                            "",
+                            0
+                        )
                     },
                     {
-                        34, new Dictionary<string, object>
-                        {
-                            { "desc", "Lists all presets, or optionally all cursors changed in a preset" },
-                            { "params", "[preset{string}]" },
-                            { "function", (Func<bool>)Cat.Commands.ListCursorPreset },
-                            { "shortcut", ""},
-                            { "type", 0 }
-                        }
+                        34, new CommandSchema(
+                            "Lists all presets, or optionally all cursors changed in a preset",
+                            "[preset{string}]",
+                            Cat.Commands.ListCursorPreset,
+                            Commands.TListCursorPreset,
+                            "",
+                            0
+                        )
                     },
                     {
-                        35, new Dictionary<string, object>
-                        {
-                            { "desc", "Opens the log editing GUI" },
-                            { "params", "" },
-                            { "function", (Func<bool>)Cat.Commands.OpenLogEditor},
-                            { "shortcut", ""},
-                            { "type", 0 }
-                        }
+                        35, new CommandSchema(
+                            "Opens the log editing GUI",
+                            "",
+                            Cat.Commands.OpenLogEditor,
+                            Commands.TOpenLogEditor,
+                            "",
+                            0
+                        )
                     },
                     {
-                        36, new Dictionary<string, object>
-                        {
-                            { "desc", "Restarts the application asking for elevation (admin)" },
-                            { "params", "" },
-                            { "function", (Func<bool>)Cat.Commands.KillMyselfAndGetGodPowers},
-                            { "shortcut", ""},
-                            { "type", 0 }
-                        }
+                        36, new CommandSchema(
+                            "Restarts the application asking for elevation (admin)",
+                            "",
+                            Cat.Commands.KillMyselfAndGetGodPowers,
+                            Commands.TKillMyselfAndGetGodPowers,
+                            "",
+                            0
+                        )
                     },
                     {
-                        37, new Dictionary<string, object>
-                        {
-                            { "desc", "[DEBUG] Throws an error" },
-                            { "params", "" },
-                            { "function", (Func<bool>)Cat.Commands.ThrowError},
-                            { "shortcut", ""},
-                            { "type", 0 }
-                        }
+                        37, new CommandSchema(
+                            "[DEBUG] Throws an error",
+                            "",
+                            Cat.Commands.ThrowError,
+                            null,
+                            "",
+                            0
+                        )
                     },
                     {
-                        38, new Dictionary<string, object>
-                        {
-                            { "desc", "Activates voice recognition" },
-                            { "params", "" },
-                            { "function", (Func<bool>)Cat.Commands.AV},
-                            { "shortcut", ""},
-                            { "type", 0 },
-                            { "tutorial", (Func<Task>)Commands.TAV }
-                        }
+                        38, new CommandSchema(
+                            "Activates voice recognition",
+                            "",
+                            Cat.Commands.AV,
+                            Commands.TAV,
+                            "",
+                            0
+                        )
                     },
                     {
-                        39, new Dictionary<string, object>
-                        {
-                            { "desc", "Closes the log editor" },
-                            { "params", "" },
-                            { "function", (Func<bool>)Cat.Commands.CLE},
-                            { "shortcut", ""},
-                            { "type", 0 }
-                        }
+                        39, new CommandSchema(
+                            "Closes the log editor",
+                            "",
+                            Cat.Commands.CLE,
+                            Commands.TCLE,
+                            "",
+                            0
+                        )
                     },
                     {
-                        40, new Dictionary<string, object>
-                        {
-                            { "desc", "Defines a word using the DictionaryAPI or the UrbanDictionaryAPI (if allowed)" },
-                            { "params", "word{string}" },
-                            { "function", (Func<bool>)Cat.Commands.Define},
-                            { "shortcut", ""},
-                            { "type", 0 }
-                        }
+                        40, new CommandSchema(
+                            "Defines a word using the DictionaryAPI or the UrbanDictionaryAPI (if allowed)",
+                            "word{string}",
+                            Cat.Commands.Define,
+                            Commands.TDefine,
+                            "",
+                            0
+                        )
                     },
                     {
-                        41, new Dictionary<string, object>
-                        {
-                            { "desc", "Runs the tutorial sequence for a given command.\nRun it with 'tutorial ;commandName' where 'commandName' is the name of any command." },
-                            { "params", "commandname{string}" },
-                            { "function", (Func<bool>)Cat.Commands.Tutorial},
-                            { "shortcut", ""},
-                            { "type", 0 }
-                        }
+                        41, new CommandSchema(
+                            "Runs the tutorial sequence for a given command.\nRun it with 'tutorial ;commandName' where 'commandName' is the name of any command.",
+                            "commandname{string}",
+                            Cat.Commands.Tutorial,
+                            Commands.TTutorial,
+                            "",
+                            0
+                        )
                     },
                     {
-                        42, new Dictionary<string, object>
-                        {
-                            { "desc", "Reads a saved object from a data file" },
-                            { "params", "filepath {string}, objectname{string}" },
-                            { "function", (Func<bool>)Commands.ReadObject},
-                            { "shortcut", ""},
-                            { "type", 0 }
-                        }
+                        42, new CommandSchema(
+                            "Reads a saved object from a data file",
+                            "filepath {string}, objectname{string}",
+                            Commands.ReadObject,
+                            Commands.TReadObject,
+                            "",
+                            0
+                        )
                     },
                     {
-                        43, new Dictionary<string, object>
-                        {
-                            { "desc", "[DEBUG] Prints the Raw BinaHex and Translation of a binary file" },
-                            { "params", "filename{string}" },
-                            { "function", (Func<bool>)Commands.PRB},
-                            { "shortcut", ""},
-                            { "type", 1}
-                        }
+                        43, new CommandSchema(
+                            "[DEBUG] Prints the Raw BinaHex and Translation of a binary file",
+                            "filename{string}",
+                            Commands.PRB,
+                            null,
+                            "",
+                            1
+                        )
                     },
                     {
-                        46, new Dictionary<string, object>
-                        {
-                            { "desc", "Toggles Cursor effects!" },
-                            { "params", "" },
-                            { "function", (Func<bool>)(() =>
+                        46, new CommandSchema(
+                            "Toggles Cursor effects!",
+                            "",
+                            (() =>
                             {
                                 CursorEffects.Toggle();
                                 Catowo.inst.ToggleInterface();
                                 return true;
-                            }) },
-                            { "shortcut", ""},
-                            { "type", 0}
-                        }
+                            }),
+                            null,
+                            "",
+                            0
+                        )
                     }
                 };
-                
-                internal readonly record struct CommandSchema(string desc, string parameters, Delegate function, Func<Task<bool>> tutorial, string shortcut, int type);
+
+                /// <summary>
+                /// Structure to hold the commands for indexing 
+                /// </summary>
+                /// <param name="desc">The description of the command</param>
+                /// <param name="parameters">The parameters the command accepts</param>
+                /// <param name="function">The actual function of the command</param>
+                /// <param name="tutorial">The tutorial function of the command</param>
+                /// <param name="shortcut">The shortcut (if any) for the command to be executed with</param>
+                /// <param name="type">Whether its complete, in dev or just a debug command</param>
+                internal readonly record struct CommandSchema(string desc, string parameters, Delegate function, Delegate tutorial, string shortcut, int type);
 
                 /// <summary>
                 /// Navigates to the previous command in the history queue and displays it in the input text box.
@@ -1901,7 +1910,7 @@ namespace Cat
                     if (cmdmap.TryGetValue(call, out int value))
                     {
                         int index = value;
-                        Dictionary<string, object> metadata = Cmds[index];
+                        CommandSchema metadata = Cmds[index];
                         var parts = cmdtext.Split(';');
                         if (parts.Length > 1)
                         {
@@ -1929,9 +1938,9 @@ namespace Cat
                             Interface.AddTextLog(error_message, RED);
 
                         bool? result = null;
-                        if (metadata.TryGetValue("function", out var actionObj) && actionObj is Func<bool> func)
+                        if (metadata.function is Func<bool> func)
                             result = func();
-                        else if (metadata.TryGetValue("function", out var funcObj) && actionObj is Func<Task<bool>> tfunc)
+                        else if (metadata.function is Func<Task<bool>> tfunc)
                             result = await tfunc();
                         else
                         {
@@ -1965,7 +1974,7 @@ namespace Cat
                         // First, get the different sequences of expected parameters
                         command = null;
                         error_message = "";
-                        string metadata = CommandProcessing.Cmds[num]["params"] as string;
+                        string metadata = CommandProcessing.Cmds[num].parameters as string;
                         string call = raw.Split(";")[0].Trim();
                         // If metadata is null then something's gone wrong with extracting it from the
                         // Commands dictionary... which is really bad.

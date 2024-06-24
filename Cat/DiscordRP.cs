@@ -12,7 +12,7 @@ namespace Cat
             return new Discord.Activity
             {
                 State = "Building Version 0.15.7",
-                Details = "STELLA",
+                Details = "Stella",
                 Type = ActivityType.Streaming,
                 Timestamps =
                 {
@@ -23,7 +23,7 @@ namespace Cat
                 {
                     LargeImage = "blackhole",
                     LargeText = "Going Insane; Programmer - Level 0x12C",
-                    SmallImage = "stellav1",
+                    SmallImage = "Stellav1",
                     SmallText = "Struggling with a real girlfriend so I'm building my own :3",
                 },
                 Party =

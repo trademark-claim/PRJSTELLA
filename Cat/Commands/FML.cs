@@ -10,6 +10,7 @@ namespace Cat
         /// Asynchronously flushes the log queue, useful for ensuring that all pending log entries are processed and stored as intended, typically before shutdown or when debugging.
         /// </remarks>
         [CAspects.AsyncExceptionSwallower]
+        [CAspects.Logging]
         internal static async Task<bool> FML()
         {
             Interface.AddLog("Flushing Log queue...");
@@ -18,28 +19,32 @@ namespace Cat
             return true;
         }
 
+        /// <summary>
+        /// Tutorial for the flush logs command
+        /// </summary>
+        /// <returns></returns>
         [CAspects.Logging]
         [CAspects.AsyncExceptionSwallower]
         internal static async Task TFlushLogs()
         {
-            ClaraHerself.Fading = false;
-            ClaraHerself.HaveOverlay = false;
-            ClaraHerself.CleanUp = false;
-            ClaraHerself.Custom = [
+            StellaHerself.Fading = false;
+            StellaHerself.HaveOverlay = false;
+            StellaHerself.CleanUp = false;
+            StellaHerself.Custom = [
                 "Command description:\n\""
-            + (string)Interface.
+            + Interface.
                 CommandProcessing
                 .Cmds[Interface
                     .CommandProcessing
                     .cmdmap["close log editor"]
-                ]["desc"]
+                ].desc
             + "\"",
             "There's nothing much to this command, just run it and it'll flush all volatile logs to the log file for this session. Plain and simple.",
             "You can run it with 'flush logs'"
             ];
-            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
-            var b = await ClaraHerself.TCS.Task;
-            if (!b) return;
+            StellaHerself.RunStella(StellaHerself.Mode.Custom, Catowo.inst.canvas);
+            var continu = await StellaHerself.TCS.Task;
+            if (!continu) return;
             Interface.CommandProcessing.ProcessCommand("flush logs");
         }
     }

@@ -19,20 +19,20 @@ namespace Cat
         [CAspects.AsyncExceptionSwallower]
         internal static async Task TStartProcessMeasuring()
         {
-            ClaraHerself.Custom = [
+            StellaHerself.Custom = [
                 "Command description:\n\""
-            + (string)Interface.
+            + Interface.
                 CommandProcessing
                 .Cmds[Interface
                     .CommandProcessing
                     .cmdmap["close log editor"]
-                ]["desc"]
+                ].desc
             + "\"",
             "This command opens a new process measurer, just run it and it'll prompt you to enter the process you want to being measuing, and it'll automatically begin!",
             "Lets try it by running 'spm'"
             ];
-            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
-            var b = await ClaraHerself.TCS.Task;
+            StellaHerself.RunStella(StellaHerself.Mode.Custom, Catowo.inst.canvas);
+            var b = await StellaHerself.TCS.Task;
             if (!b) return;
             Interface.CommandProcessing.ProcessCommand("spm");
         }

@@ -14,18 +14,17 @@ namespace Cat
         [CAspects.Logging]
         internal static bool LoadCursorPreset()
         {
-            string entryN = commandstruct.Value.Parameters[0][0] as string;
-            if (entryN == null)
+            if (commandstruct.Value.Parameters[0][0] is not string para1)
             {
                 Logging.Log("Expected string but parsing failed and returned either a null command struct or a null entry, please submit a bug report.");
                 Interface.AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
                 return false;
             }
-            string dir = Environment.CursorsFilePath + entryN;
+            string dir = Environment.CursorsFilePath + para1;
             if (!Directory.Exists(dir))
             {
                 Logging.Log($"Directory {dir} not found.");
-                Interface.AddTextLog($"No preset with name {entryN} found", RED);
+                Interface.AddTextLog($"No preset with name {para1} found", RED);
                 return false;
             }
             string file = dir + "\\preset.CLF";
@@ -140,45 +139,49 @@ namespace Cat
                     Logging.Log($"Cursor for {cursorname} successfully changed!");
                 }
             }
-            Interface.AddLog($"{entryN} cursor preset loaded!");
+            Interface.AddLog($"{para1} cursor preset loaded!");
             return true;
         }
 
+        /// <summary>
+        /// Tutorial for the load cursor preset command
+        /// </summary>
+        /// <returns></returns>
         [CAspects.Logging]
         [CAspects.AsyncExceptionSwallower]
         internal static async Task TLoadCursorPreset()
         {
-            ClaraHerself.Fading = false;
-            ClaraHerself.HaveOverlay = false;
-            ClaraHerself.CleanUp = false;
-            ClaraHerself.Custom = [
+            StellaHerself.Fading = false;
+            StellaHerself.HaveOverlay = false;
+            StellaHerself.CleanUp = false;
+            StellaHerself.Custom = [
                 "Command description:\n\""
-            + (string)Interface.
+            + Interface.
                 CommandProcessing
                 .Cmds[Interface
                     .CommandProcessing
                     .cmdmap["lcp"]
-                ]["desc"]
+                ].desc
             + "\"",
             "This command takes in two parameters.",
             "The former parameter is the preset to load, and the latter is a persistance flag.",
             "Lets do the first parameter!"
             ];
-            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
-            var b = await ClaraHerself.TCS.Task;
-            if (!b) return;
+            StellaHerself.RunStella(StellaHerself.Mode.Custom, Catowo.inst.canvas);
+            var continu = await StellaHerself.TCS.Task;
+            if (!continu) return;
             Interface.Input = "load cursor preset";
             string dir = "cats";
             if (Directory.GetDirectories(CursorsFilePath).Length < 1)
             {
-                ClaraHerself.Custom = [
+                StellaHerself.Custom = [
                 "It seems you dont have any presets made!",
                 "I'll download one for you -- one full of cat cursors!", 
                 "If you don't want me to do this, press the up arrow and use the 'add cursor preset' and 'add cursor to preset' commands to make a preset to load!, else, press the right arrow and I'll get right to it!"
                 ];
-                await ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
-                b = await ClaraHerself.TCS.Task;
-                if (!b)
+                await StellaHerself.RunStella(StellaHerself.Mode.Custom, Catowo.inst.canvas);
+                continu = await StellaHerself.TCS.Task;
+                if (!continu)
                     return;
                 string path = Path.Combine(ExternalDownloadsFolder, "cats.zip");
                 Helpers.ExternalDownloading.FromGDrive(GatoZip, path);
@@ -188,26 +191,26 @@ namespace Cat
                 Helpers.ExternalDownloading.UnzipFile(path, CursorsFilePath);
                 await Helpers.ExternalDownloading.TCS.Task;
                 spin.Stop();
-                ClaraHerself.Custom = ["The cats have been created, moving on!"];
-                await ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
-                b = await ClaraHerself.TCS.Task;
-                if (!b)
+                StellaHerself.Custom = ["The cats have been created, moving on!"];
+                await StellaHerself.RunStella(StellaHerself.Mode.Custom, Catowo.inst.canvas);
+                continu = await StellaHerself.TCS.Task;
+                if (!continu)
                     return;
             }
             else
             {
-                ClaraHerself.Custom = [
+                StellaHerself.Custom = [
                     "Please select one of your existing presets!",
                 ];
-                await ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
-                b = await ClaraHerself.TCS.Task;
-                if (!b)
+                await StellaHerself.RunStella(StellaHerself.Mode.Custom, Catowo.inst.canvas);
+                continu = await StellaHerself.TCS.Task;
+                if (!continu)
                     return;
                 var bs = new Objects.BoxSelecter<string>([.. Directory.GetDirectories(CursorsFilePath).Select(item => item.Replace(CursorsFilePath, ""))], "Choose preset:");
                 bs.ShowDialog();
                 dir = bs.SelectedItem;
             }
-            ClaraHerself.Custom = [
+            StellaHerself.Custom = [
                     $"So, the {dir} preset, perfect!",
                     "Now we have to walk through the second parameter, persistance.",
                     "This parameter is optional, and defaults to 'false'.",
@@ -217,16 +220,16 @@ namespace Cat
                     "For now though, we'll have them non-persistant, so we don't need to input the parameter!",
                     $"Now, Lets load the {dir} preset using 'load cursor preset ;{dir}'"
                 ];
-            await ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
-            b = await ClaraHerself.TCS.Task;
-            if (!b) return;
+            await StellaHerself.RunStella(StellaHerself.Mode.Custom, Catowo.inst.canvas);
+            continu = await StellaHerself.TCS.Task;
+            if (!continu) return;
             Interface.Input = $"list cursor preset ;{dir}";
             Interface.CommandProcessing.ProcessCommand();
-            ClaraHerself.Custom = [
+            StellaHerself.Custom = [
                     "Your cursors should now be the ones from within the preset, have fun!",
                 ];
-            await ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
-            await ClaraHerself.TCS.Task;
+            await StellaHerself.RunStella(StellaHerself.Mode.Custom, Catowo.inst.canvas);
+            await StellaHerself.TCS.Task;
         }
     }
 }

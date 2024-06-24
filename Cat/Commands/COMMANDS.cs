@@ -10,25 +10,68 @@ using System.Windows.Controls;
 namespace Cat
 {
     /// <summary>
-    /// Holds all commands
+    /// Class that holds every single commamd 
     /// </summary>
     internal static partial class Commands
     {
+        /// <summary>
+        /// Interface reference link, exact same as <see cref="Catowo.Interface.inst"/>
+        /// </summary>
         internal static Interface @interface;
+        /// <summary>
+        /// Instance link to an open <see cref="LogEditor"/> window
+        /// </summary>
         private static Objects.LogEditor editor;
+        /// <summary>
+        /// Instance link to the waveplayer for audio playing
+        /// </summary>
         private static WaveOut? WavePlayer;
+        /// <summary>
+        /// Audio file reader for play audio command, used in tangent with the <see cref="WavePlayer"/>
+        /// </summary>
         private static AudioFileReader AFR;
+        /// <summary>
+        /// The data of the command to be executed / being executed, changes with <see cref="Interface.CommandProcessing.ProcessCommand(string)"/>
+        /// </summary>
         internal static Command? commandstruct;
+        /// <summary>
+        /// Whether or not to throw messages with audio clean up
+        /// </summary>
         private static bool SilentAudioCleanup = false;
+        /// <summary>
+        /// Reference to the instance of an open console
+        /// </summary>
         private static System.Windows.Window? Logger = null;
+        /// <summary>
+        /// Object to hold temporary information between methods
+        /// </summary>
         private static object TempHolder;
 
+        /// <summary>
+        /// Tells the program that, when listening for a voice command, does it need the 'Hey Stella' prefix or not.
+        /// If true, no prefix is needed.
+        /// </summary>
         private const bool NoCall = true;
 
+        /// <summary>
+        /// The command to execute
+        /// </summary>
         private static string command;
+        /// <summary>
+        /// The output feedback to the user
+        /// </summary>
         private static string mess;
+        /// <summary>
+        /// The raw audio
+        /// </summary>
         private static string rawdio;
 
+        /// <summary>
+        /// Voice command mapping, where keys are keywords and end-values are Actions that determine the command and output message
+        /// </summary>
+        /// <remarks>
+        /// " " means no second keyword needed, or a default case
+        /// </remarks>
         private static readonly Dictionary<string, Dictionary<string, Action>> commandMap = new Dictionary<string, Dictionary<string, Action>>()
         {
             {
@@ -182,22 +225,30 @@ namespace Cat
             {
                 "define", new Dictionary<string, Action>()
                 {
+                    // Yes, I could make this a command or integrate it with the existing define command
                     { "", async () => 
                     {
+                        // Split the raw audio into it's component words to ignore the replacement therapy by speechrecog.json
                         var split = rawdio.Split(' ').ToList();
+                        // Remove all whitespace and words less than 3 letters in length
                         split.RemoveAll(x => x.Length < 3 || string.IsNullOrWhiteSpace(x));
                         if (split.Count > 1)
                         {
+                            // find where the define word was
                             int defloc = split.IndexOf("define");
                             if ((defloc + 1) < split.Count)
                             {
+                                // The next word is the word to define
                                 string word = split[defloc + 1];
                                 Logging.Log($"Defining word: {word}");
+                                // Use the dict apis to get the definition as a dynamic dictionary.
                                 (bool? b, Dictionary<string, dynamic>? d) = await Helpers.HTMLStuff.DefineWord(word);
-                                if (b == false)
+                                // if it failed to get the word or the dictionary is null, it exits as an invalid attempt
+                                if (b == false || d == null)
                                     return;
-                                if (d == null)
-                                    return;
+
+                                // Debugging segment for saving the raw dictionary to the clipboard for further analysis
+
 #if SAVETOCLIPBOARD
                                 string deser = Newtonsoft.Json.JsonConvert.SerializeObject(d, Formatting.Indented);
                                 try
@@ -210,9 +261,11 @@ namespace Cat
                                     Logging.LogError(e);
                                 }
 #endif
+                                // The message to send, defined above the conditions to use after them
                                 string message;
                                 if (b == true)
                                 {
+                                    // All the fancy stuff is formatting :3
                                     StringBuilder sb = new($"<t>{d["word"]}</t>  (<q>{(d.TryGetValue("phonetic", out _) ? d["phonetic"] : "Phonetic unavailable")}</q>)\n<s>Meanings</s>\n");
 
                                     foreach (var meaning in d["meanings"])
@@ -251,6 +304,7 @@ namespace Cat
                                             sb.AppendLine();
                                         }
                                     }
+                                    // Make it smaller, vertically, so it still fits on the screen
                                     message = sb.ToString().Replace("\n\n", "\n");
                                 }
                                 else
@@ -264,26 +318,26 @@ namespace Cat
                                         .AppendLine(string.Join("\n", (d["data"] as List<Dictionary<string, string>>).Select(x => $"{x["meaning"]}\n<tab><i>{x["example"]}</i>")));
                                     message = sb.ToString();
                                 }
-                                ClaraHerself.FadeDelay = 10000;
-                                ClaraHerself.Custom = [message,];
-                                ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
+                                StellaHerself.FadeDelay = 10000;
+                                StellaHerself.Custom = [message,];
+                                StellaHerself.RunStella(StellaHerself.Mode.Custom, Catowo.inst.canvas);
                             }
                         }
                     } },
                 }
             },
-            {
-                "log", new()
-                {
-                    {  "score", () => { } },
-                }
-            }
         };
 
+        /// <summary>
+        /// Function that processes vocal input for commands
+        /// </summary>
+        /// <param name="audioi"></param>
+        [CAspects.ConsumeException]
         [CAspects.Logging]
         internal static void ProcessVoiceCommand(string audioi)
         {
             rawdio = audioi;
+            // Local function for replacing commonly misheard words for what they probably are
             static string JSONSubbing(string audiof)
             {
                 string pattern = String.Join("|", Objects.VoiceCommandHandler.Speechrecogmap.Keys);
@@ -293,9 +347,9 @@ namespace Cat
 
             string audio = JSONSubbing(" " + audioi.ToLower().Trim() + " ");
             Logging.Log("Subbed Audio: " + audio);
-            if (!audio.Contains("stella") && !VoiceCommandHandler.WasCalled && !NoCall)
+            if (!audio.Contains("Stella") && !VoiceCommandHandler.WasCalled && !NoCall)
                 return;
-            audio = audio.Replace("hey stella", "").Replace("stella", "");
+            audio = audio.Replace("hey Stella", "").Replace("Stella", "");
             if (audio.Length < 5)
                 VoiceCommandHandler.WasCalled = true;
             bool failure = true;
@@ -322,8 +376,8 @@ namespace Cat
                 Interface.CommandProcessing.ProcessCommand(command);
             if (mess != null)
             {
-                ClaraHerself.Custom = [mess,];
-                ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
+                StellaHerself.Custom = [mess,];
+                StellaHerself.RunStella(StellaHerself.Mode.Custom, Catowo.inst.canvas);
                 mess = null;
             }
             else if (failure)
@@ -334,14 +388,17 @@ namespace Cat
             commandstruct = null;
         }
 
+        /// <summary>
+        /// Just a lil quote generator :3
+        /// </summary>
         [CAspects.Logging]
         private static void GenerateQuote()
         {
             List<string> quotes = Helpers.JSONManager.ExtractValueFromJsonFile<string, List<string>>("misc.json", "quotes");
             if (quotes != null && quotes.Count > 0)
             {
-                ClaraHerself.Custom = new[] { quotes[random.Next(quotes.Count)] };
-                ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
+                StellaHerself.Custom = new[] { quotes[random.Next(quotes.Count)] };
+                StellaHerself.RunStella(StellaHerself.Mode.Custom, Catowo.inst.canvas);
             }
         }
     }

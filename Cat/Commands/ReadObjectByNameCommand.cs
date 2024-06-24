@@ -10,11 +10,15 @@ namespace Cat
 {
     internal static partial class Commands
     {
+        /// <summary>
+        /// Complex command for reading an object from a binary file
+        /// </summary>
+        /// <returns></returns>
         [CAspects.Logging]
+        [CAspects.ConsumeException]
         internal static bool ReadObject()
         {
-            string file = commandstruct.Value.Parameters[0][0] as string, entry = commandstruct.Value.Parameters[0][1].ToString();
-            if (entry == null || file == null)
+            if (commandstruct.Value.Parameters[0][1].ToString() is not string para1 || commandstruct.Value.Parameters[0][0] is not string file)
             {
                 Logging.Log("Expected int or string but parsing failed and returned either a null command struct or a null entry, please submit a bug report.");
                 Interface.AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
@@ -31,47 +35,51 @@ namespace Cat
                 }
             }
             List<object> items;
-            Dictionary<string, dynamic> decereal;
+            Dictionary<string, dynamic> de_cereal;
             using (Helpers.BinaryFileHandler bfh = new(file, true))
             {
-                bool success = bfh.FindObjectIndexByName(entry, out int index);
+                bool success = bfh.FindObjectIndexByName(para1, out int index);
                 if (!success || index == -1)
                 {
-                    Interface.AddLog($"No object with name '{entry}' found");
-                    Logging.Log($"No object with name '{entry}' found");
+                    Interface.AddLog($"No object with name '{para1}' found");
+                    Logging.Log($"No object with name '{para1}' found");
                     return false;
                 }
                 items = bfh.ExtractObjectAtIndex(index);
-                decereal = bfh.DeserialiseObject(items);
+                de_cereal = bfh.DeserialiseObject(items);
             }
             Logging.Log("Data: ");
             Logging.Log(items);
             Interface.AddLog("Data:");
-            foreach (var kvp in decereal)
+            foreach (var kvp in de_cereal)
                 Interface.AddLog($"{kvp.Key}: {Logging.ProcessMessage(kvp.Value)}");
             return true;
         }
 
+        /// <summary>
+        /// 'Tutorial' for the read object command
+        /// </summary>
+        /// <returns></returns>
         [CAspects.Logging]
         [CAspects.AsyncExceptionSwallower]
         internal static async Task TReadObject()
         {
-            ClaraHerself.Fading = false;
-            ClaraHerself.HaveOverlay = false;
-            ClaraHerself.CleanUp = false;
-            ClaraHerself.Custom = [
+            StellaHerself.Fading = false;
+            StellaHerself.HaveOverlay = false;
+            StellaHerself.CleanUp = false;
+            StellaHerself.Custom = [
                 "Command description:\n\""
-            + (string)Interface.
+            + Interface.
                 CommandProcessing
                 .Cmds[Interface
                     .CommandProcessing
                     .cmdmap["read object"]
-                ]["desc"]
+                ].desc
             + "\"",
             "Complex command for my binary storage functionality. Please refer to the 'Binary Storage' section of the user manual for details."
             ];
-            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
-            var b = await ClaraHerself.TCS.Task;
+            StellaHerself.RunStella(StellaHerself.Mode.Custom, Catowo.inst.canvas);
+            var b = await StellaHerself.TCS.Task;
             if (!b) return;
         }
     }

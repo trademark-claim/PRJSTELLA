@@ -10,14 +10,15 @@ namespace Cat
         /// Information includes device name, resolution, bounds, primary status, and bits per pixel for each screen.
         /// </remarks>
         [CAspects.ConsumeException]
+        [CAspects.Logging]
         internal static bool DisplayScreenInformation()
         {
             if (commandstruct == null || commandstruct?.Parameters[1].Length < 1)
             {
                 Logging.Log("Displaying all connected screens' information...");
-                for (int i = 0; i < System.Windows.Forms.Screen.AllScreens.Length; i++)
+                for (int i = 0; i < Screen.AllScreens.Length; i++)
                 {
-                    Screen screen = System.Windows.Forms.Screen.AllScreens[i];
+                    Screen screen = Screen.AllScreens[i];
                     if (screen != null)
                         Interface.AddLog($"Screen {i + 1}", $"   Device Name: {screen.DeviceName}", $"   Bounds: {screen.Bounds.Width}px Width, {screen.Bounds.Height}px Height, {screen.Bounds.X}x, {screen.Bounds.Y}y, {screen.Bounds.Top}px Top, {screen.Bounds.Left}px left.", $"   Is Primary: {screen.Primary}", $"   BPP: {screen.BitsPerPixel}");
                     else
@@ -27,18 +28,18 @@ namespace Cat
             }
             else
             {
-                int? entryN = (int?)(commandstruct?.Parameters[1][0]);
-                if (entryN == null)
+                int? para1 = (int?)(commandstruct?.Parameters[1][0]);
+                if (para1 == null)
                 {
                     Logging.Log("Expected int but parsing failed and returned either a null command struct or a null entry, please submit a bug report.");
                     Interface.AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
                     return false;
                 }
-                int entry = entryN.Value;
-                if (entry >= 0 && entry < System.Windows.Forms.Screen.AllScreens.Length)
+                int _para1 = para1.Value;
+                if (_para1 >= 0 && _para1 < Screen.AllScreens.Length)
                 {
-                    Screen screen = System.Windows.Forms.Screen.AllScreens[entry];
-                    Interface.AddLog($"Screen {entry + 1}", $"   Device Name: {screen.DeviceName}", $"   Bounds: {screen.Bounds.Width}px Width, {screen.Bounds.Height}px Height, {screen.Bounds.X}x, {screen.Bounds.Y}y, {screen.Bounds.Top}px Top, {screen.Bounds.Left}px left.", $"   Is Primary: {screen.Primary}", $"   BPP: {screen.BitsPerPixel}");
+                    Screen screen = Screen.AllScreens[_para1];
+                    Interface.AddLog($"Screen {_para1 + 1}", $"   Device Name: {screen.DeviceName}", $"   Bounds: {screen.Bounds.Width}px Width, {screen.Bounds.Height}px Height, {screen.Bounds.X}x, {screen.Bounds.Y}y, {screen.Bounds.Top}px Top, {screen.Bounds.Left}px left.", $"   Is Primary: {screen.Primary}", $"   BPP: {screen.BitsPerPixel}");
                 }
                 else
                 {
@@ -50,29 +51,33 @@ namespace Cat
             }
         }
 
+        /// <summary>
+        /// Ttorial for the Display screen information command
+        /// </summary>
+        /// <returns></returns>
         [CAspects.Logging]
         [CAspects.AsyncExceptionSwallower]
         internal static async Task TDSI()
         {
-            ClaraHerself.Fading = false;
-            ClaraHerself.HaveOverlay = false;
-            ClaraHerself.CleanUp = false;
-            ClaraHerself.Custom = [
+            StellaHerself.Fading = false;
+            StellaHerself.HaveOverlay = false;
+            StellaHerself.CleanUp = false;
+            StellaHerself.Custom = [
                 "Command description:\n\""
-            + (string)Interface.
+            + Interface.
                 CommandProcessing
                 .Cmds[Interface
                     .CommandProcessing
                     .cmdmap["dsi"]
-                ]["desc"]
+                ].desc
             + "\"",
             "This command has an optional parameter, being a screen index.",
             "Without any parameters, it shows the information of all connected screens.\nWith a parameter it'll only show the information for that screen",
             "You can run it with 'dsi'"
             ];
-            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
-            var b = await ClaraHerself.TCS.Task;
-            if (!b) return;
+            StellaHerself.RunStella(StellaHerself.Mode.Custom, Catowo.inst.canvas);
+            var Continu = await StellaHerself.TCS.Task;
+            if (!Continu) return;
             Interface.CommandProcessing.ProcessCommand("dsi");
         }
     }

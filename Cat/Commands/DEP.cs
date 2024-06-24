@@ -3,22 +3,20 @@ namespace Cat
     internal static partial class Commands
     {
         /// <summary>
-        /// Downloads external packages or executes processes based on the provided command parameters.
+        /// Downloads external packages based on the provided parameter.
         /// </summary>
         /// <returns>A Task&lt;bool&gt; indicating the success or failure of the operation.</returns>
-        /// <remarks>
-        /// Attempts to identify and execute a download or process execution based on the input parameters. Specific actions, such as downloading FFMPEG, are determined by the command argument.
-        /// </remarks>
         [CAspects.AsyncExceptionSwallower]
+        [CAspects.Logging]
         internal static async Task<bool> DEP()
         {
-            if (commandstruct?.Parameters[0][0] is not string entry)
+            if (commandstruct?.Parameters[0][0] is not string para1)
             {
                 Logging.Log("Expected string but parsing failed and returned either a null command struct or a null entry, please submit a bug report.");
                 Interface.AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
                 return false;
             }
-            switch (entry)
+            switch (para1)
             {
                 case "ffmpeg":
                     _ = new Helpers.EPManagement(Helpers.EPManagement.Processes.FFmpeg);
@@ -50,56 +48,56 @@ namespace Cat
         [CAspects.AsyncExceptionSwallower]
         internal static async Task TDEP()
         {
-            ClaraHerself.Fading = false;
-            ClaraHerself.HaveOverlay = false;
-            ClaraHerself.CleanUp = false;
-            ClaraHerself.Custom = [
+            StellaHerself.Fading = false;
+            StellaHerself.HaveOverlay = false;
+            StellaHerself.CleanUp = false;
+            StellaHerself.Custom = [
                 "Command description:\n\""
-            + (string)Interface.
+            + Interface.
                 CommandProcessing
                 .Cmds[Interface
                     .CommandProcessing
                     .cmdmap["download expr"]
-                ]["desc"]
+                ].desc
             + "\"",
             "This command downloads 'optionals', or 'external files' for me to use!",
             $"It downloads them to {ExternalDownloadsFolder}",
             "For example, lets download the simple cat cursor!",
             "We'll run 'download expr ;cat cursor'"
             ];
-            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
-            var b = await ClaraHerself.TCS.Task;
-            if (!b) return;
+            StellaHerself.RunStella(StellaHerself.Mode.Custom, Catowo.inst.canvas);
+            var continu = await StellaHerself.TCS.Task;
+            if (!continu) return;
             Interface.Input = "download expr ;cat cursor";
             Interface.CommandProcessing.ProcessCommand();
-            ClaraHerself.Custom = [
+            StellaHerself.Custom = [
                 $"Perfect!\nIf that worked, you should have a file called 'cat.ani' in the External Downloads folder ({ExternalDownloadsFolder}).",
                 "Lets check!",
                 ];
-            await ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
-            b = await ClaraHerself.TCS.Task;
-            if (!b) return;
+            await StellaHerself.RunStella(StellaHerself.Mode.Custom, Catowo.inst.canvas);
+            continu = await StellaHerself.TCS.Task;
+            if (!continu) return;
             Catowo.inst.ToggleInterface(true, false);
             await Catowo.inst.UIToggleTCS.Task;
             await Task.Delay(200);
-            var vks = ConvertStringToVKArray(ExternalDownloadsFolder);
-            List<ExtendedInput> exis = [new ExtendedInput(VK_LWIN, 1), new BaselineInputs.ExtendedInput(VK_R),];
-            exis.AddRange(vks.Select(k => new ExtendedInput(k, k == VK_LSHIFT ? (byte)1 : (byte)0)));
-            exis.Add(new(VK_RETURN));
-            SendKeyboardInput(75, [.. exis]);
+            var virtual_keys = ConvertStringToVKArray(ExternalDownloadsFolder);
+            List<ExtendedInput> xtended_inputs = [new ExtendedInput(VK_LWIN, 1), new BaselineInputs.ExtendedInput(VK_R),];
+            xtended_inputs.AddRange(virtual_keys.Select(k => new ExtendedInput(k, k == VK_LSHIFT ? (byte)1 : (byte)0)));
+            xtended_inputs.Add(new(VK_RETURN));
+            SendKeyboardInput(75, [.. xtended_inputs]);
             await BaselineInputs.KeyboardTCS.Task;
-            ClaraHerself.Custom = [
+            StellaHerself.Custom = [
                 $"If the folder opened correctly, you'll see a file called cat.ani",
                 "Congrats, it downloaded correctly!"
                 ];
-            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
+            StellaHerself.RunStella(StellaHerself.Mode.Custom, Catowo.inst.canvas);
             try
             {
                 Logging.Log($"Focusing back to catowo canvas: {Catowo.inst.Focus()}");
-                Logging.Log($"Focusing back to Clara bubble: {ClaraHerself.Bubble.Focus()}");
+                Logging.Log($"Focusing back to Stella bubble: {StellaHerself.Bubble.Focus()}");
             }
             catch { }
-            await ClaraHerself.TCS.Task;
+            await StellaHerself.TCS.Task;
             return;
         }
     }

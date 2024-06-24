@@ -3,7 +3,7 @@ namespace Cat
     internal static partial class Commands
     {
         /// <summary>
-        /// Initiates a test to generate a progressing test sequence.
+        /// Generates a fake progress test for debugging purposes.
         /// </summary>
         /// <returns>Always returns true, indicating the method has completed execution.</returns>
         /// <remarks>
@@ -11,6 +11,7 @@ namespace Cat
         /// </remarks>
         [CAspects.ConsumeException]
         [CAspects.CDebug]
+        [CAspects.Logging]
         internal static bool GPT()
         {
             Helpers.ProgressTesting.GenerateProgressingTest();

@@ -21,16 +21,16 @@ namespace Cat
                 Logging.Log($"{entryN} was not found in command mapping");
                 return false;
             }
-            else if (!Interface.CommandProcessing.Cmds[id].TryGetValue("tutorial", out object value))
+            else if (Interface.CommandProcessing.Cmds[id].tutorial == null)
             {
                 Interface.AddTextLog($"{entryN} command has no implemented tutorial yet, sorry!", Colors.Red);
                 Logging.Log($"Tutorial for {entryN} command not linked.");
                 return false;
             }
-            else if (value is not Func<Task> action)
+            else if (Interface.CommandProcessing.Cmds[id].tutorial is not Func<Task> action)
             {
                 Interface.AddTextLog($"MAJOR ERROR: Linked tutorial funct type did not match expected.", Colors.DeepPink);
-                Logging.Log($"{entryN} tutorial action type expected Func<Task> but got {value.GetType().FullName}");
+                Logging.Log($"{entryN} tutorial action type expected Func<Task> but got {Interface.CommandProcessing.Cmds[id].tutorial.GetType().FullName}");
                 return false;
             }
             else action();
@@ -41,13 +41,13 @@ namespace Cat
         [CAspects.AsyncExceptionSwallower]
         internal static async Task TTutorial()
         {
-            ClaraHerself.Custom = [
+            StellaHerself.Custom = [
                 "You... want a tutorial... for the tutorial command.. huh?",
                 "My time is precious, and so is yours!!!",
                 "Don't mess around!"
                 ];
-            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
-            var b = await ClaraHerself.TCS.Task;
+            StellaHerself.RunStella(StellaHerself.Mode.Custom, Catowo.inst.canvas);
+            var b = await StellaHerself.TCS.Task;
             if (!b) return;
         }
     }

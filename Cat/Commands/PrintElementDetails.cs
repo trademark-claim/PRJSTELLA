@@ -13,11 +13,12 @@ namespace Cat
         /// </remarks>
         [CAspects.ConsumeException]
         [CAspects.CDebug]
+        [CAspects.Logging]
         internal static bool PrintElementDetails()
         {
-            Interface.AddLog("Background Rectangle: ", inst.Backg.Width.ToString(), inst.Backg.Height.ToString());
-            Interface.AddLog("Display box: ", logListBox.Width.ToString(), logListBox.Height.ToString(), Canvas.GetLeft(logListBox).ToString());
-            Interface.AddLog("Input box: ", @interface.inputTextBox.Width.ToString(), @interface.inputTextBox.Height.ToString(), Canvas.GetLeft(@interface.inputTextBox).ToString(), Canvas.GetTop(@interface.inputTextBox).ToString());
+            AddLog("Background Rectangle: ", inst.Backg.Width.ToString(), inst.Backg.Height.ToString());
+            AddLog("Display box: ", logListBox.Width.ToString(), logListBox.Height.ToString(), Canvas.GetLeft(logListBox).ToString());
+            AddLog("Input box: ", @interface.inputTextBox.Width.ToString(), @interface.inputTextBox.Height.ToString(), Canvas.GetLeft(@interface.inputTextBox).ToString(), Canvas.GetTop(@interface.inputTextBox).ToString());
             return true;
         }
     }

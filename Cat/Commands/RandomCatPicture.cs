@@ -14,31 +14,35 @@ namespace Cat
         internal static bool RandomCatPicture()
         {
             Interface.AddLog("Generating kitty...");
-            var r = new Helpers.CatWindow();
-            r.Show();
+            var kat_window = new Helpers.CatWindow();
+            kat_window.Show();
             return true;
         }
 
+        /// <summary>
+        /// Tutorial for the Kat Generator command
+        /// </summary>
+        /// <returns></returns>
         [CAspects.Logging]
         [CAspects.AsyncExceptionSwallower]
         internal static async Task TRandomCatPicture()
         {
-            ClaraHerself.Fading = false;
-            ClaraHerself.HaveOverlay = false;
-            ClaraHerself.CleanUp = false;
-            ClaraHerself.Custom = [
+            StellaHerself.Fading = false;
+            StellaHerself.HaveOverlay = false;
+            StellaHerself.CleanUp = false;
+            StellaHerself.Custom = [
                 "Command description:\n\""
-            + (string)Interface.
+            + Interface.
                 CommandProcessing
                 .Cmds[Interface
                     .CommandProcessing
                     .cmdmap["generate cat"]
-                ]["desc"]
+                ].desc
             + "\"",
             "There's nothing much to this command, just run it and it'll show a fluffy friend!!! \\o/)"
             ];
-            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
-            var b = await ClaraHerself.TCS.Task;
+            StellaHerself.RunStella(StellaHerself.Mode.Custom, Catowo.inst.canvas);
+            var b = await StellaHerself.TCS.Task;
             if (!b) return;
             Interface.CommandProcessing.ProcessCommand("generate cat");
         }

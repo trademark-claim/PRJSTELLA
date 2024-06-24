@@ -109,12 +109,12 @@ namespace Cat
         }
        
         /// <summary>
-        /// Static class for dealing with direct Clara interactions, such as speech bubbles and images / animations (if we can get it)
+        /// Static class for dealing with direct Stella interactions, such as speech bubbles and images / animations (if we can get it)
         /// </summary>
         /// <remarks>
         /// Need to have back progression (using left arrow)
         /// </remarks>
-        internal static class ClaraHerself
+        internal static class StellaHerself
         {
             /// <summary>
             /// Used with the speech bubble arrays to keep track of which array item we're on.
@@ -127,8 +127,8 @@ namespace Cat
             /// Holds the introduction text
             /// </summary>
             private static readonly string[] Introduction = [
-                "Hey! It's me, Clara! (Made by Nexus) \nIt seems this is the first time you've opened me (or I've been updated).\nIf you want to skip this, press the up arrow. \nIf you want to view the changelog, press the down arrow (not working)'\nIf you want to run through the introduction, just press the right arrow key!",
-                "So you wanna do the introduction again... sweet!\nI'm Clara, the Centralised, Logistical, Administrative and Requisition Assistant. \nMy sole purpose is to automate, optimize and otherwise improve your computer experience.\n You can press the left arrow key to move through parts.",
+                "Hey! It's me, Stella! (Made by Nexus) \nIt seems this is the first time you've opened me (or I've been updated).\nIf you want to skip this, press the up arrow. \nIf you want to view the changelog, press the down arrow (not working)'\nIf you want to run through the introduction, just press the right arrow key!",
+                "So you wanna do the introduction again... sweet!\nI'm Stella, the Smart Technology for Enhanced Lifestyle and Living Assistance! \nMy sole purpose is to automate, optimize and otherwise improve your computer experience.\n You can press the left arrow key to move through parts.",
                 "There are two (at the moment) main modes to this program: Background and Interface.\nInterface is where there's an overlay with a textbox and an output box, where you can enter commands.\n   Key shortcuts won't work here, but this is where most of the functionality is.\nBackground is where there... is no main overlay (you're currently in background mode!).\n   This is what the app will be in 99% of the time.",
                 "To open the interface:\n  Hold both shifts (both th left and right one),\n  Then press and hold Q,\n  then press I!\n  (LShift + RShift + Q + I). \n To close the interface run the 'close' command.\nTo view the help page, run 'help'",
                 "This program is in a pre-pre-pre-pre-alpha stage, and there will be bugs and stuff.\nYou can send logs to me (Discord: _dissociation_) (Gmail: brainjuice.work23@gmail.com) with bug reports and feedback and stuff. Enjoy!",
@@ -194,9 +194,9 @@ namespace Cat
             /// <param name="canvas">The canvas</param>
             [CAspects.Logging]
             [CAspects.ConsumeException]
-            internal static async Task RunClara(Mode mode, Canvas canvas)
+            internal static async Task RunStella(Mode mode, Canvas canvas)
             {
-                ClaraHerself.canvas = canvas;
+                StellaHerself.canvas = canvas;
                 if (Bubble != null && Catowo.inst != null && canvas != null)
                 {
                     num = 0;
@@ -217,7 +217,7 @@ namespace Cat
                     case Mode.Custom:
                         TCS = new TaskCompletionSource<bool>();
                         CurrentStory = Custom;
-                        Logging.Log("Custom Clara Speech: ", CurrentStory);
+                        Logging.Log("Custom Stella Speech: ", CurrentStory);
                         if (fadeCancellationTokenSource != null && !fadeCancellationTokenSource.IsCancellationRequested)
                         {
                             fadeCancellationTokenSource.Cancel();

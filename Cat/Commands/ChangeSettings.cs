@@ -15,10 +15,10 @@ namespace Cat
         {
             try
             {
-                var entryN = commandstruct?.Parameters[0][0] as string;
-                var entryM = commandstruct?.Parameters[0][1] as string;
+                var para1 = commandstruct?.Parameters[0][0] as string;
+                var para2 = commandstruct?.Parameters[0][1] as string;
 
-                if (entryN == null || entryM == null)
+                if (para1 == null || para2 == null)
                 {
                     var message = "Expected string but parsing failed, command struct or entry was null.";
                     Logging.Log(message);
@@ -26,10 +26,10 @@ namespace Cat
                     return false;
                 }
 
-                var normalizedKey = entryN.ToLower().Trim();
+                var normalizedKey = para1.ToLower().Trim();
                 var data = Helpers.IniParsing.GetStructure(UserDataFile);
 
-                Logging.Log("Processing NM:", entryN, entryM);
+                Logging.Log("Processing NM:", para1, para2);
 
                 foreach (var section in data.Keys)
                 {
@@ -47,10 +47,10 @@ namespace Cat
                             var (type, constraints) = Helpers.IniParsing.validation[kvp.Key];
                             if ((Type)type == typeof(float) && constraints is Tuple<float, float> range)
                             {
-                                if (float.TryParse(entryM, out float result) &&
+                                if (float.TryParse(para2, out float result) &&
                                     result >= range.Item1 && result <= range.Item2)
                                 {
-                                    UserData.UpdateValue(kvp.Key, entryM);
+                                    UserData.UpdateValue(kvp.Key, para2);
                                     Helpers.IniParsing.UpAddValue(UserDataFile, section, kvp.Key, result.ToString());
                                 }
                                 else
@@ -61,9 +61,9 @@ namespace Cat
                             }
                             else if ((Type)type == typeof(bool))
                             {
-                                if (bool.TryParse(entryM, out bool result))
+                                if (bool.TryParse(para2, out bool result))
                                 {
-                                    UserData.UpdateValue(kvp.Key, entryM);
+                                    UserData.UpdateValue(kvp.Key, para2);
                                     Helpers.IniParsing.UpAddValue(UserDataFile, section, kvp.Key, result.ToString());
                                 }
                                 else
@@ -74,8 +74,8 @@ namespace Cat
                             }
                             else
                             {
-                                UserData.UpdateValue(kvp.Key, entryM);
-                                Helpers.IniParsing.UpAddValue(UserDataFile, section, kvp.Key, entryM);
+                                UserData.UpdateValue(kvp.Key, para2);
+                                Helpers.IniParsing.UpAddValue(UserDataFile, section, kvp.Key, para2);
                             }
 
                             Interface.AddLog($"Updated {kvp.Key} in section {section}.");
@@ -94,39 +94,43 @@ namespace Cat
                 return false;
             }
         }
-
+        
+        /// <summary>
+        /// Tutorial for the Change settings command
+        /// </summary>
+        /// <returns></returns>
         [CAspects.Logging]
         [CAspects.AsyncExceptionSwallower]
         internal static async Task TChangeSettings()
         {
-            ClaraHerself.Fading = false;
-            ClaraHerself.HaveOverlay = false;
-            ClaraHerself.CleanUp = false;
-            ClaraHerself.Custom = [
+            StellaHerself.Fading = false;
+            StellaHerself.HaveOverlay = false;
+            StellaHerself.CleanUp = false;
+            StellaHerself.Custom = [
                 "Command description:\n\""
-                    + (string)Interface.
+                    + Interface.
                         CommandProcessing
                         .Cmds[Interface
                             .CommandProcessing
                             .cmdmap["change settings"]
-                        ]["desc"]
+                        ].desc
                     + "\"",
                     "This command takes two inputs: variablename{string}, and value{string}",
                     "The former is the name of the setting you want to change\nThe latter being the value of that setting.",
                     "The list of variables are as such:"
             ];
-            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
-            var b = await ClaraHerself.TCS.Task;
-            if (!b) return;
+            StellaHerself.RunStella(StellaHerself.Mode.Custom, Catowo.inst.canvas);
+            var continu = await StellaHerself.TCS.Task;
+            if (!continu) return;
             Interface.CommandProcessing.ProcessCommand("view settings");
-            ClaraHerself.Custom = [
+            StellaHerself.Custom = [
                     "Lets change the font size to 15!",
                     "Fontsize must be a floating point value between 1.0 and 50.0.",
                     "We'll be using the command 'cs ;FontSize ;15' for this",
             ];
-            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
-            b = await ClaraHerself.TCS.Task;
-            if (!b) return;
+            StellaHerself.RunStella(StellaHerself.Mode.Custom, Catowo.inst.canvas);
+            continu = await StellaHerself.TCS.Task;
+            if (!continu) return;
             Interface.Input = "cs ;FontSize ;15";
             Interface.CommandProcessing.ProcessCommand();
         }

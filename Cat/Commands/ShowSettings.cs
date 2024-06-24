@@ -30,19 +30,19 @@ namespace Cat
         [CAspects.AsyncExceptionSwallower]
         internal static async Task TShowSettings()
         {
-            ClaraHerself.Custom = [
+            StellaHerself.Custom = [
                 "Command description:\n\""
-            + (string)Interface.
+            + Interface.
                 CommandProcessing
                 .Cmds[Interface
                     .CommandProcessing
                     .cmdmap["close log editor"]
-                ]["desc"]
+                ].desc
             + "\"",
             "There's nothing much to this command, just run it and it'll list all the changeable settings by group."
             ];
-            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
-            var b = await ClaraHerself.TCS.Task;
+            StellaHerself.RunStella(StellaHerself.Mode.Custom, Catowo.inst.canvas);
+            var b = await StellaHerself.TCS.Task;
             if (!b) return;
             Interface.CommandProcessing.ProcessCommand("show settings");
         }

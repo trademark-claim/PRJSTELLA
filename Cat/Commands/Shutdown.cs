@@ -23,20 +23,20 @@ namespace Cat
         [CAspects.AsyncExceptionSwallower]
         internal static async Task TShutdown()
         {
-            ClaraHerself.Custom = [
+            StellaHerself.Custom = [
                 "Command description:\n\""
-            + (string)Interface.
+            + Interface.
                 CommandProcessing
                 .Cmds[Interface
                     .CommandProcessing
                     .cmdmap["close log editor"]
-                ]["desc"]
+                ].desc
             + "\"",
             "There's nothing much to this command, just run it and it'll shut me down entirely (auto flushing logs and performing cleanup)",
             "Press the right arrow for me to do this, press the up arrow to cancel."
             ];
-            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
-            var b = await ClaraHerself.TCS.Task;
+            StellaHerself.RunStella(StellaHerself.Mode.Custom, Catowo.inst.canvas);
+            var b = await StellaHerself.TCS.Task;
             if (!b) return;
             Interface.CommandProcessing.ProcessCommand("shutdown");
         }

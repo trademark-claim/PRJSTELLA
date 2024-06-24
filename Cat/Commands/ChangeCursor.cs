@@ -4,70 +4,79 @@ namespace Cat
 {
     internal static partial class Commands
     {
+        /// <summary>
+        /// Command to change your default cursor
+        /// </summary>
+        /// <returns></returns>
         [CAspects.Logging]
         [CAspects.ConsumeException]
         internal static bool ChangeCursor()
         {
-            var entryN = commandstruct?.Parameters[0][0] as string;
-            if (entryN == null)
+            var para1 = commandstruct?.Parameters[0][0] as string;
+            if (para1 == null)
             {
                 var message = "Expected string but parsing failed, command struct or entry was null.";
                 Logging.Log(message);
                 Interface.AddTextLog($"Execution Failed: {message}", RED);
                 return false;
             }
-            if (!File.Exists(entryN) || (!entryN.EndsWith(".ani") && !entryN.EndsWith(".cur")))
+            if (!File.Exists(para1) || (!para1.EndsWith(".ani") && !para1.EndsWith(".cur")))
             {
-                Logging.Log($"{entryN} does not exist / could not be found as a file");
+                Logging.Log($"{para1} does not exist / could not be found as a file");
                 Interface.AddTextLog("Please input a valid filepath! (.ani, .cur)", RED);
                 return false;
             }
-            Interface.AddLog($"Changing to {entryN}...");
-            BaselineInputs.Cursor.ChangeCursor(entryN);
+            Interface.AddLog($"Changing to {para1}...");
+            BaselineInputs.Cursor.ChangeCursor(para1);
             return true;
         }
 
+
+        /// <summary>
+        /// Tutorial for the change cursor command
+        /// </summary>
+        /// <returns></returns>
         [CAspects.Logging]
         [CAspects.AsyncExceptionSwallower]
         internal static async Task TChangeCursor()
         {
-            ClaraHerself.Fading = false;
-            ClaraHerself.HaveOverlay = false;
-            ClaraHerself.CleanUp = false;
-            ClaraHerself.Custom = [
+            StellaHerself.Fading = false;
+            StellaHerself.HaveOverlay = false;
+            StellaHerself.CleanUp = false;
+            StellaHerself.Custom = [
                 "Command description:\n\""
-                    + (string)Interface.
+                    + Interface.
                         CommandProcessing
                         .Cmds[Interface
                             .CommandProcessing
                             .cmdmap["change cursor"]
-                        ]["desc"]
+                        ].desc
                     + "\"",
                     "This is the ChangeCursor command, used to change your normal cursor to a .cur or .ani file.",
                     "I'll walk you through changing it to a... cat!",
                     "First, I'll download the cat cursor, one second~"
             ];
-            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
-            var can = await ClaraHerself.TCS.Task;
-            if (!can)
+            StellaHerself.RunStella(StellaHerself.Mode.Custom, Catowo.inst.canvas);
+            var continu = await StellaHerself.TCS.Task;
+            if (!continu)
                 return;
             Helpers.ExternalDownloading.FromGDrive(SingleCat, Path.Combine(ExternalDownloadsFolder, "cat.ani"));
             await Helpers.ExternalDownloading.TCS.Task;
-            ClaraHerself.Custom = [
+            StellaHerself.Custom = [
                     $"Okay, cursor downloaded to {Path.Combine(ExternalDownloadsFolder, "cat.ani")}!",
                     "Now, lets type the command out and run it!"
             ];
-            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
-            can = await ClaraHerself.TCS.Task;
-            if (!can)
+            StellaHerself.RunStella(StellaHerself.Mode.Custom, Catowo.inst.canvas);
+            continu = await StellaHerself.TCS.Task;
+            if (!continu)
                 return;
             Interface.Input = $"change cursor ;{Path.Combine(ExternalDownloadsFolder, "cat.ani")}";
-            ClaraHerself.Custom = [
+            StellaHerself.Custom = [
                     $"That's the full command,\nafter we run it you should see some UI output\nand your normal cursor should now be a cat!",
             ];
-            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
-            can = await ClaraHerself.TCS.Task;
-            if (!can)
+            StellaHerself.RunStella(StellaHerself.Mode.Custom, Catowo.inst.canvas);
+            continu = await StellaHerself.TCS.Task;
+            if (!continu)
                 return;
             Interface.CommandProcessing.ProcessCommand();
         }

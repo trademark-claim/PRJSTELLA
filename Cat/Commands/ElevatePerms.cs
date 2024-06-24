@@ -8,6 +8,7 @@
         /// <returns>true if already has admin, otherwise nothing as it kills the application.</returns>
         [CAspects.UpsetStomach]
         [CAspects.ConsumeException]
+        [CAspects.Logging]
         internal static bool KillMyselfAndGetGodPowers()
         {
             bool? rah = Helpers.BackendHelping.RestartWithAdminRightsIfNeeded();
@@ -19,27 +20,31 @@
             return rah ?? true;
         }
 
+        /// <summary>
+        /// Tutorial for the elevate perms command
+        /// </summary>
+        /// <returns></returns>
         [CAspects.Logging]
         [CAspects.AsyncExceptionSwallower]
         internal static async Task TKillMyselfAndGetGodPowers()
         {
-            ClaraHerself.Fading = false;
-            ClaraHerself.HaveOverlay = false;
-            ClaraHerself.CleanUp = false;
-            ClaraHerself.Custom = [
+            StellaHerself.Fading = false;
+            StellaHerself.HaveOverlay = false;
+            StellaHerself.CleanUp = false;
+            StellaHerself.Custom = [
                 "Command description:\n\""
-            + (string)Interface.
+            + Interface.
                 CommandProcessing
                 .Cmds[Interface
                     .CommandProcessing
                     .cmdmap["elevate perms"]
-                ]["desc"]
+                ].desc
             + "\"",
             "There's nothing much to this command, just run it ('elevate perms') and it'll attempt to restart me but with elevated perms -- keep in mind that all volatile states will be wiped.",
             "If you want me to run this command, press the right arrow key, else press the up arrow."
             ];
-            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
-            var b = await ClaraHerself.TCS.Task;
+            StellaHerself.RunStella(StellaHerself.Mode.Custom, Catowo.inst.canvas);
+            var b = await StellaHerself.TCS.Task;
             if (!b) return;
             Interface.CommandProcessing.ProcessCommand("elevate perms");
         }

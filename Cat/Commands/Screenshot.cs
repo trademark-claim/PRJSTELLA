@@ -5,37 +5,36 @@ namespace Cat
     internal static partial class Commands
     {
         /// <summary>
-        /// Takes a screenshot based on the specified mode and saves it to a predetermined location.
+        /// Takes a screenshot based on the specified mode and saves it.
         /// </summary>
-        /// <returns>A Task&lt;bool&gt; indicating the success or failure of the screenshot operation.</returns>
+        /// <returns>A Task&lt;bool&gt; indicating the success or failure of the screenshot.</returns>
         /// <remarks>
-        /// Supports taking individual screenshots of each screen, a stitched screenshot of all screens, or a screenshot of a specific screen, based on the input parameter.
+        /// Can take individual screenshots of each screen, a stitched screenshot of all screens, or a screenshot of a specific screen, based on the input parameter.
         /// </remarks>
         [CAspects.AsyncExceptionSwallower]
         [CAspects.Logging]
         internal static async Task<bool> Screenshot()
         {
             if (@interface != null) 
-                await @interface.Hide();
-            int? entryN = (int?)(commandstruct?.Parameters[0][0]);
-            if (entryN == null)
+                await @interface?.Hide();
+            if (commandstruct?.Parameters[0][0] is not int para1)
             {
                 Logging.Log("Expected int but parsing failed and returned either a null command struct or a null entry, please submit a bug report.");
                 Interface.AddTextLog("Execution Failed: Command struct or entry was null, check logs.", RED);
                 return false;
             }
-            int entry = entryN.Value;
+
             Logging.Log("Taking screenshots...");
-            switch (entry)
+            switch (para1)
             {
-                case >= 0 when entry < System.Windows.Forms.Screen.AllScreens.Length:
+                case >= 0 when para1 < Screen.AllScreens.Length:
                     {
-                        Logging.Log($"Capturing screen {entry}");
-                        Bitmap bmp = Helpers.Screenshotting.CaptureScreen(entry, out string? error);
+                        Logging.Log($"Capturing screen {para1}");
+                        Bitmap bmp = Helpers.Screenshotting.CaptureScreen(para1, out string? error);
                         if (error != "" && error != null)
                         {
                             Interface.AddTextLog(error, RED);
-                            @interface.Show();
+                            @interface?.Show();
                             return false;
                         }
                         Logging.Log("Captured!");
@@ -59,9 +58,9 @@ namespace Cat
                                 string? error = errors[i];
                                 if (error != null)
                                     Interface.AddTextLog($"Error when shooting screen {i}" + error, RED);
-                                Logging.Log(error == null ? "no error" : error);
+                                Logging.Log(error ?? "no error");
                             }
-                            @interface.Show();
+                            @interface?.Show();
                             Logging.Log("Exiting Screenshotting due to errors.");
                             return false;
                         }
@@ -115,17 +114,17 @@ namespace Cat
         [CAspects.AsyncExceptionSwallower]
         internal static async Task TScreenshot()
         {
-            ClaraHerself.Fading = false;
-            ClaraHerself.HaveOverlay = false;
-            ClaraHerself.CleanUp = false;
-            ClaraHerself.Custom = [
+            StellaHerself.Fading = false;
+            StellaHerself.HaveOverlay = false;
+            StellaHerself.CleanUp = false;
+            StellaHerself.Custom = [
                 "Command description:\n\""
-            + (string)Interface.
+            + Interface.
                 CommandProcessing
                 .Cmds[Interface
                     .CommandProcessing
                     .cmdmap["screenshot"]
-                ]["desc"]
+                ].desc
             + "\"",
             "This is my screenshot functionality!\n It takes in one parameter, the capture mode, an integer.",
             "If the value is:",
@@ -137,15 +136,15 @@ namespace Cat
             "The interface, if open, will also close automatically for the screenshot.",
             "Lets take a stitched one by running 'screenshot ;-2'"
             ];
-            ClaraHerself.RunClara(ClaraHerself.Mode.Custom, Catowo.inst.canvas);
-            var b = await ClaraHerself.TCS.Task;
+            StellaHerself.RunStella(StellaHerself.Mode.Custom, Catowo.inst.canvas);
+            var b = await StellaHerself.TCS.Task;
             if (!b) return;
             await Helpers.BackendHelping.EnsureCompletion(Interface.CommandProcessing.ProcessCommand, ["screenshot ;-2"], finishdelayms: 200).Task;
-            ClaraHerself.Custom = [
+            StellaHerself.Custom = [
                 "There, screenshot taken!",
                 $"It'll be located at {SSFolder}, lemme open it for ya!"
                 ];
-            b = await ClaraHerself.TCS.Task;
+            b = await StellaHerself.TCS.Task;
             if (!b) return;
             Catowo.inst.ToggleInterface(true, false);
             await Catowo.inst.UIToggleTCS.Task;
