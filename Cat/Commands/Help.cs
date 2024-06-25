@@ -1,4 +1,9 @@
+using Microsoft.VisualBasic;
+using SharpCompress;
 using System.Text;
+using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Navigation;
 
 namespace Cat
 {
@@ -21,6 +26,7 @@ namespace Cat
                 Interface.AddTextLog("Run 'help ;commands' to see a list of commands\nRun 'help ;(cmdname)\n    E.g: 'help ;screenshot'\n  to see extended help for that command.", System.Windows.Media.Color.FromRgb(0xC0, 0xC0, 0xC0));
                 Interface.AddLog("This is a program created to help automate, manage, and improve overall effectiveness of your computer, currently only for Windows machines.");
                 Interface.AddLog("Uhhh... don't really know what else to put here apart from some general notes:\n   For the PARAMS field when viewing command specific help, the symbols are defined as such:\n      | means OR, so you can input the stuff on the left OR the stuff on the right of the bar\n      [] means OPTIONAL PARAMETER, in other words you don't *need* to input it, they'll often have default values.\n      {} denotes a datatype, the expected type you input. bool is true/false, int is any whole number.");
+                Interface.AddLog("Oh, and:\n Voice Commands, Shortcuts and Documentational help is here!\nRun 'help ;voice commands' to see the voice commands.\nRun 'help ;shortcuts' to see the keyboard shortcuts.\nRun 'help ;documentation' to see the documentation");
                 return true;
             }
             else
@@ -50,6 +56,67 @@ namespace Cat
                     }
 
                 }
+                else if (para1 == "documentation")
+                {
+                    Interface.AddLog("Here're the documentation links: ");
+                    void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
+                    {
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+                        e.Handled = true;
+                    }
+
+                    (string, string)[] strings = [
+                        ("https://github.com/trademark-claim/laughing-octo-garbanzo/blob/master/README.md", "ReadMe"),
+                        ("https://github.com/trademark-claim/laughing-octo-garbanzo/blob/master/Installation.md", "Installation Guide"),
+                        ("https://github.com/trademark-claim/laughing-octo-garbanzo/blob/master/ref_manual.md", "Reference manual"),
+                        ("https://github.com/trademark-claim/laughing-octo-garbanzo/blob/master/user_guide.md", "User Guide")
+                        ];
+
+                    foreach ((string s1, string s2) in strings) {
+                        TextBlock textBlock = new();
+                        textBlock.Inlines.Add(" - Click ");
+                        Hyperlink hyperlink = new(new Run("here"))
+                        {
+                            NavigateUri = new Uri(s1)
+                        };
+                        hyperlink.RequestNavigate += Hyperlink_RequestNavigate;
+                        textBlock.Inlines.Add(hyperlink);
+                        textBlock.Inlines.Add(" for the " + s2);
+                        Interface.logListBox.Items.Add(textBlock);
+                    }
+                }
+                else if (para1 == "shortcuts")
+                {
+                    ((string[])[
+                        "Here are the shortcuts: ",
+                        
+                        ]).ForEach(x => Interface.AddLog(x));
+                }
+                else if (para1 == "voice commands")
+                {
+                    Interface.AddLog("Voice commands:");
+
+                    var groupedCommands = commandMap
+                        .SelectMany(c => c.Value, (category, command) => new { Command = command.Key, Description = command.Value.Description, Category = category.Key, command.Value.InnerCommand})
+                        .GroupBy(c => c.Description)
+                        .Select((group, index) => new
+                        {
+                            CommandNumber = index + 1,
+                            Description = group.Key,
+                            InnerCommand = group.First().InnerCommand,
+                            Commands = group.Select(g => $"\"{g.Command} {g.Category}\"").ToList()
+                        });
+
+                    foreach (var group in groupedCommands)
+                    {
+                        Interface.AddLog($"Command #{group.CommandNumber}");
+                        Interface.AddLog($"      Called with {string.Join(", ", group.Commands)}");
+                        Interface.AddLog($"      Description: {group.Description}");
+                        if (group.InnerCommand != "")
+                            Interface.AddLog("Command Version: '" + group.InnerCommand + "'");
+                    }
+                }
+
                 else if (Interface.CommandProcessing.cmdmap.TryGetValue(para1, out int result))
                 {
                     var Keys = Interface.CommandProcessing.cmdmap.Where(x => x.Value == result).Select(x => x.Key).ToArray();

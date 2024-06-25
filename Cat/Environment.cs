@@ -1,4 +1,6 @@
-﻿// -----------------------------------------------------------------------
+﻿//#define CursorChanges
+
+// -----------------------------------------------------------------------
 // Environment.cs
 // Contains definitions for environment settings, paths, and utility methods
 // for STELLA's runtime environment.
@@ -85,6 +87,9 @@ namespace Cat
         internal const int VK_BACK = 0x08;
         internal const int VK_ESC = 0x1B;
         internal const int VK_RETURN = 0x0D;
+        internal const int VK_LEFT = 0x25;
+        internal const int VK_RIGHT = 0x27;
+        internal const int VK_UP = 0x26;
         internal const int VK_A = 0x41; // A key
         internal const int VK_B = 0x42; // B key
         internal const int VK_C = 0x43; // C key
@@ -453,13 +458,82 @@ namespace Cat
             internal static float FontSize
             { get => _fontsize; set { _fontsize = value; Catowo.Interface.logListBox.UpdateFontSize(); foreach (Objects.ProcessManager pm in Commands.PMs) pm.InvalidateVisual(); } }
 
-
+            [Obsolete("Not in use")]
             private static string DiscordExePath = @"C:\Users\<CURRENTUSER>\AppData\Local\Discord\app-1.0.9043\Discord.exe";
 
+            [Obsolete("Not in use")]
             internal static string DiscordPath { get => DiscordExePath.Replace("<CURRENTUSER>", userName); }
 
+            [Obsolete("Not in use")]
             internal static readonly double[] CommandKeys = [];
 
+#if CursorChanges // TODO
+            private static bool rainbowEnabled = false;
+            private static byte red = 0;
+            private static byte blue = 0;
+            private static byte green = 0;
+            private static byte alpha = 0;
+            private static bool useSquare = true;
+
+            internal static byte Red { 
+                get => red; 
+                set 
+                {
+                    red = value;
+                    rainbowEnabled = false;
+                }
+            }
+
+            internal static byte Blue
+            {
+                get => blue;
+                set
+                {
+                    blue = value;
+                    rainbowEnabled = false;
+                }
+            }
+
+            internal static byte Green
+            {
+                get => green;
+                set
+                {
+                    green = value;
+                    rainbowEnabled = false;
+                }
+            }
+
+            internal static byte Alpha
+            {
+                get => alpha;
+                set
+                {
+                    alpha = value;
+                }
+            }
+
+            internal static bool RainbowEnabled
+            {
+                get => rainbowEnabled;
+                set
+                {
+                    if (true)
+                        red = blue = green = 1;
+                    rainbowEnabled = value;
+                }
+            }
+
+            internal static bool UseSquare
+            {
+                get => useSquare;
+                set
+                {
+                    CursorEffects.UsingASquare = value;
+                    useSquare = value;
+                }
+            }
+#endif
             /// <summary>Updates a user setting value based on a key-value pair.</summary>
             /// <param name="key">The setting key to update.</param>
             /// <param name="value">The new value for the setting.</param>
@@ -467,6 +541,26 @@ namespace Cat
             {
                 switch (key)
                 {
+#if CursorChanges
+                    case nameof(RainbowEnabled):
+                        RainbowEnabled = bool.Parse(value); 
+                        break;
+                    case nameof(Red):
+                        Red = byte.Parse(value); 
+                        break;
+                    case nameof(Green):
+                        Green = byte.Parse(value);
+                        break;
+                    case nameof(Alpha):
+                        Alpha = byte.Parse(value);
+                        break;
+                    case nameof(Blue):
+                        Blue = byte.Parse(value);
+                        break;
+                    case nameof(UseSquare):
+                        UseSquare = bool.Parse(value);
+                        break;
+#endif
                     case nameof(AspectLogging):
                         AspectLogging = bool.Parse(value);
                         break;
@@ -532,6 +626,10 @@ namespace Cat
 
                     case nameof(ExtendedLogging):
                         ExtendedLogging = bool.Parse(value);
+                        break;
+
+                    case nameof(RequireNameCallForVoiceCommands):
+                        RequireNameCallForVoiceCommands = bool.Parse(value);
                         break;
 
                     default:

@@ -132,7 +132,8 @@ namespace Cat
                 "There are two (at the moment) main modes to this program: Background and Interface.\nInterface is where there's an overlay with a textbox and an output box, where you can enter commands.\n   Key shortcuts won't work here, but this is where most of the functionality is.\nBackground is where there... is no main overlay (you're currently in background mode!).\n   This is what the app will be in 99% of the time.",
                 "To open STELLA's interface:\n  Hold both shifts (both th left and right one),\n  Then press and hold Q,\n  then press I!\n  (LShift + RShift + Q + I). \n To close STELLA's interface run the 'close' command.\nTo view the help page, run 'help'",
                 "This program is in a pre-pre-pre-pre-alpha stage, and there will be bugs and stuff.\nYou can send logs to me (Discord: _dissociation_) (Gmail: brainjuice.work23@gmail.com) with bug reports and feedback and stuff. Enjoy!",
-                "Hmmm.. is there anything else..?\nOh right! Local data is stored at C:\\ProgramData\\Kitty\\Cat\\\nHave fun, I hope you enjoy this app! o/"
+                "Hmmm.. is there anything else..?\nOh right! Local data is stored at C:\\ProgramData\\Kitty\\Cat\\\nHave fun, I hope you enjoy this app! o/",
+                "If you ever get stuck, just try the 'help' and 'tutorial' commands!"
             ];
 
             internal static string[] Custom { get; set; } = ["Uh oh! You shouldn't see this!"];
@@ -252,6 +253,7 @@ namespace Cat
                                                             num = 0;
                                                             Catowo.inst.PreviewKeyDown -= ProgressionKeydown;
                                                             canvas.Children.Remove(Bubble);
+                                                            fadeCancellationTokenSource.Cancel();
                                                             Bubble = null;
                                                             return;
                                                         }
@@ -291,7 +293,7 @@ namespace Cat
                     canvas.Children.Remove(Bubble);
                     Bubble = null;
                 }
-                TCS.SetResult(true);
+                TCS?.SetResult(true);
             }
 
             internal static void RemoveOverlay()
@@ -311,7 +313,7 @@ namespace Cat
                         {
                             if (++num > CurrentStory.Length - 1)
                             {
-                                TCS.SetResult(true);
+                                TCS?.SetResult(true);
                                 num = 0;
                                 Catowo.inst.PreviewKeyDown -= ProgressionKeydown;
                                 if (CleanUp)
@@ -348,7 +350,7 @@ namespace Cat
                 if (e.Key == Key.Up)
                     if (canvas != null)
                     {
-                        TCS.SetResult(false);
+                        TCS?.SetResult(false);
                         num = 0;
                         if (CleanUp)
                             Catowo.inst.MakeFunnyWindow();
@@ -511,8 +513,9 @@ namespace Cat
                     SetTop<double>(textBlock, TextPadding.Top + Control);
                     SetLeft<double>(tail, rectangle.Width - 10);
                     SetTop<double>(tail, rectangle.Height);
-                    double left = LowerRightCornerFreeze.X - rectangle.Width;
-                    double top = LowerRightCornerFreeze.Y - rectangle.Height;
+                    var (rect, _) = Helpers.ScreenSizing.GetAdjustedScreenSize(Catowo.GetScreen()); 
+                    double left = rect.X + rect.Width - rectangle.Width - 40;
+                    double top = rect.Y + rect.Height - rectangle.Height - 40;
                     SetLeft<double>(this, left);
                     SetTop<double>(this, top);
                     Width = rectangle.Width;
@@ -528,6 +531,16 @@ namespace Cat
             private static bool isOn = false;
             private static DispatcherTimer fadeTimer;
             private static Window allencompassing;
+#if CursorChange
+            private static bool IsRainbow { get => UserData.Red == 1 && UserData.Green == 1 && UserData.Blue == 1; }
+            internal static Color UserColor => Color.FromArgb(UserData.Alpha, UserData.Red, UserData.Green, UserData.Blue);
+            internal static bool UsingASquare = UserData.UseSquare;
+#else
+            private static bool IsRainbow = true;
+            internal static Color UserColor => Color.FromRgb(255, 255, 255);
+            internal static bool UsingASquare = true;
+#endif
+            internal static int Mode = 0;
 
             private delegate void CursorTrailDelegate(in Point mousepos);
 
@@ -580,7 +593,18 @@ namespace Cat
                     var editedstyle = GetWindowLongWrapper(hwnd, GWL_EXSTYLE);
                     Logging.Log([$"Set Win Style of Handle {hwnd} from {originalStyle:X} ({originalStyle:B}) [{originalStyle}] to {editedstyle:X} ({editedstyle:B}) [{editedstyle}]"]);
                 };
-                Particles.LineTrail.Init();
+                switch (Mode) 
+                {
+                    case 0:
+                        Particles.LineTrail.Init();
+                        break;
+                    case 1:
+                        Particles.ShapeTrail.Init();
+                        break;
+                    case 2:
+                        Particles.WhiteLineTrail.Init();
+                        break;
+                }
             }
 
             private static IntPtr SetHook(LowLevelProc proc)
@@ -632,14 +656,14 @@ namespace Cat
             }
 
             [CAspects.Logging]
-            private static void Stop()
+            internal static void Stop()
             {
                 if (!isOn) return;
                 DestroyKeyHook();
                 allencompassing.Close();
                 try
                 {
-                    fadeTimer.Stop();
+                    fadeTimer?.Stop();
                 }
                 catch
                 {
@@ -665,24 +689,27 @@ namespace Cat
 
             private static class Particles
             {
-                internal static class RectangleTrail
+                [Obsolete("Not working")]
+                internal static class ShapeTrail
                 {
                     private class Effect
                     {
-                        internal Rectangle Rect = new() { Fill = Brushes.Pink, Width = 5.0, Height = 5.0, Opacity = 1.0, IsHitTestVisible = false };
+                        internal Shape Shape = UsingASquare ? 
+                            new Rectangle { Fill = IsRainbow ? new SolidColorBrush(Color.FromRgb((byte)random.Next(0, 255), (byte)random.Next(0, 255), (byte)random.Next(0, 255))) : new SolidColorBrush(UserColor), Width = 5.0, Height = 5.0, Opacity = 1.0, IsHitTestVisible = false } :
+                            new Ellipse { Fill = IsRainbow ? new SolidColorBrush(Color.FromRgb((byte)random.Next(0, 255), (byte)random.Next(0, 255), (byte)random.Next(0, 255))) : new SolidColorBrush(UserColor), Width = 5.0, Height = 5.0, Opacity = 1.0, IsHitTestVisible = false } ;
                         internal double OpacityDecrement = 0.05;
                     }
 
                     private static Queue<Effect> effectsQueue = new();
 
                     [CAspects.Logging]
-                    internal static void SetUpRectangles()
+                    internal static void Init()
                     {
                         Memento = new List<Effect>(200);
                         for (int i = 0; i < 200; i++)
                         {
                             Effect effect = new Effect();
-                            canvas.Children.Add(effect.Rect);
+                            canvas.Children.Add(effect.Shape);
                             Memento.Add(effect);
                             effectsQueue.Enqueue(effect);
                         }
@@ -694,18 +721,18 @@ namespace Cat
                     {
                         foreach (Effect effect in Memento)
                         {
-                            if (effect.Rect.Opacity > 0)
+                            if (effect.Shape.Opacity > 0)
                             {
-                                effect.Rect.Opacity = Math.Max(0, effect.Rect.Opacity - effect.OpacityDecrement);
+                                effect.Shape.Opacity = Math.Max(0, effect.Shape.Opacity - effect.OpacityDecrement);
                             }
                         }
 
-                        if (effectsQueue.Peek().Rect.Opacity == 0)
+                        if (effectsQueue.Peek().Shape.Opacity == 0)
                         {
                             Effect effect = effectsQueue.Dequeue();
-                            Canvas.SetTop(effect.Rect, point.Y - effect.Rect.Height / 2);
-                            Canvas.SetLeft(effect.Rect, point.X - effect.Rect.Width / 2);
-                            effect.Rect.Opacity = 1.0;
+                            Canvas.SetTop(effect.Shape, point.Y - effect.Shape.Height / 2);
+                            Canvas.SetLeft(effect.Shape, point.X - effect.Shape.Width / 2);
+                            effect.Shape.Opacity = 1.0;
                             effectsQueue.Enqueue(effect);
                         }
                     }
@@ -724,11 +751,11 @@ namespace Cat
                     }
                 }
 
-                internal static class BiLineTrail
+                internal static class WhiteLineTrail
                 {
                     internal static void Init()
                     {
-                        Memento = new Tuple<DynamicLineDrawer, DynamicLineDrawer>(new DynamicLineDrawer(canvas, 9, new SolidColorBrush(Colors.White)), new DynamicLineDrawer(canvas, 4, new SolidColorBrush(Colors.Pink)));
+                        Memento = new Tuple<DynamicLineDrawer, DynamicLineDrawer>(new DynamicLineDrawer(canvas, 9, new SolidColorBrush(Colors.White)), new DynamicLineDrawer(canvas, 4, IsRainbow ? Statics.dyingrainbow : new SolidColorBrush(UserColor)));
                         _method = (in Point p) => { var (m1, m2) = (Memento as Tuple<DynamicLineDrawer, DynamicLineDrawer>); m1.AddPoint(p); m2.AddPoint(p); };
                         fadeTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(15) };
                         _hookID = SetHook(_proc);
@@ -743,7 +770,7 @@ namespace Cat
 
                     internal class Effect
                     {
-                        internal readonly Rectangle rect;
+                        internal readonly Shape Shape;
                         private double speedX;
                         private double speedY;
                         private double opacitySpeed = 0.01; // Adjust for faster/slower fade
@@ -753,16 +780,32 @@ namespace Cat
                         internal Effect(Canvas canvas, Point p)
                         {
                             this.canvas = canvas;
-                            rect = new Rectangle
-                            {
-                                Fill = new SolidColorBrush(Color.FromArgb(255, (byte)random.Next(256), (byte)random.Next(256), (byte)random.Next(256))),
-                                Width = 5,
-                                Height = 5,
-                                Opacity = 1
-                            };
+                            if (UsingASquare)
+                                Shape = new Rectangle
+                                {
+                                    Fill = IsRainbow ? new SolidColorBrush(Color.FromArgb(255, (byte)random.Next(256), (byte)random.Next(256), (byte)random.Next(256))) :
+                                    new SolidColorBrush(UserColor),
+                                    Width = 5,
+                                    Height = 5,
+                                    Opacity = 1,
+                                    StrokeThickness = 1,
+                                    Stroke = Brushes.Black
+                                };
+                            else
+                                Shape = new Ellipse
+                                {
+                                    Fill = IsRainbow ? new SolidColorBrush(Color.FromArgb(255, (byte)random.Next(256), (byte)random.Next(256), (byte)random.Next(256))) :
+                                    new SolidColorBrush(UserColor),
+                                    Width = 5,
+                                    Height = 5,
+                                    Opacity = 1,
+                                    StrokeThickness = 1,
+                                    Stroke = Brushes.Black
+                                };
 
-                            Canvas.SetLeft(rect, p.X - rect.Width / 2);
-                            Canvas.SetTop(rect, p.Y - rect.Height / 2);
+                            Canvas.SetZIndex(Shape, 99);
+                            Canvas.SetLeft(Shape, p.X - Shape.Width / 2);
+                            Canvas.SetTop(Shape, p.Y - Shape.Height / 2);
 
                             // Random speed
                             double speed = random.NextDouble() * 2 + 1; // Speed range [1, 3)
@@ -775,7 +818,7 @@ namespace Cat
                             speedX = speed * Math.Cos(angle);
                             speedY = speed * Math.Sin(angle);
 
-                            canvas.Children.Add(rect);
+                            canvas.Children.Add(Shape);
                         }
 
                         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
@@ -785,17 +828,17 @@ namespace Cat
                             var elapsedTime = (now - lastUpdate).TotalSeconds;
                             lastUpdate = now;
 
-                            Canvas.SetLeft(rect, Canvas.GetLeft(rect) + speedX * elapsedTime * 60);
-                            Canvas.SetTop(rect, Canvas.GetTop(rect) + speedY * elapsedTime * 60);
+                            Canvas.SetLeft(Shape, Canvas.GetLeft(Shape) + speedX * elapsedTime * 60);
+                            Canvas.SetTop(Shape, Canvas.GetTop(Shape) + speedY * elapsedTime * 60);
 
                             // Apply gravity to Y speed
                             speedY += gravity * elapsedTime * 60; // Adjust gravity effect here if needed
 
                             // Fade out effect
-                            rect.Opacity -= opacitySpeed * elapsedTime * 60; ;
-                            if (rect.Opacity <= 0)
+                            Shape.Opacity -= opacitySpeed * elapsedTime * 60; ;
+                            if (Shape.Opacity <= 0)
                             {
-                                canvas.Children.Remove(rect);
+                                canvas.Children.Remove(Shape);
                                 return false; // Effect finished
                             }
                             return true; // Effect continues
@@ -866,6 +909,7 @@ namespace Cat
                     Stroke = dyingrainbow,
                     StrokeThickness = 2,
                 };
+                Canvas.SetZIndex(polyline, 99);
                 canvas.Children.Add(polyline);
             }
 
@@ -879,6 +923,7 @@ namespace Cat
                     Stroke = brush,
                     StrokeThickness = thickness
                 };
+                Canvas.SetZIndex(polyline, 99);
                 canvas.Children.Add(polyline);
             }
 

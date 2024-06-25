@@ -700,15 +700,30 @@ namespace Cat
             internal class SpinnyThing
             {
                 private readonly string[] animation = { "|", "/", "-", "\\" };
-                private TextBlock block;
+                internal readonly TextBlock block;
                 private byte num = 0;
                 private readonly DispatcherTimer timer;
+                internal string title = "";
 
                 /// <summary>
                 /// Initializes a new instance of the <see cref="SpinnyThing"/> class and starts the animation.
                 /// </summary>
                 internal SpinnyThing()
                 {
+                    (_, block) = Catowo.Interface.AddTextLogR(animation[num++]);
+                    timer = new DispatcherTimer();
+                    timer.Interval = TimeSpan.FromMilliseconds(50);
+                    timer.Tick += Timer_Tick;
+                    timer.Start();
+                }
+
+                /// <summary>
+                /// Constructor with title
+                /// </summary>
+                /// <param name="title"></param>
+                internal SpinnyThing(string title)
+                {
+                    this.title = title + "...  ";
                     (_, block) = Catowo.Interface.AddTextLogR(animation[num++]);
                     timer = new DispatcherTimer();
                     timer.Interval = TimeSpan.FromMilliseconds(50);
@@ -724,21 +739,32 @@ namespace Cat
                 private void Timer_Tick(object sender, EventArgs e)
                 {
                     if (block != null)
-                        block.Text = animation[num++];
+                        block.Text = title + animation[num++];
                     if (num == animation.Length) num = 0;
                     if (block != null)
                         Catowo.Interface.logListBox.Items.Refresh();
                 }
 
                 /// <summary>
-                /// Stops the animation and removes the animation block from the log list box.
+                /// Stops the animation and removes / pauses the animation block from the log list box.
                 /// </summary>
-                internal void Stop()
+                internal void Stop(bool remove = true)
                 {
                     timer.Stop();
                     timer.Tick -= Timer_Tick;
                     if (block != null)
-                        Catowo.Interface.logListBox.Items.Remove(block);
+                    {
+                        block.Dispatcher.Invoke(() =>
+                        {
+                            if (remove)
+                                Interface.logListBox.Items.Remove(block);
+                            else
+                            {
+                                block.Text = title + animation[0];
+                                Interface.logListBox.Items.Refresh();
+                            }
+                        });
+                    }
                 }
             }
         }

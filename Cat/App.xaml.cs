@@ -86,6 +86,7 @@ namespace Cat
             if (isShuttingDown)
                 return;
             isShuttingDown = true;
+            CursorEffects.Stop();
             DateTime endtime = DateTime.Now;
             TimeSpan dur = endtime - starttime;
             long averageMemoryUsage = maxMemory / 2;

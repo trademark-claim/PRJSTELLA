@@ -51,6 +51,8 @@ using SWS = System.Windows.Shapes;
 using System.Windows.Media.Animation;
 using System.Windows.Forms;
 using System.Runtime.CompilerServices;
+using System.Windows.Automation.Text;
+using System.Windows.Input;
 
 namespace Cat
 {
@@ -437,6 +439,49 @@ namespace Cat
                         SeekKey.Remove(vkCode);
                     }
 
+                    if (StellaHerself.TCS != null && !StellaHerself.TCS.Task.IsCompleted)
+                    {
+                        if (vkCode == VK_LEFT)
+                        {
+                            var keyEventArgs = new System.Windows.Input.KeyEventArgs(
+                                Keyboard.PrimaryDevice,
+                                PresentationSource.FromVisual(Catowo.inst.canvas),
+                                0,
+                                Key.Left
+                            )
+                            {
+                                RoutedEvent = Keyboard.PreviewKeyDownEvent
+                            };
+                            Catowo.inst.canvas.RaiseEvent(keyEventArgs);
+                        }
+                        else if (vkCode == VK_UP)
+                        {
+                            var keyEventArgs = new System.Windows.Input.KeyEventArgs(
+                                Keyboard.PrimaryDevice,
+                                PresentationSource.FromVisual(Catowo.inst.canvas),
+                                0,
+                                Key.Up
+                            )
+                            {
+                                RoutedEvent = Keyboard.PreviewKeyDownEvent
+                            };
+                            Catowo.inst.canvas.RaiseEvent(keyEventArgs);
+                        }
+                        else if (vkCode == VK_RIGHT)
+                        {
+                            var keyEventArgs = new System.Windows.Input.KeyEventArgs(
+                                Keyboard.PrimaryDevice,
+                                PresentationSource.FromVisual(Catowo.inst.canvas),
+                                0,
+                                Key.Right
+                            )
+                            {
+                                RoutedEvent = Keyboard.PreviewKeyDownEvent
+                            };
+                            Catowo.inst.canvas.RaiseEvent(keyEventArgs);
+                        }
+                    }
+
                     DebugLabel.Content += $"{Qd}, {RShifted}, {LShifted}, {vkCode}, {wParam}, {(Keys)vkCode}";
                     if (!Qd && vkCode == VK_Q)
                     {
@@ -759,25 +804,28 @@ namespace Cat
         [CAspects.Logging]
         [CAspects.ConsumeException]
         [CAspects.UpsetStomach]
-        internal bool ToggleInterface(bool animation = true, bool makefunny = true)
+        internal async Task<bool> ToggleInterface(bool animation = true, bool makefunny = true)
         {
             UIToggleTCS = new();
             if (Interface.inst != null)
             {
                 if (animation)
+                {
                     Interface.inst.ShrinkAndDisappear(() =>
                     {
                         try
                         {
-                            Interface.inst.Children?.Clear();
-                            Interface.inst.parent?.Children.Remove(Interface.inst);
+                            Interface.inst?.Children?.Clear();
+                            Interface.inst?.parent?.Children.Remove(Interface.inst);
                             Interface.inst = null;
                         }
-                        catch (Exception ex) 
+                        catch (Exception ex)
                         {
                             Logging.LogError(ex);
                         }
                     });
+                    await Interface.inst.AnimationTCS.Task;
+                }
                 else
                 {
                     Interface.inst.Children?.Clear();
@@ -794,7 +842,7 @@ namespace Cat
                 if (makefunny)
                     MakeNormalWindow();
                 canvas.Children.Add(new Interface(canvas));
-                Objects.CursorEffects.MoveTop();
+                await Interface.inst.AnimationTCS.Task;
                 Interface.inst.inputTextBox?.Focus();
                 UIToggleTCS.SetResult(true);
                 return true;
@@ -1128,14 +1176,20 @@ namespace Cat
             internal static (int, TextBlock) AddTextLogR(string logMessage, SolidColorBrush brush = null)
             {
                 Interface? instance = inst;
-                if (instance == null) return (-2, null);
-                if (brush == null) brush = new(Colors.White);
-                TextBlock block = new TextBlock { Text = logMessage, Foreground = brush };
-                int value = instance.Dispatcher.Invoke(() => logListBox.AddItem(block));
-                if (_scrollViewer != null)
-                    _scrollViewer.ScrollToEnd();
-                else
-                    logListBox.ScrollIntoView(logListBox.Items[logListBox.Items.Count - 1]);
+                TextBlock block = null;
+                int value = -2;
+                Catowo.inst.Dispatcher.Invoke(() =>
+                {
+                    if (instance == null)
+                        return;
+                    brush ??= new(Colors.White);
+                    block = new TextBlock { Text = logMessage, Foreground = brush };
+                    value = instance.Dispatcher.Invoke(() => logListBox.AddItem(block));
+                    if (_scrollViewer != null)
+                        _scrollViewer.ScrollToEnd();
+                    else
+                        logListBox.ScrollIntoView(logListBox.Items[logListBox.Items.Count - 1]);
+                });
                 return (value, block);
             }
 
@@ -1158,11 +1212,14 @@ namespace Cat
                 return value;
             }
 
+            internal TaskCompletionSource<bool> AnimationTCS { get; private set; }
+
             /// <summary>
             /// Animated the interface to move up
             /// </summary>
             internal void AnimateUp()
             {
+                AnimationTCS = new();
                 TranslateTransform trans = new TranslateTransform();
                 RenderTransform = trans;
                 double screenHeight = Catowo.GetScreen().Bounds.Height;
@@ -1183,6 +1240,7 @@ namespace Cat
                 Storyboard.SetTargetProperty(bounceUp, new PropertyPath("(UIElement.RenderTransform).(TranslateTransform.Y)"));
                 storyboard.Children.Add(bounceUp);
                 storyboard.Begin(this, true);
+                AnimationTCS.SetResult(true);
             }
 
             /// <summary>
@@ -1191,6 +1249,7 @@ namespace Cat
             /// <param name="complete"></param>
             internal async void ShrinkAndDisappear(Action complete)
             {
+                AnimationTCS = new();
                 var sc = Catowo.GetScreen().Bounds;
                 double initialWidth = sc.Width;
                 double initialHeight = sc.Height;
@@ -1244,6 +1303,7 @@ namespace Cat
                 await Task.Delay(TimeSpan.FromSeconds(duration + 0.1)); 
                 Logging.Log(["Shrink animation complete by async delay."]);
                 complete?.Invoke();
+                AnimationTCS.SetResult(true);
             }
 
             /// <summary>
@@ -1522,7 +1582,7 @@ namespace Cat
                         1, new CommandSchema(
                             "Closes STELLA's interface, the shortcut will open it.",
                             "",
-                            (() => { return Catowo.inst.ToggleInterface(); }),
+                            (async () => { return await Catowo.inst.ToggleInterface(); }),
                             null,
                             "Shift Q I",
                             0
@@ -1965,7 +2025,6 @@ namespace Cat
                             (() =>
                             {
                                 CursorEffects.Toggle();
-                                Catowo.inst.ToggleInterface();
                                 return true;
                             }),
                             null,
@@ -2095,8 +2154,9 @@ namespace Cat
                             Logging.Log([">>>ERROR<<< Action nor TFunct not found for the given command ID."]);
                             Interface.AddTextLog($"Action nor TFunct object not found for command {call}, stopping command execution.\nThis... shouldn't happen. hm.", SWM.Color.FromRgb(200, 0, 40));
                         }
-                        if (result == false)
+                        if (result == false && Commands.ActualError)
                             Interface.AddTextLog($"Something went wrong executing {cmdtext}", RED);
+                        Commands.ActualError = true;
                         Logging.Log([$"Finished Processing command {call}"]);
                     }
                     else

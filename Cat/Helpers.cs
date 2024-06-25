@@ -1,4 +1,6 @@
-﻿// -----------------------------------------------------------------------
+﻿//#define CursorChanges
+
+// -----------------------------------------------------------------------
 // Helpers.cs
 // Contains utility methods for screenshotting, screen recording,
 // managing configurations through INI files, and other helper functions.
@@ -348,6 +350,8 @@ namespace Cat
         /// </summary>
         public static partial class BackendHelping
         {
+
+
             /// <summary>
             /// Creates a default value for a given type.
             /// </summary>
@@ -822,6 +826,14 @@ namespace Cat
                 { "AllowUrbanDictionaryDefinitionsWhenWordNotFound", (typeof(bool), false)},
                 { "ExtendedLogging", (typeof(bool), false) },
                 { "RequireNameCallForVoiceCommands", (typeof(bool), true)},
+#if CursorChanges
+                { "RainbowEnabled", (typeof(bool), false)},
+                { "Red", (typeof(byte), (0, 255)) },
+                { "Blue", (typeof(byte), (0, 255)) },
+                { "Green", (typeof(byte), (0, 255)) },
+                { "Alpha", (typeof(byte), (0, 255)) },
+                { "UseSquare", (typeof(bool), false)},
+#endif
             };
 
             /// <summary>
@@ -864,6 +876,21 @@ namespace Cat
                         ("ExtendedLogging", false)
                     }
                 }
+#if CursorChanges
+                ,
+                {
+                    "CursorEffects",
+                    new()
+                    {
+                        ("Red", 1),
+                        ("Blue", 1),
+                        ("Green", 1),
+                        ("Alpha", 255),
+                        ("RainbowEnabled", true),
+                        ("UseSquare", true),
+                    }
+                }
+#endif
             };
 
             /// <summary>

@@ -13,7 +13,7 @@ namespace Cat
      */
 
     /// <summary>
-    /// Holds the Interop wrappers and base methods (the latter hidden)
+    /// Holds the wrappers and interop methods (the latter hidden)
     /// </summary>
     internal static partial class PInvoke
     {
@@ -120,8 +120,20 @@ namespace Cat
         [return: MarshalAs(UnmanagedType.Bool)]
         private static partial bool SetForegroundWindow(IntPtr hWnd);
 
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
+
 
         #region Internal Methods Wrapping P/Invoke
+
+        internal static uint GetWindowThreadProcessIdWrapper(IntPtr hWnd, out uint processId)
+        {
+            Logging.Log([$">PINVOKE< Getting Process ID given handle: {hWnd}"]);
+            uint result = GetWindowThreadProcessId(hWnd, out processId);
+            Logging.Log([$">PINVOKE< Thread ID: {result}, Process ID: {processId}"]);
+            LogMarshalError();
+            return result;
+        }
 
         internal static bool SetForegroundWindowWrapper(IntPtr hWnd)
         {
