@@ -267,11 +267,11 @@ namespace Cat
             Screen screen = System.Windows.Forms.Screen.AllScreens[value];
             _screen_ = value;
             await Task.Delay(100);
-            var (width, height, _) = Helpers.ScreenSizing.GetAdjustedScreenSize(screen);
-            Top = screen.Bounds.Top;
-            Left = screen.Bounds.Left;
-            Width = width;
-            Height = height;
+            var (rect, _) = Helpers.ScreenSizing.GetAdjustedScreenSize(screen);
+            Top = rect.Top;
+            Left = rect.Left;
+            Width = rect.Width;
+            Height = rect.Height;
             Logging.Log(["New Screen Params: ", Top, Left, Width, Height]);
             ToggleInterface(true);
             await UIToggleTCS.Task;
@@ -896,8 +896,8 @@ namespace Cat
             private SWS.Rectangle InitBackg()
             {
                 var scre = GetScreen();
-                var (screenWidth, screenHeight, _) = Helpers.ScreenSizing.GetAdjustedScreenSize(scre);
-                Backg = new SWS.Rectangle { Width = screenWidth, Height = screenHeight, Fill = new SWM.SolidColorBrush(SWM.Colors.Gray), Opacity = UserData.Opacity };
+                var (rect, _) = Helpers.ScreenSizing.GetAdjustedScreenSize(scre);
+                Backg = new SWS.Rectangle { Width = rect.Width, Height = rect.Height, Fill = new SWM.SolidColorBrush(SWM.Colors.Gray), Opacity = UserData.Opacity };
                 Logging.Log([$"{Catowo.inst.Screen}, {Backg.Width} {Backg.Height}"]);
 #if CrashWary // This just makes it so that it leaves a small margin for me to still interact with the windows behind it when STELLA crashes
                 rect.Height = rect.Height - 50;
@@ -919,17 +919,17 @@ namespace Cat
             private void InitializeComponents()
             {
                 Screen screen = GetScreen();
-                var (screenWidth, screenHeight, workAreaHeight) = Helpers.ScreenSizing.GetAdjustedScreenSize(screen);
+                var (rect, workAreaHeight) = Helpers.ScreenSizing.GetAdjustedScreenSize(screen);
 #if CrashWary
-                screenHeight -= 50;
+                rect.Height = rect.Height - 50;
 #endif
-                double taskbarHeight = screenHeight - workAreaHeight;
+                double taskbarHeight = rect.Height - workAreaHeight;
                 double padding = 20;
                 double inputTextBoxHeight = 30;
 
                 inputTextBox = new SWC.TextBox
                 {
-                    Width = screenWidth - (padding * 2),
+                    Width = rect.Width - (padding * 2),
                     Height = inputTextBoxHeight,
                     Margin = new Thickness(0, 0, 0, padding),
                     Background = WABrush,
@@ -967,11 +967,11 @@ namespace Cat
 #if CrashWary
                 SetTop<double>(inputTextBox, (screenHeight - taskbarHeight - inputTextBoxHeight - (padding)) + 50);
 #else
-                SetTop<double>(inputTextBox, screenHeight - taskbarHeight - inputTextBoxHeight - (padding));
+                SetTop<double>(inputTextBox, rect.Height - taskbarHeight - inputTextBoxHeight - (padding));
 #endif
 
-                logListBox.Width = screenWidth - (padding * 2);
-                logListBox.Height = screenHeight - taskbarHeight - inputTextBoxHeight - (padding * 3);
+                logListBox.Width = rect.Width - (padding * 2);
+                logListBox.Height = rect.Height - taskbarHeight - inputTextBoxHeight - (padding * 3);
 
                 SetLeft<double>(logListBox, padding);
 #if CrashWary
@@ -990,19 +990,19 @@ namespace Cat
             internal void UpdateInterface()
             {
                 Screen screen = GetScreen();
-                var (screenWidth, screenHeight, workAreaHeight) = Helpers.ScreenSizing.GetAdjustedScreenSize(screen);
+                var (Rect, workAreaHeight) = Helpers.ScreenSizing.GetAdjustedScreenSize(screen);
 
-                double taskbarHeight = screenHeight - workAreaHeight;
+                double taskbarHeight = Rect.Height- workAreaHeight;
                 double padding = 20;
                 double inputTextBoxHeight = 30;
-                inputTextBox.Width = screenWidth - (padding * 2);
+                inputTextBox.Width = Rect.Width - (padding * 2);
                 inputTextBox.Height = inputTextBoxHeight;
-                SetTop<double>(inputTextBox, screenHeight - taskbarHeight - inputTextBoxHeight - (padding));
-                logListBox.Width = screenWidth - (padding * 2);
-                logListBox.Height = screenHeight - taskbarHeight - inputTextBoxHeight - (padding * 3);
+                SetTop<double>(inputTextBox, Rect.Height - taskbarHeight - inputTextBoxHeight - (padding));
+                logListBox.Width = Rect.Width - (padding * 2);
+                logListBox.Height = Rect.Height - taskbarHeight - inputTextBoxHeight - (padding * 3);
 
-                Backg.Width = screenWidth;
-                Backg.Height = screenHeight;
+                Backg.Width = Rect.Width;
+                Backg.Height = Rect.Height;
             }
 
             /// <summary>
@@ -1486,7 +1486,10 @@ namespace Cat
                     { "rb", 43 },
 
                     { "toggle cursor effects", 46 },
-                    { "tce", 46 }
+                    { "tce", 46 },
+
+                    { "shrink", 44 },
+                    { "grow", 45 }
                 };
 
                 /// <summary>
@@ -1934,6 +1937,26 @@ namespace Cat
                             "",
                             1
                         )
+                    },
+                    {
+                        44, new CommandSchema(
+                                "",
+                                "",
+                                () => { Catowo.inst.Top = Catowo.inst.Left = 20;  Catowo.inst.Width = Catowo.inst.Height = System.Windows.Forms.Screen.PrimaryScreen.Bounds.Height - 10; Catowo.inst.WindowState = WindowState.Normal;  return true;},
+                                null,
+                                "",
+                                2
+                            )
+                    },
+                    {
+                        45, new CommandSchema(
+                            "",
+                            "",
+                            () => { Catowo.inst.WindowState = WindowState.Maximized; return true; },
+                            null,
+                            "",
+                            2
+                            )
                     },
                     {
                         46, new CommandSchema(

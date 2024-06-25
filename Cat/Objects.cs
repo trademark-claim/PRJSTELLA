@@ -593,6 +593,7 @@ namespace Cat
                 }
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
             private static IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
             {
                 if (nCode >= 0)
@@ -688,6 +689,7 @@ namespace Cat
                         _method = RectangleTick;
                     }
 
+                    [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
                     internal static void RectangleTick(in Point point)
                     {
                         foreach (Effect effect in Memento)
@@ -776,6 +778,7 @@ namespace Cat
                             canvas.Children.Add(rect);
                         }
 
+                        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
                         internal bool Tick()
                         {
                             var now = DateTime.Now;
@@ -824,6 +827,7 @@ namespace Cat
 
                         private static bool isRenderingSubscribed = false;
 
+                        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
                         private static void Update(object sender, EventArgs e)
                         {
                             for (int i = effects.Count - 1; i >= 0; i--)
@@ -845,8 +849,6 @@ namespace Cat
                 }
             }
         }
-
-        internal readonly record struct Command(string Call, string Raw, object[][]? Parameters = null);
 
         internal class DynamicLineDrawer
         {
@@ -881,6 +883,7 @@ namespace Cat
             }
 
             // Method to add a point
+            [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
             public void AddPoint(Point point)
             {
                 if (Helpers.BackendHelping.IsPointWithinOtherPointForSmoothing(point, previous, 5)) return;
@@ -898,11 +901,13 @@ namespace Cat
             }
 
             // Method to remove a point
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void RemovePoint(Point point)
             {
                 polyline.Points.Remove(point);
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void RemoveOldest()
             {
                 if (polyline.Points.Count > 0)
@@ -912,7 +917,9 @@ namespace Cat
             }
         }
 
-        internal class LogEditor : Window // Code the GUI here
+        internal readonly record struct Command(string Call, string Raw, object[][]? Parameters = null);
+
+        internal class LogEditor : Window 
         {
             private LoggingListBox logListBox;
             private Grid mainGrid; // Content Container

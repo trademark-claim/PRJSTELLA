@@ -204,15 +204,17 @@ namespace Cat
             /// This method considers the DPI settings of the system to adjust the screen size for high DPI displays.
             /// </remarks>
             [CAspects.Logging]
-            internal static (double Width, double Height, double WorkingAreaHeight) GetAdjustedScreenSize(Screen screen)
+            internal static (Rect bounds, double WorkingAreaHeight) GetAdjustedScreenSize(Screen screen)
             {
                 var dpiX = GetSystemDpi("DpiX");
                 var dpiY = GetSystemDpi("Dpi");
                 double screenWidth = screen.Bounds.Width / dpiX;
                 double screenHeight = screen.Bounds.Height / dpiY;
+                double screenTop = screen.Bounds.Top / dpiY;
+                double screenLeft = screen.Bounds.Left / dpiX;
                 double workAreaHeight = screen.WorkingArea.Height / dpiY;
 
-                return (screenWidth, screenHeight, workAreaHeight);
+                return (new(screenLeft, screenTop, screenWidth, screenHeight), workAreaHeight);
             }
 
             /// <summary>
@@ -757,7 +759,6 @@ namespace Cat
             }
 
             [GeneratedRegex(@"ERROR (\S+) START")]
-            [GeneratedCode("System.Text.RegularExpressions.Generator", "8.0.10.21615")]
             private static partial Regex ErrorGuidRegex();
         }
 

@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Cat
@@ -397,9 +398,14 @@ namespace Cat
 
         #endregion Internal Methods Wrapping P/Invoke
 
-        private static void LogMarshalError()
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void LogMarshalError(
+            [CallerMemberName] string cname = "",
+            [CallerLineNumber] int ln = 0
+            )
         {
             int errorCode = Marshal.GetLastWin32Error();
+            Logging.Log([$"Marshal Erroring check called by {cname} @ {ln}"], false);
             if (errorCode != 0)
                 Logging.Log([$">PINVOKE< Error: {errorCode} - {new System.ComponentModel.Win32Exception(errorCode).Message}"]);
             else Logging.Log(["Marshal operation successful"]);
