@@ -42,7 +42,7 @@ namespace Cat
         /// <summary>
         /// Reference to the instance of an open console
         /// </summary>
-        private static System.Windows.Window? Logger = null;
+        internal static System.Windows.Window? Logger = null;
         /// <summary>
         /// Object to hold temporary information between methods
         /// </summary>

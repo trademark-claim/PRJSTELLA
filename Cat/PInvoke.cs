@@ -17,95 +17,183 @@ namespace Cat
     /// </summary>
     internal static partial class PInvoke
     {
+        /// <summary>
+        /// Gets the position of the cursor in system coordinates
+        /// </summary>
+        /// <param name="lpPoint"></param>
+        /// <returns></returns>
         [LibraryImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static partial bool GetCursorPos(out POINT lpPoint);
 
+        /// <summary>
+        /// Sets the cursor to a system coordinate location
+        /// </summary>
+        /// <param name="X"></param>
+        /// <param name="Y"></param>
+        /// <returns></returns>
         [LibraryImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static partial bool SetCursorPos(int X, int Y);
 
+        /// <summary>
+        /// Sends raw input to the functional layer -- being anything from keyboard input to mouse and audio
+        /// </summary>
         [LibraryImport("user32.dll", SetLastError = true)]
         private static partial uint SendInput(uint nInputs, [MarshalAs(UnmanagedType.LPArray), In] INPUT[] pInputs, int cbSize);
 
+        /// <summary>
+        /// Gets the current window style (combination of flags)
+        /// </summary>
         [DllImport("user32.dll", SetLastError = true)]
         private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
 
+        /// <summary>
+        /// Sets the window style (Transparency, Pass through, top most, etc)
+        /// </summary>
         [DllImport("user32.dll", SetLastError = true)]
         private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
 
+        /// <summary>
+        /// Hooks in a method to be triggered by function hooks (so like key input)
+        /// </summary>
         [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
         private static extern IntPtr SetWindowsHookEx(int idHook, LowLevelProc lpfn, IntPtr hMod, uint dwThreadId);
 
+        /// <summary>
+        /// Removes a function hook given the hook holder key
+        /// </summary>
         [LibraryImport("user32.dll", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static partial bool UnhookWindowsHookEx(IntPtr hhk);
 
+        /// <summary>
+        /// Tells the hook to yield hold of the sequence to the next hook
+        /// </summary>
         [LibraryImport("user32.dll", StringMarshalling = StringMarshalling.Utf16, SetLastError = true)]
         private static partial IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
 
+        /// <summary>
+        /// Gets a module handle (pointer) given a name
+        /// </summary>
         [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         private static extern IntPtr GetModuleHandle(string lpModuleName);
 
+        /// <summary>
+        /// Gets the state of a key (given virtual key code)
+        /// </summary>
         [LibraryImport("user32.dll", SetLastError = true)]
         private static partial short GetAsyncKeyState(int vKey);
 
+        /// <summary>
+        /// Increments the cursor display count by 1
+        /// </summary>
         [DllImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern int ShowCursor([MarshalAs(UnmanagedType.Bool)] bool bShow);
 
-        
+        /// <summary>
+        /// Loads the handle for a cursor visual loaded given file
+        /// </summary>
         [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
         private static extern IntPtr LoadCursorFromFile(string path);
 
+        /// <summary>
+        /// Sets a cursor to a prepared cursor (given handle) using ID
+        /// </summary>
         [LibraryImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static partial bool SetSystemCursor(IntPtr hcur, uint id);
 
+        /// <summary>
+        /// Changes low level settings files, mostly used here for cursors
+        /// </summary>
         [DllImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool SystemParametersInfo(uint uiAction, uint uiParam, IntPtr pvParam, uint fWinIni);
 
+        /// <summary>
+        /// Returns the desktop window
+        /// </summary>
         [LibraryImport("user32.dll", SetLastError = true)]
         private static partial IntPtr GetDesktopWindow();
 
+        /// <summary>
+        /// Gets the Device Content object for a window (given handle), used for screen capture
+        /// </summary>
         [LibraryImport("user32.dll", SetLastError = true)]
         private static partial IntPtr GetWindowDC(IntPtr hWnd);
 
+        /// <summary>
+        /// Copies pixels one by one from a Window Device context to a Bitmap device content, given location, width, hieght and operation mode
+        /// </summary>
         [LibraryImport("gdi32.dll", SetLastError = true)]
         private static partial uint BitBlt(IntPtr hDestDC, int xDest, int yDest, int wDest, int hDest, IntPtr hSrcDC, int xSrc, int ySrc, CopyPixelOperation rop);
 
+        /// <summary>
+        /// Releases the device Context objects for later use
+        /// </summary>
         [LibraryImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static partial bool ReleaseDC(IntPtr hWnd, IntPtr hDC);
 
+        /// <summary>
+        /// Creates a bitmap from the .NET object to an Interop object
+        /// </summary>
         [LibraryImport("gdi32.dll", SetLastError = true)]
         private static partial IntPtr CreateCompatibleBitmap(IntPtr hDC, int width, int height);
 
+        /// <summary>
+        /// Creates a device context from interop to .NET
+        /// </summary>
         [LibraryImport("gdi32.dll", SetLastError = true)]
         private static partial IntPtr CreateCompatibleDC(IntPtr hDC);
 
+        /// <summary>
+        /// Returns the handle of a requested object
+        /// </summary>
         [LibraryImport("gdi32.dll", SetLastError = true)]
         private static partial IntPtr SelectObject(IntPtr hDC, IntPtr hObject);
 
+        /// <summary>
+        /// Deletes an object given handle
+        /// </summary>
         [LibraryImport("gdi32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static partial bool DeleteObject(IntPtr hObject);
 
+        /// <summary>
+        /// Deletes a device context
+        /// </summary>
         [LibraryImport("gdi32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static partial bool DeleteDC(IntPtr hDC);
 
+        /// <summary>
+        /// Gets the handle of the currently focused window
+        /// </summary>
         [LibraryImport("user32.dll", SetLastError = true)]
         private static partial IntPtr GetForegroundWindow();
 
+        /// <summary>
+        /// Shows a window given handler
+        /// </summary>
         [LibraryImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static partial bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
+        /// <summary>
+        /// Sends a WM to a given window, allows for parameter input
+        /// </summary>
         [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         private static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
 
+        /// <summary>
+        /// Why are black guys eyes red after sex? From the pepper spray.
+        /// </summary>
+        /// <param name="enumProc"></param>
+        /// <param name="lParam"></param>
+        /// <returns></returns>
         [LibraryImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static partial bool EnumWindows(EnumWindowsProc enumProc, IntPtr lParam);

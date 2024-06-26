@@ -33,6 +33,7 @@ using System.Windows.Navigation;
 using System.Windows.Threading;
 using System.Xml;
 using System.Xml.Linq;
+using ZstdSharp.Unsafe;
 using static Cat.Helpers.BinaryFileHandler;
 using static Cat.Logging;
 using CLR = System.Drawing.Color;
@@ -265,9 +266,10 @@ namespace Cat
         public class CatWindow : Window
         {
             private readonly HttpClient _client = new HttpClient();
-            private readonly SWC.Image _imageControl = new SWC.Image();
+            private readonly SWC.Image _imageControl = new SWC.Image() { ClipToBounds = true };
             private Logging.ProgressLogging Progress = new("Cat Window Image Download:", true);
             private Logging.ProgressLogging.SpinnyThing spinnything;
+            private readonly int _timeoutMilliseconds = 5000;
 
             /// <summary>
             /// Initializes a new instance of the <see cref="CatWindow"/> class.
@@ -278,70 +280,103 @@ namespace Cat
             /// </remarks>
             public CatWindow()
             {
-                Logging.Log(["Constructing Cat window"]);
+                Logging.Log(new[] { "Constructing Cat window" });
                 Title = "Random Cat Photo";
                 Content = _imageControl;
-                Logging.Log(["Window Loaded"]);
+                Logging.Log(new[] { "Window Loaded" });
+                ResizeMode = ResizeMode.NoResize;
                 spinnything = new();
-                FetchAndDisplayCatImage();
+                Loaded += async (s, e) => await FetchAndDisplayCatImageAsync();
                 Topmost = true;
             }
 
             /// <summary>
-            /// Fetches a random cat image from the CATaaS (Cats as a Service) API and displays it in the window.
+            /// Fetches a random cat image from The Cat API and displays it in the window.
             /// </summary>
             /// <remarks>
-            /// This method asynchronously gets a cat image URL from the CATaaS API, downloads the image,
+            /// This method asynchronously gets a cat image URL from The Cat API, downloads the image,
             /// and displays it within the window. If the image fetch fails, an error is logged.
             /// </remarks>
             [CAspects.Logging]
             [CAspects.AsyncExceptionSwallower]
             [CAspects.InterfaceNotice]
-            private async Task FetchAndDisplayCatImage()
+            private async Task FetchAndDisplayCatImageAsync()
             {
-                Logging.Log(["Getting Cat image from https://cataas.com/cat?json=true"]);
+                Logging.Log(new[] { "Getting Cat image from https://api.thecatapi.com/v1/images/search" });
                 try
                 {
-                    string url = "https://cataas.com/cat?json=true";
-                    HttpResponseMessage response = await _client.GetAsync(url);
-                    response.EnsureSuccessStatusCode();
-                    string responseBody = await response.Content.ReadAsStringAsync();
-                    Logging.Log([$"Response body: {responseBody}"]);
-                    using (JsonDocument doc = JsonDocument.Parse(responseBody))
+                    string url = "https://api.thecatapi.com/v1/images/search";
+                    using (var cts = new CancellationTokenSource(_timeoutMilliseconds))
                     {
-                        string id = doc.RootElement.GetProperty("_id").GetString();
-                        Logging.Log([$"ID: {id}"]);
-                        string imageUrl = $"https://cataas.com/cat/{id}";
-                        Logging.Log(["Init'ing Bitmap"]);
-                        BitmapImage bitmapImage = new BitmapImage();
-                        bitmapImage.BeginInit();
-                        bitmapImage.UriSource = new Uri(imageUrl, UriKind.Absolute);
-                        bitmapImage.EndInit();
-                        Logging.Log(["Ending Init of Bitmap, loading..."]);
-                        bitmapImage.DownloadCompleted += (s, e) =>
+                        cts.Token.Register(() => { Close(); Interface.AddLog("Failed to get image from API :("); });
+                        HttpResponseMessage response = await _client.GetAsync(url, cts.Token);
+                        response.EnsureSuccessStatusCode();
+                        string responseBody = await response.Content.ReadAsStringAsync(cts.Token);
+                        Logging.Log(new[] { $"Response body: {responseBody}" });
+                        var json = JsonConvert.DeserializeObject<List<Dictionary<string, dynamic>>>(responseBody);
+                        if (json.Count < 1)
                         {
-                            Dispatcher.Invoke(() =>
-                            {
-                                Logging.Log(["Source downloaded for bitmap! Halving size..."]);
-                                _imageControl.Source = bitmapImage;
-                                _imageControl.Width = bitmapImage.PixelWidth / 2;
-                                _imageControl.Height = bitmapImage.PixelHeight / 2;
-                                Width = _imageControl.Width;
-                                Height = _imageControl.Height;
-                                Logging.Log(["Bitmap complete, window should adjust size automatically."]);
-                                Interface.AddLog("Here is your kitty!");
-                                spinnything.Stop();
-                                Show();
-                            });
-                        };
+                            HandleFetchFailure("Failed to get Cat image");
+                            return;
+                        }
+
+                        BitmapImage bitmapImage = new BitmapImage();
+                        bitmapImage.DownloadCompleted += (s, e) => Dispatcher.Invoke(() => HandleDownloadSuccess(bitmapImage));
                         bitmapImage.DownloadProgress += (s, e) => Progress.InvokeEvent(new((byte)e.Progress));
+                        bitmapImage.BeginInit();
+                        bitmapImage.UriSource = new Uri(json[0]["url"], UriKind.Absolute);
+                        bitmapImage.EndInit();
+                        Logging.Log(new[] { "Ending Init of Bitmap, loading..." });
                     }
                 }
                 catch (Exception ex)
                 {
                     Logging.LogError(ex);
-                    spinnything.Stop();
+                    if (ex is not TaskCanceledException)
+                        HandleFetchFailure("Error occurred while fetching the Cat image");
                 }
+            }
+
+            /// <summary>
+            /// Method to handle the completion success c:
+            /// </summary>
+            /// <param name="bitmapImage"></param>
+            [CAspects.Logging]
+            [CAspects.ConsumeException]
+            private void HandleDownloadSuccess(BitmapImage bitmapImage)
+            {
+                Logging.Log(new[] { "Source downloaded for bitmap! Halving size..." });
+                _imageControl.Source = bitmapImage;
+                _imageControl.Width = bitmapImage.PixelWidth / 2;
+                _imageControl.Height = bitmapImage.PixelHeight / 2;
+                Width = _imageControl.Width;
+                Height = _imageControl.Height;
+                Logging.Log(new[] { "Bitmap complete, window should adjust size automatically." });
+                Interface.AddLog("Here is your kitty!");
+                spinnything.Stop();
+                Progress.InvokeEvent(new((byte)100));
+                Show();
+                InvalidateVisual();
+            }
+
+            /// <summary>
+            /// Method to handle HTTP-FETCH request failures.
+            /// </summary>
+            /// <param name="message"></param>
+            [CAspects.Logging]
+            [CAspects.ConsumeException]
+            private void HandleFetchFailure(string message)
+            {
+                spinnything.Stop();
+                Progress.InvokeEvent(new((byte)100));
+                Interface.AddLog(message);
+                Close();
+            }
+
+            protected override void OnClosed(EventArgs e)
+            {
+                base.OnClosed(e);
+                spinnything.Stop();
             }
         }
 

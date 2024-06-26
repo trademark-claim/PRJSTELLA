@@ -11,13 +11,28 @@ namespace Cat
         /// </remarks>
         [CAspects.ConsumeException]
         [CAspects.Logging]
-        internal static bool RandomCatPicture()
+        internal static async Task<bool> RandomCatPicture()
         {
-            Interface.AddLog("Generating kitty...");
-            var kat_window = new Helpers.CatWindow();
-            kat_window.Show();
+            int para1 = 1;
+            if (commandstruct?.Parameters?[0].Length > 0)
+            {
+                if (commandstruct?.Parameters[0][0] is int para2 && para2 > 0)
+                {
+                    para1 = Math.Min(50, para2);
+                }
+            }
+            Logging.Log(["Params:", commandstruct?.Parameters]);
+            Logging.Log(["Cat amount: ", para1]);
+            for (int i = 0; i < para1; i++)
+            {
+                Interface.AddLog("Generating kitty...");
+                var kat_window = new Helpers.CatWindow();
+                kat_window.Show();
+            }
+
             return true;
         }
+
 
         /// <summary>
         /// Tutorial for the Kat Generator command

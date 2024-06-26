@@ -202,6 +202,12 @@ namespace Cat
             private readonly SWC.ListBox _listBox;
             private ScrollViewer _scrollViewer;
 
+            protected override void OnClosed(EventArgs e)
+            {
+                base.OnClosed(e);
+                Commands.Logger = null;
+            }
+
             /// <summary>
             /// Initializes a new instance of the <see cref="LogWindow"/> class, creating the log viewer UI.
             /// </summary>
@@ -609,6 +615,7 @@ namespace Cat
         {
             private byte progress = 0;
             private string title;
+            private bool oncedone = false;
             private readonly bool @interface;
 
             private event Action<ProgressUpdateEventArgs> OnProgressUpdate;
@@ -649,8 +656,9 @@ namespace Cat
                             block.Text = bar;
                         Catowo.Interface.logListBox.Items.Refresh();
                     }
-                    if (progress == 100)
+                    if (progress == 100 && !oncedone)
                     {
+                        oncedone = true;
                         Log([title + "Complete!"]);
                         if (@interface)
                             Catowo.Interface.AddLog(title + " Compelte!");
@@ -750,8 +758,11 @@ namespace Cat
                 /// </summary>
                 internal void Stop(bool remove = true)
                 {
-                    timer.Stop();
-                    timer.Tick -= Timer_Tick;
+                    if (timer.IsEnabled)
+                    {
+                        timer.Stop();
+                        timer.Tick -= Timer_Tick;
+                    }
                     if (block != null)
                     {
                         block.Dispatcher.Invoke(() =>

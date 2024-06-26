@@ -1751,7 +1751,7 @@ namespace Cat
                     {
                         19, new CommandSchema(
                             "Shows a random kitty :3",
-                            "",
+                            "[cats{int}]",
                             Cat.Commands.RandomCatPicture,
                             Commands.TRandomCatPicture,
                             "Shift Q K",
