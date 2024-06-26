@@ -324,7 +324,7 @@ namespace Cat
         /// <param name="audioi"></param>
         [CAspects.ConsumeException]
         [CAspects.Logging]
-        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
+        //[MethodImpl(MethodImplOptions.AggressiveOptimization)]
         internal static void ProcessVoiceCommand(string audioi)
         {
             rawdio = audioi;

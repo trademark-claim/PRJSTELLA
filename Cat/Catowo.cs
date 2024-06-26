@@ -34,6 +34,7 @@ global using Rectangle = System.Windows.Shapes.Rectangle;
 global using Size = System.Windows.Size;
 global using Image = System.Drawing.Image;
 global using ListBox = System.Windows.Controls.ListBox;
+global using Control = System.Windows.Controls.Control;
 using NAudio.Wave;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
@@ -131,6 +132,17 @@ namespace Cat
                 /// Flag indicating whether the C key is down or nah
                 /// </summary>
         private bool Cd = false;
+        /// <summary>
+        /// Flag indicating whether the M key is down or nah
+        /// </summary>
+        private bool Md = false;
+        /// <summary>
+        /// Flag indicating whether the T key is down or nah
+        /// </summary>
+        private bool Td = false;
+
+        internal void ResetStates()
+            => RShifted = LShifted = Qd = Cd = Md = Td = false;
 
         #region Markers
 
@@ -287,6 +299,14 @@ namespace Cat
         /// </summary>
         internal static class Hooking
         {
+            /// <summary>
+            /// Mirror Property
+            /// </summary>
+            private static bool Td { get => inst.Td; set => inst.Td = value; }
+            /// <summary>
+            /// Mirror Property
+            /// </summary>
+            private static bool Md { get => inst.Md; set => inst.Md = value; }
             /// <summary>
             /// Mirror Property
             /// </summary>
@@ -483,25 +503,64 @@ namespace Cat
                     }
 
                     DebugLabel.Content += $"{Qd}, {RShifted}, {LShifted}, {vkCode}, {wParam}, {(Keys)vkCode}";
-                    if (!Qd && vkCode == VK_Q)
+                    switch (vkCode)
                     {
-                        Qd = true;
-                        return CallNextHookExWrapper(_keyboardHookID, nCode, wParam, lParam);
+                        case VK_Q:
+                            if (!Qd)
+                            {
+                                Qd = true;
+                                return CallNextHookExWrapper(_keyboardHookID, nCode, wParam, lParam);
+                            }
+                            break;
+
+                        case VK_RSHIFT:
+                            if (!RShifted)
+                            {
+                                RShifted = true;
+                                return CallNextHookExWrapper(_keyboardHookID, nCode, wParam, lParam);
+                            }
+                            break;
+
+                        case VK_LSHIFT:
+                            if (!LShifted)
+                            {
+                                LShifted = true;
+                                return CallNextHookExWrapper(_keyboardHookID, nCode, wParam, lParam);
+                            }
+                            break;
+
+                        case VK_C:
+                            if (!Cd)
+                            {
+                                Cd = true;
+                                return CallNextHookExWrapper(_keyboardHookID, nCode, wParam, lParam);
+                            }
+                            break;
+
+                        case VK_M:
+                            if (!Md)
+                            {
+                                Md = true;
+                                return CallNextHookExWrapper(_keyboardHookID, nCode, wParam, lParam);
+                            }
+                            break;
+
+                        case VK_T:
+                            if (!Td)
+                            {
+                                Td = true;
+                                return CallNextHookExWrapper(_keyboardHookID, nCode, wParam, lParam);
+                            }
+                            break;
                     }
-                    if (!RShifted && vkCode == VK_RSHIFT)
+                    if (Md && Td)
                     {
-                        RShifted = true;
-                        return CallNextHookExWrapper(_keyboardHookID, nCode, wParam, lParam);
-                    }
-                    if (!LShifted && vkCode == VK_LSHIFT)
-                    {
-                        LShifted = true;
-                        return CallNextHookExWrapper(_keyboardHookID, nCode, wParam, lParam);
-                    }
-                    if (!Cd && vkCode == VK_C)
-                    {
-                        Cd = true;
-                        return CallNextHookExWrapper(_keyboardHookID, nCode, wParam, lParam);
+                        switch (vkCode)
+                        {
+                            case >= VK_1 and <= VK_9:
+                                string item = vkCodeToCharMap[vkCode].Item1.ToString();
+                                break;
+                        }
                     }
                     if (Qd)
                     {
@@ -522,12 +581,41 @@ namespace Cat
                                 case VK_E:
                                     Objects.CursorEffects.Toggle();
                                     break;
+                                case VK_B:
+                                    Interface.CommandProcessing.ProcessCommand("screenshot ;-1");
+                                    break;
+                                case VK_N:
+                                    Interface.CommandProcessing.ProcessCommand("screenshot ;-2");
+                                    break;
+                                case VK_K:
+                                    IntPtr fwh = GetForegroundWindowWrapper();
+                                    PInvoke.GetWindowThreadProcessIdWrapper(fwh, out uint pid);
+                                    Process activeprocess = Process.GetProcessById((int)pid);
+                                    activeprocess.Kill(true);
+                                    break;
                             }
                         }
                         else if (RShifted && LShifted)
                         {
                             switch (vkCode)
                             {
+                                case VK_V:
+                                    Interface.CommandProcessing.ProcessCommand("toggle stt");
+                                    break;
+                                case VK_L:
+                                    Interface.CommandProcessing.ProcessCommand("ole");
+                                    break;
+                                case VK_O:
+                                    Process.Start(new ProcessStartInfo
+                                    {
+                                        FileName = "explorer.exe",
+                                        Arguments = "C:\\ProgramData\\Kitty\\Cat\\NYANPASU",
+                                        UseShellExecute = true
+                                    });
+                                    break;
+                                case VK_B:
+                                    Interface.CommandProcessing.ProcessCommand("show console");
+                                    break;
                                 case VK_E:
                                     if (!ShuttingDown)
                                     {
@@ -535,7 +623,6 @@ namespace Cat
                                         App.ShuttingDown();
                                     }
                                     break;
-
                                 case VK_1:
                                     Mode ^= Modes.Shortcuts;
                                     break;
@@ -650,6 +737,14 @@ namespace Cat
 
                         case VK_C:
                             Cd = false;
+                            break;
+
+                        case VK_M:
+                            Md = false;
+                            break;
+
+                        case VK_T:
+                            Td = false;
                             break;
                     }
                 }
@@ -807,6 +902,7 @@ namespace Cat
         internal async Task<bool> ToggleInterface(bool animation = true, bool makefunny = true)
         {
             UIToggleTCS = new();
+            ResetStates();
             if (Interface.inst != null)
             {
                 if (animation)
@@ -1531,6 +1627,8 @@ namespace Cat
                     { "test error", 37 },
 
                     { "activate voice", 38 },
+                    { "toggle stt", 38 },
+                    { "toggle voice", 38 },
 
                     { "close log editor", 39 },
                     { "cle", 39 },
@@ -1549,7 +1647,10 @@ namespace Cat
                     { "tce", 46 },
 
                     { "shrink", 44 },
-                    { "grow", 45 }
+                    { "grow", 45 },
+
+                    { "open settings", 47 },
+                    { "ops", 47 }
                 };
 
                 /// <summary>
@@ -1574,7 +1675,7 @@ namespace Cat
                             "",
                             (Func<Task<bool>>)Cat.Commands.Shutdown,
                             Commands.TShutdown,
-                            "Shift Q E",
+                            "LShift RShift Q E",
                             0
                         )
                     },
@@ -1584,7 +1685,7 @@ namespace Cat
                             "",
                             (async () => { return await Catowo.inst.ToggleInterface(); }),
                             null,
-                            "Shift Q I",
+                            "LShift RShift Q I",
                             0
                         )
                     },
@@ -1594,7 +1695,7 @@ namespace Cat
                             "screennum{int}",
                             Cat.Commands.ChangeScreen,
                             Commands.TChangeScreen,
-                            "Shift Q (number)",
+                            "LShift RShift Q (number)",
                             0
                         )
                     },
@@ -1604,7 +1705,7 @@ namespace Cat
                             "[mode{int}]",
                             (Func<Task<bool>>)Cat.Commands.Screenshot,
                             Commands.TScreenshot,
-                            "Shift Q S",
+                            "LShift RShift Q S",
                             0
                         )
                     },
@@ -1614,7 +1715,7 @@ namespace Cat
                             "",
                             Cat.Commands.StartRecording,
                             null,
-                            "Shift Q R",
+                            "LShift RShift Q R",
                             2
                         )
                     },
@@ -1634,7 +1735,7 @@ namespace Cat
                             "",
                             Cat.Commands.StopRecording,
                             null,
-                            "Shift Q D",
+                            "LShift RShift Q D",
                             2
                         )
                     },
@@ -1651,7 +1752,7 @@ namespace Cat
                     {
                         8, new CommandSchema(
                             "Plays an audio file, present the filepath as an argument with optional looping.\nE.g: play audio ;C:/Downloads/Sussyaudio.mp4 ;true",
-                            "filepath{str}, [looping{bool}]",
+                            "filepath{string}, [looping{bool}]",
                             Cat.Commands.PlayAudio,
                             Commands.TPlayAudio,
                             "",
@@ -1674,7 +1775,7 @@ namespace Cat
                             "process{string/int}",
                             Cat.Commands.TakeProcessSnapshot,
                             null,
-                            "Shift Q T",
+                            "LShift RShift Q T",
                             2
                         )
                     },
@@ -1684,8 +1785,8 @@ namespace Cat
                             "",
                             Cat.Commands.StartProcessMeasuring,
                             Commands.TStartProcessMeasuring,
-                            "Shift Q X",
-                            0
+                            "LShift RShift Q X",
+                            2
                         )
                     },
                     {
@@ -1694,7 +1795,7 @@ namespace Cat
                             "[savedata{bool}]",
                             Cat.Commands.StopProcessMeasuring,
                             null,
-                            "Shift Q C",
+                            "LShift RShift Q C",
                             2
                         )
                     },
@@ -1754,7 +1855,7 @@ namespace Cat
                             "[cats{int}]",
                             Cat.Commands.RandomCatPicture,
                             Commands.TRandomCatPicture,
-                            "Shift Q K",
+                            "LShift RShift Q K",
                             0
                         )
                     },
@@ -1784,7 +1885,7 @@ namespace Cat
                             "",
                             Cat.Commands.OpenLogger,
                             Commands.TOpenLogger,
-                            "Shift Q ,",
+                            "LShift RShift Q ,",
                             0
                         )
                     },
@@ -1794,7 +1895,7 @@ namespace Cat
                             "",
                             Cat.Commands.CloseLogger,
                             Commands.TCloseLogger,
-                            "Shift Q .",
+                            "LShift RShift Q .",
                             0
                         )
                     },
@@ -1804,7 +1905,7 @@ namespace Cat
                             "",
                             Cat.Commands.StopAudio,
                             Commands.TStopAudio,
-                            "Shift Q V",
+                            "LShift RShift Q V",
                             0
                         )
                     },
@@ -1824,7 +1925,7 @@ namespace Cat
                             "",
                             (Func<Task<bool>>)Cat.Commands.FML,
                             Commands.TFlushLogs,
-                            "Shift Q F",
+                            "LShift RShift Q F",
                             0
                         )
                     },
@@ -1935,7 +2036,7 @@ namespace Cat
                             Cat.Commands.ThrowError,
                             null,
                             "",
-                            0
+                            2
                         )
                     },
                     {
@@ -1985,7 +2086,7 @@ namespace Cat
                             Commands.ReadObject,
                             Commands.TReadObject,
                             "",
-                            0
+                            2
                         )
                     },
                     {
@@ -2005,7 +2106,7 @@ namespace Cat
                                 () => { Catowo.inst.Top = Catowo.inst.Left = 20;  Catowo.inst.Width = Catowo.inst.Height = System.Windows.Forms.Screen.PrimaryScreen.Bounds.Height - 10; Catowo.inst.WindowState = WindowState.Normal;  return true;},
                                 null,
                                 "",
-                                2
+                                1
                             )
                     },
                     {
@@ -2015,7 +2116,7 @@ namespace Cat
                             () => { Catowo.inst.WindowState = WindowState.Maximized; return true; },
                             null,
                             "",
-                            2
+                            1
                             )
                     },
                     {
@@ -2028,6 +2129,16 @@ namespace Cat
                                 return true;
                             }),
                             null,
+                            "",
+                            0
+                        )
+                    },
+                    {
+                        47, new CommandSchema(
+                            "Opens the settings menu",
+                            "", 
+                            Commands.OpenSettings,
+                            Commands.TOpenSettings,
                             "",
                             0
                         )
@@ -2055,7 +2166,7 @@ namespace Cat
                 [CAspects.Logging]
                 internal static void HistoryUp()
                 {
-                    string? previousraw = History.GetNext();
+                    string? previousraw = History.GetPrevious();
                     if (previousraw == null || History.Failed)
                     {
                         History.Failed = false;
@@ -2075,7 +2186,7 @@ namespace Cat
                 [CAspects.Logging]
                 internal static void HistoryDown()
                 {
-                    string? nextraw = History.GetPrevious();
+                    string? nextraw = History.GetNext();
                     if (nextraw == null || History.Failed)
                     {
                         History.Failed = false;

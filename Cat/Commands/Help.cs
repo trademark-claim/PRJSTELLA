@@ -89,7 +89,25 @@ namespace Cat
                 {
                     ((string[])[
                         "Here are the shortcuts: ",
-                        
+                        "Primary Shortcuts:",
+                        "LShift + RShift + Q + E: Triggers the shutdown sequence",
+                        "LShift + RShift + Q + I: Opens the interface",
+                        "LShift + RShift + Q + V: Toggles the STT stuff",
+                        "LShift + RShift + Q + L: Opens a Log Editor",
+                        "LShift + RShift + Q + O: Opens the local data folder",
+                        "LShift + RShift + Q + B: Opens a live logger",
+                        "",
+                        "Quick Clicks (Q C) Shortcuts;",
+                        "Q + C + K: Force kills the active window",
+                        "Q + C + 0: Resets your cursors",
+                        "Q + C + 1-9: (Literally Press 1,2,3,4...8, or 9) Toggles the preset linked to that number",
+                        "Q + C + E: Toggles the cursor trail and click effects",
+                        "Q + C + B: Takes a screenshot of every connected screen",
+                        "Q + C + N: Takes a stitch screenshot",
+                        "",
+                        "Macros:",
+                        "M + T + 1-9: (Literally Press 1,2,3,4...8, or 9) Sends the macro keystrokes",
+                        "M + T + E: Opens the Macro Editor"
                         ]).ForEach(x => Interface.AddLog(x));
                 }
                 else if (para1 == "voice commands")
@@ -110,10 +128,10 @@ namespace Cat
                     foreach (var group in groupedCommands)
                     {
                         Interface.AddLog($"Command #{group.CommandNumber}");
-                        Interface.AddLog($"      Called with {string.Join(", ", group.Commands)}");
+                        Interface.AddLog($"      Called with: {string.Join(", ", group.Commands)}");
                         Interface.AddLog($"      Description: {group.Description}");
                         if (group.InnerCommand != "")
-                            Interface.AddLog("Command Version: '" + group.InnerCommand + "'");
+                            Interface.AddLog("      Command Version: '" + group.InnerCommand + "'");
                     }
                 }
 

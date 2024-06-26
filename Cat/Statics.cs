@@ -42,6 +42,9 @@ namespace Cat
         internal static SolidColorBrush DEEPPINK { get; } = new(Colors.DeepPink);
         internal static SolidColorBrush HOTPINK { get; } = new(Colors.HotPink);
 
+        /// <summary>
+        /// White-Pink brush
+        /// </summary>
         internal static LinearGradientBrush WABrush { get; } = new()
         {
             GradientStops =
@@ -54,6 +57,9 @@ namespace Cat
             EndPoint = new(0.5,0.8),
         };
 
+        /// <summary>
+        /// Pink-Cyan-Red
+        /// </summary>
         internal static readonly LinearGradientBrush brush = new()
         {
             GradientStops =
@@ -66,6 +72,9 @@ namespace Cat
                 }
         };
 
+        /// <summary>
+        /// Rainbow coloured brush~
+        /// </summary>
         internal static readonly LinearGradientBrush rainbowbrush = new()
         {
             GradientStops =
@@ -89,6 +98,9 @@ namespace Cat
                 }
         };
 
+        /// <summary>
+        /// Same as the rainbow brush but it fades
+        /// </summary>
         internal static readonly LinearGradientBrush dyingrainbow = new()
         {
             GradientStops =

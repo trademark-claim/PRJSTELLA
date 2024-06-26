@@ -1,6 +1,6 @@
 ﻿#define A
-//#define B
-//#define C
+#define B
+#define C
 
 using System.Globalization;
 using System.IO;
@@ -24,6 +24,7 @@ using System.Diagnostics.Contracts;
 using System.Timers;
 using System.Runtime.CompilerServices;
 using System.Net.NetworkInformation;
+using static Cat.Helpers;
 
 namespace Cat
 {
@@ -133,9 +134,13 @@ namespace Cat
                 "To open STELLA's interface:\n  Hold both shifts (both th left and right one),\n  Then press and hold Q,\n  then press I!\n  (LShift + RShift + Q + I). \n To close STELLA's interface run the 'close' command.\nTo view the help page, run 'help'",
                 "This program is in a pre-pre-pre-pre-alpha stage, and there will be bugs and stuff.\nYou can send logs to me (Discord: _dissociation_) (Gmail: brainjuice.work23@gmail.com) with bug reports and feedback and stuff. Enjoy!",
                 "Hmmm.. is there anything else..?\nOh right! Local data is stored at C:\\ProgramData\\Kitty\\Cat\\\nHave fun, I hope you enjoy this app! o/",
-                "If you ever get stuck, just try the 'help' and 'tutorial' commands!"
+                "If you ever get stuck, just try the 'help' and 'tutorial' commands!",
+                "I'll now open the interface and run 'help' + 'help ;commands' for you, enjoy!"
             ];
 
+            /// <summary>
+            /// What Stella will be yapping about
+            /// </summary>
             internal static string[] Custom { get; set; } = ["Uh oh! You shouldn't see this!"];
 
             /// <summary>
@@ -188,6 +193,8 @@ namespace Cat
 
             internal static TaskCompletionSource<bool> TCS { get; private set; }
 
+            private static Mode _mode;
+
             /// <summary>
             /// Cancer cures smoking.
             /// </summary>
@@ -198,6 +205,7 @@ namespace Cat
             internal static async Task RunStella(Mode mode, Canvas canvas)
             {
                 StellaHerself.canvas = canvas;
+                _mode = mode;
                 if (Bubble != null && Catowo.inst != null && canvas != null)
                 {
                     num = 0;
@@ -326,6 +334,12 @@ namespace Cat
                                 {
                                     canvas.Children.Remove(Bubble);
                                     Bubble = null;
+                                }
+                                if (_mode == Mode.Introduction)
+                                {
+                                    Catowo.inst.ToggleInterface();
+                                    Interface.CommandProcessing.ProcessCommand("help");
+                                    Interface.CommandProcessing.ProcessCommand("help ;commands");
                                 }
                                 return;
                             }
@@ -1356,7 +1370,22 @@ namespace Cat
             }
 
             [CAspects.Logging]
-            public static Task StartListeningAndProcessingAsync()
+            internal static void Toggle()
+            {
+                if (ready)
+                {
+                    StopListening();
+                    Interface.AddLog("Stopped Listening!");
+                }
+                else
+                {
+                    StartListeningAndProcessingAsync();
+                    Interface.AddLog("Began Listening!");
+                }
+            }
+
+            [CAspects.Logging]
+            private static Task StartListeningAndProcessingAsync()
             {
                 if (ready)
                     return Task.CompletedTask;
@@ -1870,5 +1899,146 @@ namespace Cat
                 return desiredSize;
             }
         }
+
+
+        internal partial class SettingsWindow : Window
+        {
+            private Dictionary<string, Control> controls = new Dictionary<string, Control>();
+            private readonly string iniFilePath = UserDataFile;
+
+            internal SettingsWindow()
+            {
+                Title = "Settings";
+                CreateSettingsWindow();
+                LoadSettings();
+                Background = WABrush;
+            }
+
+            private void CreateSettingsWindow()
+            {
+                var mainPanel = new StackPanel();
+                AddGroup(mainPanel, "Display", new (string, Control)[]
+                {
+            ("Brightness", CreateSlider(0, 1, 0.01)),
+            ("Opacity", CreateSlider(0, 1, 0.01)),
+            ("FontSize", CreateSlider(1, 50, 1))
+                });
+
+                AddGroup(mainPanel, "Startup", new (string, Control)[]
+                {
+            ("Startup", CreateCheckBox()),
+            ("StartWithConsole", CreateCheckBox()),
+            ("StartWithInterface", CreateCheckBox()),
+            ("StartWithVoice", CreateCheckBox())
+                });
+
+                AddGroup(mainPanel, "Permissions", new (string, Control)[]
+                {
+            ("AllowRegistryEdits", CreateCheckBox()),
+            ("LaunchAsAdmin", CreateCheckBox()),
+            ("AllowUrbanDictionaryDefinitionsWhenWordNotFound", CreateCheckBox()),
+            ("RequireNameCallForVoiceCommands", CreateCheckBox())
+                });
+
+                AddGroup(mainPanel, "Logging", new (string, Control)[]
+                {
+            ("AspectLogging", CreateCheckBox()),
+            ("FullLogging", CreateCheckBox()),
+            ("AssemblyInformation", CreateCheckBox()),
+            ("EnvironmentVariables", CreateCheckBox()),
+            ("TimeAll", CreateCheckBox()),
+            ("LoggingDetails", CreateCheckBox()),
+            ("ExtendedLogging", CreateCheckBox())
+                });
+
+                var saveButton = new SWC.Button { Content = "Save", Margin = new Thickness(10), HorizontalAlignment = System.Windows.HorizontalAlignment.Center, Width = 45 };
+                saveButton.Click += SaveButton_Click;
+                mainPanel.Children.Add(saveButton);
+
+                ResizeMode = ResizeMode.NoResize;
+                SizeToContent = SizeToContent.WidthAndHeight;
+                Content = new ScrollViewer { Content = mainPanel };
+            }
+
+            private void AddGroup(StackPanel mainPanel, string groupName, (string key, Control control)[] settings)
+            {
+                var groupExpander = new Expander { Header = groupName, IsExpanded = true, Margin = new Thickness(10) };
+                var groupPanel = new StackPanel();
+                foreach (var (key, control) in settings)
+                {
+                    var stackPanel = new StackPanel { Orientation = SWC.Orientation.Horizontal, Margin = new Thickness(5) };
+                    stackPanel.Children.Add(new Label { Content = key, Width = 200 });
+                    stackPanel.Children.Add(control);
+                    groupPanel.Children.Add(stackPanel);
+                    controls[key] = control;
+                }
+                groupExpander.Content = groupPanel;
+                mainPanel.Children.Add(groupExpander);
+            }
+
+            private Slider CreateSlider(double min, double max, double tick)
+            {
+                return new Slider { Minimum = min, Maximum = max, TickFrequency = tick, IsSnapToTickEnabled = true, Width = 200, Margin = new Thickness(5) };
+            }
+
+            private SWC.CheckBox CreateCheckBox()
+            {
+                return new SWC.CheckBox { Margin = new Thickness(5) };
+            }
+
+            private void LoadSettings()
+            {
+                var settings = IniParsing.GetStructure(iniFilePath);
+
+                foreach (var section in settings)
+                {
+                    foreach (var setting in section.Value)
+                    {
+                        if (controls.ContainsKey(setting.Key))
+                        {
+                            var control = controls[setting.Key];
+                            if (control is Slider slider)
+                            {
+                                slider.Value = double.Parse(setting.Value);
+                            }
+                            else if (control is SWC.CheckBox checkBox)
+                            {
+                                checkBox.IsChecked = bool.Parse(setting.Value);
+                            }
+                        }
+                    }
+                }
+            }
+
+            private void SaveButton_Click(object sender, RoutedEventArgs e)
+            {
+                foreach (var key in controls.Keys)
+                {
+                    var control = controls[key];
+                    string value = string.Empty;
+
+                    if (control is Slider slider)
+                    {
+                        value = slider.Value.ToString();
+                    }
+                    else if (control is SWC.CheckBox checkBox)
+                    {
+                        value = checkBox.IsChecked.ToString();
+                    }
+
+                    var section = IniParsing.validation[key].Item2 is (float, float) ? "Display" :
+                                  IniParsing.validation[key].Item2 is bool ? "Startup" :
+                                  IniParsing.validation[key].Item2 is bool ? "Permissions" :
+                                  "Logging";
+
+                    IniParsing.UpAddValue(iniFilePath, section, key, value);
+                    UserData.UpdateValue(key, value);
+                }
+
+                Interface.AddLog("Settings Saved!");
+                Close();
+            }
+        }
+
     }
 }

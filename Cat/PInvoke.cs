@@ -189,25 +189,34 @@ namespace Cat
         private static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
 
         /// <summary>
-        /// Why are black guys eyes red after sex? From the pepper spray.
+        /// Runs a function on every single window active on the system
         /// </summary>
-        /// <param name="enumProc"></param>
-        /// <param name="lParam"></param>
-        /// <returns></returns>
         [LibraryImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static partial bool EnumWindows(EnumWindowsProc enumProc, IntPtr lParam);
 
+        /// <summary>
+        /// Gets a window's title
+        /// </summary>
         [DllImport("user32.dll", SetLastError =true)]
         private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
 
+        /// <summary>
+        /// Gets the Text length of a given window
+        /// </summary>
         [DllImport("user32.dll", SetLastError = true)]
         private static extern int GetWindowTextLength(IntPtr hWnd);
 
+        /// <summary>
+        /// Activates a window (sets it's focus)
+        /// </summary>
         [LibraryImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static partial bool SetForegroundWindow(IntPtr hWnd);
 
+        /// <summary>
+        /// Gets the Thread and Process ownership of a window (each window belongs to a thread, which in turn belongs to a process)
+        /// </summary>
         [DllImport("user32.dll", SetLastError = true)]
         private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
 

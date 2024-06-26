@@ -6,7 +6,6 @@ namespace Cat
     {
         [CAspects.Logging]
         [CAspects.ConsumeException]
-        [CAspects.InDev]
         internal static bool RemoveCursorFromPreset()
         {
             if (commandstruct?.Parameters[0][0] is not string para1 || commandstruct?.Parameters[0][1] is not string para2)
