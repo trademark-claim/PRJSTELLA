@@ -11,10 +11,10 @@ Central Guide to STELLA and it's main functions
 
 
 #### License
-This project is licensed - see the [LICENSE.md](LICENSE.md) file for details.
+This project is licensed - see the [LICENSE.md](Cat/LICENSE.md) file for details.
 
 #### Terms and Conditions
-The terms and conditions for this project can be found [here](ts_and_cs.md).
+The terms and conditions for this project can be found [here](Cat/ts_and_cs.md).
 
 #### Privacy Policy
-The Privacy Policy can be found [here](privacy.md)
+The Privacy Policy can be found [here](Cat/privacy.md)
